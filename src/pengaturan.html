@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pengaturan - Sistem Wakaf Makam</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        .scrollbar-thin::-webkit-scrollbar { height: 8px; width: 8px; }
+        .scrollbar-thin::-webkit-scrollbar-track { background: #f1f5f9; }
+        .scrollbar-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+    <script type="module" src="/main.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div class="flex h-screen overflow-hidden">
+        <!-- SIDEBAR -->
+        <aside class="w-64 bg-emerald-800 text-white flex flex-col flex-shrink-0">
+            <div class="p-6 border-b border-emerald-700">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg leading-tight">Wakaf Makam</h1>
+                        <p class="text-xs text-emerald-200">Yayasan</p>
+                    </div>
+                </div>
+            </div>
+
+            <nav class="flex-1 py-4">
+                <ul class="space-y-1">
+                    <li>
+                        <a href="index.html" class="flex items-center gap-3 px-6 py-3 hover:bg-emerald-700 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                            </svg>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="blok.html" class="flex items-center gap-3 px-6 py-3 hover:bg-emerald-700 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                            </svg>
+                            <span>Data Blok</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="data-makam.html" class="flex items-center gap-3 px-6 py-3 hover:bg-emerald-700 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                            </svg>
+                            <span>Data Makam</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="pembayaran.html" class="flex items-center gap-3 px-6 py-3 hover:bg-emerald-700 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                            </svg>
+                            <span>Pembayaran</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="laporan.html" class="flex items-center gap-3 px-6 py-3 hover:bg-emerald-700 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            <span>Laporan</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center gap-3 px-6 py-3 bg-emerald-700 border-r-4 border-emerald-400">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                            <span class="font-medium">Pengaturan</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+            <div class="p-4 border-t border-emerald-700">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="font-medium text-sm">Admin</p>
+                        <p class="text-xs text-emerald-200">Petugas Makam</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 flex flex-col min-w-0">
+            <!-- HEADER -->
+            <header class="bg-white border-b border-gray-200 px-6 py-4">
+                <h1 class="text-xl font-bold text-gray-800">Pengaturan Aplikasi</h1>
+            </header>
+
+            <!-- CONTENT -->
+            <div class="flex-1 overflow-auto scrollbar-thin p-6">
+                
+                <div class="grid grid-cols-2 gap-6">
+                    
+                    <!-- PROFIL APLIKASI -->
+                    <div class="bg-white rounded-xl border border-gray-200 shadow-sm">
+                        <div class="px-5 py-4 border-b border-gray-200">
+                            <h2 class="font-semibold text-gray-800 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                </svg>
+                                Profil Aplikasi
+                            </h2>
+                        </div>
+                        <div class="p-5 space-y-5">
+                            <!-- Nama Makam -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Nama Yayasan / Makam</label>
+                                <input type="text" value="Yayasan Wakaf Makam Al-Ikhlas" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Masukkan nama yayasan atau makam">
+                                <p class="text-xs text-gray-500 mt-1">Nama ini akan muncul di header aplikasi dan laporan.</p>
+                            </div>
+
+                            <!-- Logo -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Logo Aplikasi</label>
+                                <div class="flex items-center gap-4">
+                                    <div class="w-20 h-20 bg-emerald-100 rounded-xl flex items-center justify-center border-2 border-dashed border-emerald-300">
+                                        <svg class="w-10 h-10 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                        </svg>
+                                    </div>
+                                    <div class="flex-1">
+                                        <button onclick="document.getElementById('logoInput').click()" class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                                            Pilih File Logo
+                                        </button>
+                                        <input type="file" id="logoInput" class="hidden" accept=".jpg,.jpeg,.png">
+                                        <p class="text-xs text-gray-500 mt-2">Format: JPG, PNG. Ukuran maks: 2MB. Disarankan 1:1.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Info Tambahan -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Alamat Makam</label>
+                                <textarea rows="2" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Masukkan alamat lengkap makam">Jl. Raya Cipaku No. 123, Kel. Bahagia, Kec. Sejahtera, Kota Bandung</textarea>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Nomor Telepon Yayasan</label>
+                                <input type="text" value="(022) 1234567" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Contoh: (022) 1234567">
+                            </div>
+
+                            <div class="pt-3">
+                                <button class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors">
+                                    Simpan Perubahan
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DATABASE & BACKUP -->
+                    <div class="space-y-6">
+                        <!-- Info Database -->
+                        <div class="bg-white rounded-xl border border-gray-200 shadow-sm">
+                            <div class="px-5 py-4 border-b border-gray-200">
+                                <h2 class="font-semibold text-gray-800 flex items-center gap-2">
+                                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path>
+                                    </svg>
+                                    Database SQLite
+                                </h2>
+                            </div>
+                            <div class="p-5 space-y-4">
+                                <!-- Lokasi File DB -->
+                                <div class="bg-gray-50 rounded-lg p-4">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Lokasi File Database</label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="text" value="C:\\Users\\Admin\\AppData\\Local\\WakafMakam\\data.db" readonly class="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-600 font-mono">
+                                        <button onclick="copyPath()" class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg transition-colors" title="Copy Path">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                            </svg>
+                                        </button>
+                                        <button class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg transition-colors" title="Buka Folder">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-2">
+                                        <span class="inline-flex items-center gap-1">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                            </svg>
+                                            File database SQLite disimpan secara lokal di komputer ini.
+                                        </span>
+                                    </p>
+                                </div>
+
+                                <!-- Info Statistik DB -->
+                                <div class="grid grid-cols-3 gap-3">
+                                    <div class="bg-blue-50 rounded-lg p-3 text-center">
+                                        <p class="text-xs text-blue-600 mb-1">Ukuran DB</p>
+                                        <p class="text-lg font-bold text-blue-700">2.4 MB</p>
+                                    </div>
+                                    <div class="bg-purple-50 rounded-lg p-3 text-center">
+                                        <p class="text-xs text-purple-600 mb-1">Total Record</p>
+                                        <p class="text-lg font-bold text-purple-700">1,247</p>
+                                    </div>
+                                    <div class="bg-amber-50 rounded-lg p-3 text-center">
+                                        <p class="text-xs text-amber-600 mb-1">Terakhir Update</p>
+                                        <p class="text-lg font-bold text-amber-700">15 Feb</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Backup Database -->
+                        <div class="bg-white rounded-xl border border-gray-200 shadow-sm">
+                            <div class="px-5 py-4 border-b border-gray-200">
+                                <h2 class="font-semibold text-gray-800 flex items-center gap-2">
+                                    <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+                                    </svg>
+                                    Backup & Restore
+                                </h2>
+                            </div>
+                            <div class="p-5 space-y-4">
+                                <!-- Backup ke Google Drive -->
+                                <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-10 h-10 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <svg class="w-6 h-6 text-emerald-600" viewBox="0 0 24 24" fill="currentColor">
+                                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                                            </svg>
+                                        </div>
+                                        <div class="flex-1">
+                                            <h3 class="font-medium text-emerald-800 mb-1">Backup ke Google Drive</h3>
+                                            <p class="text-sm text-emerald-600 mb-3">Database akan di-backup otomatis ke Google Drive Anda. Memerlukan koneksi internet.</p>
+                                            
+                                            <div class="flex items-center gap-3 mb-3">
+                                                <div class="flex-1 bg-white rounded-lg px-3 py-2 text-sm text-gray-600 flex items-center gap-2">
+                                                    <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                                    </svg>
+                                                    Terhubung: admin@yayasan.com
+                                                </div>
+                                                <button class="text-sm text-red-600 hover:text-red-700 font-medium">Putuskan</button>
+                                            </div>
+
+                                            <div class="space-y-2">
+                                                <label class="flex items-center gap-2">
+                                                    <input type="checkbox" checked class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500">
+                                                    <span class="text-sm text-emerald-700">Backup otomatis setiap hari</span>
+                                                </label>
+                                                <label class="flex items-center gap-2">
+                                                    <input type="checkbox" class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500">
+                                                    <span class="text-sm text-emerald-700">Backup sebelum menutup aplikasi</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Tombol Backup Manual -->
+                                <div class="flex gap-3">
+                                    <button onclick="backupNow()" class="flex-1 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                                        </svg>
+                                        Backup Sekarang
+                                    </button>
+                                    <button class="px-4 py-3 border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg transition-colors flex items-center justify-center gap-2">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                                        </svg>
+                                        Export ke File
+                                    </button>
+                                </div>
+
+                                <!-- Riwayat Backup -->
+                                <div class="border-t border-gray-200 pt-4">
+                                    <h4 class="text-sm font-medium text-gray-700 mb-3">Riwayat Backup</h4>
+                                    <div class="space-y-2">
+                                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                            <div class="flex items-center gap-3">
+                                                <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                </svg>
+                                                <div>
+                                                    <p class="text-sm font-medium text-gray-700">Backup otomatis harian</p>
+                                                    <p class="text-xs text-gray-500">15 Feb 2026, 03:00 WIB</p>
+                                                </div>
+                                            </div>
+                                            <span class="text-xs text-green-600 font-medium">Berhasil</span>
+                                        </div>
+                                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                            <div class="flex items-center gap-3">
+                                                <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                </svg>
+                                                <div>
+                                                    <p class="text-sm font-medium text-gray-700">Backup manual</p>
+                                                    <p class="text-xs text-gray-500">14 Feb 2026, 14:30 WIB</p>
+                                                </div>
+                                            </div>
+                                            <span class="text-xs text-green-600 font-medium">Berhasil</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Restore Database -->
+                        <div class="bg-white rounded-xl border border-gray-200 shadow-sm">
+                            <div class="px-5 py-4 border-b border-gray-200">
+                                <h2 class="font-semibold text-gray-800 flex items-center gap-2">
+                                    <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                    </svg>
+                                    Restore Database
+                                </h2>
+                            </div>
+                            <div class="p-5">
+                                <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+                                    <div class="flex items-start gap-3">
+                                        <svg class="w-5 h-5 text-amber-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                        </svg>
+                                        <div>
+                                            <p class="text-sm font-medium text-amber-800">Peringatan</p>
+                                            <p class="text-sm text-amber-600">Restore akan mengganti seluruh data saat ini dengan data dari file backup. Pastikan Anda sudah melakukan backup terlebih dahulu.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex gap-3">
+                                    <button class="flex-1 px-4 py-2.5 border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg transition-colors">
+                                        Pilih File Backup
+                                    </button>
+                                    <button class="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition-colors">
+                                        Restore dari Google Drive
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL BACKUP BERHASIL -->
+    <div id="modalBackupSuccess" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/50"></div>
+        <div class="absolute inset-0 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+                <div class="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-800 mb-2">Backup Berhasil!</h3>
+                <p class="text-sm text-gray-500 mb-6">Database berhasil di-backup ke Google Drive.</p>
+                <button onclick="closeBackupModal()" class="w-full px-4 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function copyPath() {
+            const pathInput = document.querySelector('input[readonly]');
+            pathInput.select();
+            pathInput.setSelectionRange(0, 99999); // For mobile
+            navigator.clipboard.writeText(pathInput.value).then(() => {
+                // Could show a toast here
+                alert('Path database disalin ke clipboard!');
+            });
+        }
+
+        function backupNow() {
+            // Simulate backup process
+            setTimeout(() => {
+                document.getElementById('modalBackupSuccess').classList.remove('hidden');
+            }, 1000);
+        }
+
+        function closeBackupModal() {
+            document.getElementById('modalBackupSuccess').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

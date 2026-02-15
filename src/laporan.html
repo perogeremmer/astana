@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laporan - Sistem Wakaf Makam</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        .scrollbar-thin::-webkit-scrollbar { height: 8px; width: 8px; }
+        .scrollbar-thin::-webkit-scrollbar-track { background: #f1f5f9; }
+        .scrollbar-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+    <script type="module" src="/main.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div class="flex h-screen overflow-hidden">
+        <!-- SIDEBAR -->
+        <aside class="w-64 bg-emerald-800 text-white flex flex-col flex-shrink-0">
+            <div class="p-6 border-b border-emerald-700">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg leading-tight">Wakaf Makam</h1>
+                        <p class="text-xs text-emerald-200">Yayasan</p>
+                    </div>
+                </div>
+            </div>
+
+            <nav class="flex-1 py-4">
+                <ul class="space-y-1">
+                    <li>
+                        <a href="index.html" class="flex items-center gap-3 px-6 py-3 hover:bg-emerald-700 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                            </svg>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="blok.html" class="flex items-center gap-3 px-6 py-3 hover:bg-emerald-700 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                            </svg>
+                            <span>Data Blok</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="data-makam.html" class="flex items-center gap-3 px-6 py-3 hover:bg-emerald-700 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                            </svg>
+                            <span>Data Makam</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="pembayaran.html" class="flex items-center gap-3 px-6 py-3 hover:bg-emerald-700 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                            </svg>
+                            <span>Pembayaran</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center gap-3 px-6 py-3 bg-emerald-700 border-r-4 border-emerald-400">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            <span class="font-medium">Laporan</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="pengaturan.html" class="flex items-center gap-3 px-6 py-3 hover:bg-emerald-700 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                            <span>Pengaturan</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+            <div class="p-4 border-t border-emerald-700">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="font-medium text-sm">Admin</p>
+                        <p class="text-xs text-emerald-200">Petugas Makam</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 flex flex-col min-w-0">
+            <!-- HEADER -->
+            <header class="bg-white border-b border-gray-200 px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <h1 class="text-xl font-bold text-gray-800">Laporan Keuangan & Data Makam</h1>
+                    <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                        </svg>
+                        Export PDF
+                    </button>
+                </div>
+            </header>
+
+            <!-- CONTENT -->
+            <div class="flex-1 overflow-auto scrollbar-thin p-6">
+                
+                <!-- SELECTOR TAHUN -->
+                <div class="bg-white rounded-xl border border-gray-200 p-5 mb-6">
+                    <div class="flex items-center gap-4">
+                        <label class="text-base font-semibold text-gray-700">Pilih Tahun:</label>
+                        <select id="tahunSelect" onchange="updateLaporan()" class="px-4 py-2.5 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white min-w-[120px]">
+                            <option value="2022">2022</option>
+                            <option value="2023">2023</option>
+                            <option value="2024">2024</option>
+                            <option value="2025" selected>2025</option>
+                            <option value="2026">2026</option>
+                        </select>
+                        <span class="text-sm text-gray-500 ml-4">Data akan otomatis terupdate berdasarkan tahun yang dipilih</span>
+                    </div>
+                </div>
+
+                <!-- STATISTIK CARDS -->
+                <div class="grid grid-cols-4 gap-6 mb-6">
+                    <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-3">
+                            <p class="text-sm text-gray-500">Sudah Bayar</p>
+                            <div class="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <p class="text-3xl font-bold text-emerald-600" id="statSudahBayar">892</p>
+                        <p class="text-xs text-gray-400 mt-1">Jiwa</p>
+                    </div>
+
+                    <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-3">
+                            <p class="text-sm text-gray-500">Belum Bayar</p>
+                            <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <p class="text-3xl font-bold text-red-500" id="statBelumBayar">355</p>
+                        <p class="text-xs text-gray-400 mt-1">Jiwa</p>
+                    </div>
+
+                    <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-3">
+                            <p class="text-sm text-gray-500">Makam Baru</p>
+                            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <p class="text-3xl font-bold text-blue-600" id="statMakamBaru">45</p>
+                        <p class="text-xs text-gray-400 mt-1">Jiwa</p>
+                    </div>
+
+                    <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-3">
+                            <p class="text-sm text-gray-500">Total Pendapatan</p>
+                            <div class="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <p class="text-3xl font-bold text-amber-600" id="statPendapatan">Rp 89.2jt</p>
+                        <p class="text-xs text-gray-400 mt-1">Tahun <span id="labelTahun">2025</span></p>
+                    </div>
+                </div>
+
+                <!-- DETAIL SECTION -->
+                <div class="grid grid-cols-2 gap-6 mb-6">
+                    <!-- Chart/Progress Section -->
+                    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                        <h3 class="font-semibold text-gray-800 mb-4">Persentase Pembayaran Tahun <span class="tahun-label">2025</span></h3>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span class="text-gray-600">Sudah Bayar</span>
+                                    <span class="font-medium text-emerald-600" id="pctSudah">71.5%</span>
+                                </div>
+                                <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
+                                    <div class="h-full bg-emerald-500 rounded-full" style="width: 71.5%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span class="text-gray-600">Belum Bayar</span>
+                                    <span class="font-medium text-red-500" id="pctBelum">28.5%</span>
+                                </div>
+                                <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
+                                    <div class="h-full bg-red-500 rounded-full" style="width: 28.5%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6 pt-4 border-t border-gray-100">
+                            <h4 class="text-sm font-medium text-gray-700 mb-3">Rincian per Blok Tahun <span class="tahun-label">2025</span></h4>
+                            <div class="space-y-2">
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600">Blok A</span>
+                                    <span class="font-medium">320 makam (Sudah bayar: 280)</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600">Blok B</span>
+                                    <span class="font-medium">450 makam (Sudah bayar: 320)</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600">Blok C</span>
+                                    <span class="font-medium">280 makam (Sudah bayar: 180)</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600">Blok D</span>
+                                    <span class="font-medium">197 makam (Sudah bayar: 112)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ringkasan Makam Baru -->
+                    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                        <h3 class="font-semibold text-gray-800 mb-4">Data Makam Baru Tahun <span class="tahun-label">2025</span></h3>
+                        <div class="text-center py-8">
+                            <div class="inline-flex items-center justify-center w-24 h-24 bg-blue-50 rounded-full mb-4">
+                                <span class="text-4xl font-bold text-blue-600" id="makamBaruCount">45</span>
+                            </div>
+                            <p class="text-gray-600">Makam baru yang terdaftar</p>
+                        </div>
+                        
+                        <div class="space-y-3 mt-4">
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 bg-emerald-100 rounded flex items-center justify-center text-sm font-bold text-emerald-600">A</div>
+                                    <span class="text-sm text-gray-700">Blok A</span>
+                                </div>
+                                <span class="font-semibold text-gray-800">12 makam</span>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 bg-blue-100 rounded flex items-center justify-center text-sm font-bold text-blue-600">B</div>
+                                    <span class="text-sm text-gray-700">Blok B</span>
+                                </div>
+                                <span class="font-semibold text-gray-800">18 makam</span>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 bg-amber-100 rounded flex items-center justify-center text-sm font-bold text-amber-600">C</div>
+                                    <span class="text-sm text-gray-700">Blok C</span>
+                                </div>
+                                <span class="font-semibold text-gray-800">10 makam</span>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 bg-purple-100 rounded flex items-center justify-center text-sm font-bold text-purple-600">D</div>
+                                    <span class="text-sm text-gray-700">Blok D</span>
+                                </div>
+                                <span class="font-semibold text-gray-800">5 makam</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TABEL RINCIAN -->
+                <div class="bg-white rounded-xl border border-gray-200 shadow-sm">
+                    <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+                        <h3 class="font-semibold text-gray-800">Rincian Pembayaran per Blok - Tahun <span class="tahun-label">2025</span></h3>
+                    </div>
+                    <div class="overflow-x-auto scrollbar-thin">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Blok</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Total Makam</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-emerald-600 uppercase">Sudah Bayar</th>
+                                    <th class="px-4 py-3 text-center text-xs font-semibold text-red-500 uppercase">Belum Bayar</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Iuran per Makam</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold text-amber-600 uppercase">Total Pendapatan</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200" id="tabelRincian">
+                                <tr>
+                                    <td class="px-4 py-3 text-sm font-medium text-gray-800">Blok A</td>
+                                    <td class="px-4 py-3 text-sm text-center text-gray-600">320</td>
+                                    <td class="px-4 py-3 text-sm text-center text-emerald-600 font-medium">280</td>
+                                    <td class="px-4 py-3 text-sm text-center text-red-500 font-medium">40</td>
+                                    <td class="px-4 py-3 text-sm text-right text-gray-600">Rp 100.000</td>
+                                    <td class="px-4 py-3 text-sm text-right font-semibold text-gray-800">Rp 28.000.000</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 text-sm font-medium text-gray-800">Blok B</td>
+                                    <td class="px-4 py-3 text-sm text-center text-gray-600">450</td>
+                                    <td class="px-4 py-3 text-sm text-center text-emerald-600 font-medium">320</td>
+                                    <td class="px-4 py-3 text-sm text-center text-red-500 font-medium">130</td>
+                                    <td class="px-4 py-3 text-sm text-right text-gray-600">Rp 150.000</td>
+                                    <td class="px-4 py-3 text-sm text-right font-semibold text-gray-800">Rp 48.000.000</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 text-sm font-medium text-gray-800">Blok C</td>
+                                    <td class="px-4 py-3 text-sm text-center text-gray-600">280</td>
+                                    <td class="px-4 py-3 text-sm text-center text-emerald-600 font-medium">180</td>
+                                    <td class="px-4 py-3 text-sm text-center text-red-500 font-medium">100</td>
+                                    <td class="px-4 py-3 text-sm text-right text-gray-600">Rp 100.000</td>
+                                    <td class="px-4 py-3 text-sm text-right font-semibold text-gray-800">Rp 18.000.000</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 text-sm font-medium text-gray-800">Blok D</td>
+                                    <td class="px-4 py-3 text-sm text-center text-gray-600">197</td>
+                                    <td class="px-4 py-3 text-sm text-center text-emerald-600 font-medium">112</td>
+                                    <td class="px-4 py-3 text-sm text-center text-red-500 font-medium">85</td>
+                                    <td class="px-4 py-3 text-sm text-right text-gray-600">Rp 200.000</td>
+                                    <td class="px-4 py-3 text-sm text-right font-semibold text-gray-800">Rp 22.400.000</td>
+                                </tr>
+                            </tbody>
+                            <tfoot class="bg-gray-50 font-semibold">
+                                <tr>
+                                    <td class="px-4 py-3 text-sm text-gray-800">TOTAL</td>
+                                    <td class="px-4 py-3 text-sm text-center text-gray-800">1.247</td>
+                                    <td class="px-4 py-3 text-sm text-center text-emerald-600">892</td>
+                                    <td class="px-4 py-3 text-sm text-center text-red-500">355</td>
+                                    <td class="px-4 py-3 text-sm text-right text-gray-600">-</td>
+                                    <td class="px-4 py-3 text-sm text-right text-amber-600">Rp 116.400.000</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Data dummy untuk simulasi
+        const dataLaporan = {
+            2022: { sudah: 1100, belum: 85, baru: 32, pendapatan: "Rp 125.5jt", makamBaru: 32 },
+            2023: { sudah: 1050, belum: 135, baru: 28, pendapatan: "Rp 118.2jt", makamBaru: 28 },
+            2024: { sudah: 980, belum: 210, baru: 38, pendapatan: "Rp 98.5jt", makamBaru: 38 },
+            2025: { sudah: 892, belum: 355, baru: 45, pendapatan: "Rp 89.2jt", makamBaru: 45 },
+            2026: { sudah: 420, belum: 827, baru: 12, pendapatan: "Rp 42.1jt", makamBaru: 12 }
+        };
+
+        function updateLaporan() {
+            const tahun = document.getElementById('tahunSelect').value;
+            const data = dataLaporan[tahun];
+            
+            // Update statistik
+            document.getElementById('statSudahBayar').textContent = data.sudah;
+            document.getElementById('statBelumBayar').textContent = data.belum;
+            document.getElementById('statMakamBaru').textContent = data.baru;
+            document.getElementById('statPendapatan').textContent = data.pendapatan;
+            document.getElementById('labelTahun').textContent = tahun;
+            document.getElementById('makamBaruCount').textContent = data.makamBaru;
+            
+            // Update label tahun di semua elemen
+            document.querySelectorAll('.tahun-label').forEach(el => {
+                el.textContent = tahun;
+            });
+            
+            // Update persentase
+            const total = data.sudah + data.belum;
+            const pctSudah = ((data.sudah / total) * 100).toFixed(1);
+            const pctBelum = ((data.belum / total) * 100).toFixed(1);
+            document.getElementById('pctSudah').textContent = pctSudah + '%';
+            document.getElementById('pctBelum').textContent = pctBelum + '%';
+        }
+    </script>
+</body>
+</html>
