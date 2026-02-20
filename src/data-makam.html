@@ -12,8 +12,42 @@
         .scrollbar-thin::-webkit-scrollbar-track { background: #f1f5f9; }
         .scrollbar-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Force white background for all form elements */
+        input, select, textarea {
+            background-color: white !important;
+            color: #1f2937 !important;
+        }
+        
+        input[readonly], input:disabled {
+            background-color: #f3f4f6 !important;
+        }
+        
+        /* Select specific styling */
+        select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
+            background-repeat: no-repeat !important;
+            background-position: right 0.5rem center !important;
+            background-size: 1.5em 1.5em !important;
+            padding-right: 2.5rem !important;
+        }
+        
+        select option {
+            background-color: white !important;
+            color: #1f2937 !important;
+        }
+        
+        /* Date input calendar icon styling */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(0.4);
+            cursor: pointer;
+        }
     </style>
     <script type="module" src="/main.js"></script>
+    <script type="module" src="/data-makam.js"></script>
 </head>
 <body class="bg-gray-50 text-gray-800">
 
@@ -119,7 +153,7 @@
                                 class="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-emerald-500">
                         </div>
                     </div>
-                    <button onclick="openModal()" class="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg flex items-center gap-2 transition-colors">
+                    <button onclick="openModal()" class="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg flex items-center gap-2 transition-colors" id="btnTambahData">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                         </svg>
@@ -396,16 +430,22 @@
                         <div class="space-y-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Nama Lengkap <span class="text-red-500">*</span></label>
-                                <input type="text" id="tambahNama" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Masukkan nama almarhum">
+                                <input type="text" id="tambahNama" class="w-full h-11 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder="Masukkan nama almarhum">
                             </div>
-                            <div class="grid grid-cols-2 gap-4">
+                            <div class="grid grid-cols-3 gap-4">
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Nomor Blok Makam <span class="text-red-500">*</span></label>
-                                    <input type="text" id="tambahBlok" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Contoh: A-12">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Blok <span class="text-red-500">*</span></label>
+                                    <select id="tambahBlockSelect" class="w-full h-11 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                                        <option value="">Pilih Blok</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Nomor Makam <span class="text-red-500">*</span></label>
+                                    <input type="text" id="tambahNomor" class="w-full h-11 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder="Contoh: 12, 05A">
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Tanggal Wafat <span class="text-red-500">*</span></label>
-                                    <input type="date" id="tambahTanggal" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                                    <input type="date" id="tambahTanggal" class="w-full h-11 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
                                 </div>
                             </div>
                         </div>
@@ -428,16 +468,16 @@
                                 <div class="space-y-3">
                                     <div>
                                         <label class="block text-xs font-medium text-gray-600 mb-1">Nama Lengkap</label>
-                                        <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Nama ahli waris pertama">
+                                        <input type="text" class="heir-nama w-full h-9 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Nama ahli waris pertama">
                                     </div>
                                     <div class="grid grid-cols-2 gap-3">
                                         <div>
                                             <label class="block text-xs font-medium text-gray-600 mb-1">Nomor Telepon</label>
-                                            <input type="tel" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="08xxxxxxxx">
+                                            <input type="tel" class="heir-telp w-full h-9 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="08xxxxxxxx">
                                         </div>
                                         <div>
                                             <label class="block text-xs font-medium text-gray-600 mb-1">Hubungan</label>
-                                            <select class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm appearance-none cursor-pointer" style="background-image: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 fill=%22none%22 viewBox=%220 0 24 24%22 stroke=%22%236b7280%22><path stroke-linecap=%22round%22 stroke-linejoin=%22round%22 stroke-width=%222%22 d=%22M19 9l-7 7-7-7%22/></svg>'); background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1em 1em; padding-right: 2rem;">
+                                            <select class="heir-hubungan w-full h-9 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs">
                                                 <option value="">Pilih</option>
                                                 <option value="anak">Anak</option>
                                                 <option value="istri">Istri</option>
@@ -450,7 +490,7 @@
                                     </div>
                                     <div>
                                         <label class="block text-xs font-medium text-gray-600 mb-1">Alamat Lengkap</label>
-                                        <textarea rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Alamat lengkap ahli waris"></textarea>
+                                        <textarea class="heir-alamat w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" rows="2" placeholder="Alamat lengkap ahli waris"></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -476,7 +516,7 @@
 
                 <div class="px-6 py-4 border-t border-gray-200 flex gap-3">
                     <button onclick="closeModal()" class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors">Batal</button>
-                    <button class="flex-1 px-4 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors">Simpan Data</button>
+                    <button onclick="simpanData()" class="flex-1 px-4 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors">Simpan Data</button>
                 </div>
             </div>
         </div>
@@ -503,16 +543,22 @@
                         <div class="space-y-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Nama Lengkap <span class="text-red-500">*</span></label>
-                                <input type="text" id="editNama" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Masukkan nama almarhum">
+                                <input type="text" id="editNama" class="w-full h-11 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Masukkan nama almarhum">
                             </div>
-                            <div class="grid grid-cols-2 gap-4">
+                            <div class="grid grid-cols-3 gap-4">
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Nomor Blok Makam <span class="text-red-500">*</span></label>
-                                    <input type="text" id="editBlok" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Contoh: A-12">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Blok <span class="text-red-500">*</span></label>
+                                    <select id="editBlockSelect" class="w-full h-11 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                                        <option value="">Pilih Blok</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Nomor Makam <span class="text-red-500">*</span></label>
+                                    <input type="text" id="editNomor" class="w-full h-11 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Contoh: 12, 05A">
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Tanggal Wafat <span class="text-red-500">*</span></label>
-                                    <input type="date" id="editTanggal" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <input type="date" id="editTanggal" class="w-full h-11 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
                                 </div>
                             </div>
                         </div>
@@ -596,311 +642,13 @@
     </div>
 
     <script>
-        // Variables for Add Modal
-        let jumlahAhliWaris = 1;
-        const maxAhliWaris = 3;
-
-        // Variables for Edit Modal
-        let jumlahAhliWarisEdit = 1;
-        let currentDeleteName = '';
-
-        // Add Modal Functions
-        function openModal() {
-            const modal = document.getElementById('inputModal');
-            const panel = document.getElementById('modalPanel');
-            modal.classList.remove('hidden');
-            setTimeout(() => panel.classList.remove('translate-x-full'), 10);
-        }
-
-        function closeModal() {
-            const modal = document.getElementById('inputModal');
-            const panel = document.getElementById('modalPanel');
-            panel.classList.add('translate-x-full');
-            setTimeout(() => modal.classList.add('hidden'), 300);
-            resetAhliWaris();
-        }
-
-        function resetAhliWaris() {
-            const container = document.getElementById('ahliWarisContainer');
-            container.innerHTML = `
-                <div class="p-4 bg-blue-50 rounded-xl border border-blue-100">
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="text-sm font-semibold text-blue-800">Ahli Waris #1</span>
-                        <span class="text-xs bg-blue-200 text-blue-800 px-2 py-0.5 rounded">Wajib</span>
-                    </div>
-                    <div class="space-y-3">
-                        <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Nama Lengkap</label>
-                            <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Nama ahli waris pertama">
-                        </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Nomor Telepon</label>
-                                <input type="tel" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="08xxxxxxxx">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Hubungan</label>
-                                <select class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm appearance-none cursor-pointer" style="background-image: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 fill=%22none%22 viewBox=%220 0 24 24%22 stroke=%22%236b7280%22><path stroke-linecap=%22round%22 stroke-linejoin=%22round%22 stroke-width=%222%22 d=%22M19 9l-7 7-7-7%22/></svg>'); background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1em 1em; padding-right: 2rem;">
-                                    <option value="">Pilih</option>
-                                    <option value="anak">Anak</option>
-                                    <option value="istri">Istri</option>
-                                    <option value="suami">Suami</option>
-                                    <option value="cucu">Cucu</option>
-                                    <option value="saudara">Saudara</option>
-                                    <option value="lainnya">Lainnya</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Alamat Lengkap</label>
-                            <textarea rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Alamat lengkap ahli waris"></textarea>
-                        </div>
-                    </div>
-                </div>
-            `;
-            jumlahAhliWaris = 1;
-            updateTombolWaris();
-        }
-
-        function tambahAhliWaris() {
-            if (jumlahAhliWaris >= maxAhliWaris) return;
-            
-            jumlahAhliWaris++;
-            const container = document.getElementById('ahliWarisContainer');
-            const newWaris = document.createElement('div');
-            newWaris.className = 'p-4 bg-blue-50 rounded-xl border border-blue-100';
-            newWaris.innerHTML = `
-                <div class="flex items-center justify-between mb-3">
-                    <span class="text-sm font-semibold text-blue-800">Ahli Waris #${jumlahAhliWaris}</span>
-                    <span class="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">Opsional</span>
-                </div>
-                <div class="space-y-3">
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">Nama Lengkap</label>
-                        <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Nama ahli waris ke-${jumlahAhliWaris}">
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Nomor Telepon</label>
-                            <input type="tel" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="08xxxxxxxx">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Hubungan</label>
-                            <select class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm appearance-none cursor-pointer" style="background-image: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 fill=%22none%22 viewBox=%220 0 24 24%22 stroke=%22%236b7280%22><path stroke-linecap=%22round%22 stroke-linejoin=%22round%22 stroke-width=%222%22 d=%22M19 9l-7 7-7-7%22/></svg>'); background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1em 1em; padding-right: 2rem;">
-                                <option value="">Pilih</option>
-                                <option value="anak">Anak</option>
-                                <option value="istri">Istri</option>
-                                <option value="suami">Suami</option>
-                                <option value="cucu">Cucu</option>
-                                <option value="saudara">Saudara</option>
-                                <option value="lainnya">Lainnya</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">Alamat Lengkap</label>
-                        <textarea rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Alamat lengkap ahli waris"></textarea>
-                    </div>
-                </div>
-            `;
-            container.appendChild(newWaris);
-            updateTombolWaris();
-        }
-
-        function hapusAhliWarisTerakhir() {
-            if (jumlahAhliWaris <= 1) return;
-            
-            const container = document.getElementById('ahliWarisContainer');
-            container.removeChild(container.lastElementChild);
-            jumlahAhliWaris--;
-            updateTombolWaris();
-        }
-
-        function updateTombolWaris() {
-            const btnTambah = document.getElementById('btnTambahWaris');
-            const btnHapus = document.getElementById('btnHapusWaris');
-            
-            if (jumlahAhliWaris >= maxAhliWaris) {
-                btnTambah.classList.add('opacity-50', 'cursor-not-allowed');
-            } else {
-                btnTambah.classList.remove('opacity-50', 'cursor-not-allowed');
-            }
-            
-            if (jumlahAhliWaris > 1) {
-                btnHapus.classList.remove('hidden');
-            } else {
-                btnHapus.classList.add('hidden');
-            }
-        }
-
-        // Edit Modal Functions
-        function openEditModal(nama, blok, tanggal, ahliWarisData) {
-            document.getElementById('editNama').value = nama;
-            document.getElementById('editBlok').value = blok;
-            document.getElementById('editTanggal').value = tanggal;
-
-            // Populate ahli waris
-            const container = document.getElementById('editAhliWarisContainer');
-            container.innerHTML = '';
-            jumlahAhliWarisEdit = ahliWarisData.length;
-
-            ahliWarisData.forEach((ahli, index) => {
-                const isWajib = index === 0;
-                const warisEl = document.createElement('div');
-                warisEl.className = 'p-4 bg-blue-50 rounded-xl border border-blue-100';
-                warisEl.innerHTML = `
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="text-sm font-semibold text-blue-800">Ahli Waris #${index + 1}</span>
-                        <span class="text-xs ${isWajib ? 'bg-blue-200 text-blue-800' : 'bg-gray-200 text-gray-600'} px-2 py-0.5 rounded">${isWajib ? 'Wajib' : 'Opsional'}</span>
-                    </div>
-                    <div class="space-y-3">
-                        <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Nama Lengkap</label>
-                            <input type="text" value="${ahli.nama}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Nama ahli waris">
-                        </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Nomor Telepon</label>
-                                <input type="tel" value="${ahli.telp}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="08xxxxxxxx">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Hubungan</label>
-                                <select class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm appearance-none cursor-pointer" style="background-image: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 fill=%22none%22 viewBox=%220 0 24 24%22 stroke=%22%236b7280%22><path stroke-linecap=%22round%22 stroke-linejoin=%22round%22 stroke-width=%222%22 d=%22M19 9l-7 7-7-7%22/></svg>'); background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1em 1em; padding-right: 2rem;">
-                                    <option value="">Pilih</option>
-                                    <option value="anak" ${ahli.hub === 'anak' ? 'selected' : ''}>Anak</option>
-                                    <option value="istri" ${ahli.hub === 'istri' ? 'selected' : ''}>Istri</option>
-                                    <option value="suami" ${ahli.hub === 'suami' ? 'selected' : ''}>Suami</option>
-                                    <option value="cucu" ${ahli.hub === 'cucu' ? 'selected' : ''}>Cucu</option>
-                                    <option value="saudara" ${ahli.hub === 'saudara' ? 'selected' : ''}>Saudara</option>
-                                    <option value="lainnya" ${ahli.hub === 'lainnya' ? 'selected' : ''}>Lainnya</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Alamat Lengkap</label>
-                            <textarea rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Alamat lengkap ahli waris"></textarea>
-                        </div>
-                    </div>
-                `;
-                container.appendChild(warisEl);
-            });
-
-            updateTombolWarisEdit();
-
-            const modal = document.getElementById('editModal');
-            const panel = document.getElementById('editModalPanel');
-            modal.classList.remove('hidden');
-            setTimeout(() => panel.classList.remove('translate-x-full'), 10);
-        }
-
-        function closeEditModal() {
-            const modal = document.getElementById('editModal');
-            const panel = document.getElementById('editModalPanel');
-            panel.classList.add('translate-x-full');
-            setTimeout(() => modal.classList.add('hidden'), 300);
-        }
-
-        function tambahAhliWarisEdit() {
-            if (jumlahAhliWarisEdit >= maxAhliWaris) return;
-            
-            jumlahAhliWarisEdit++;
-            const container = document.getElementById('editAhliWarisContainer');
-            const newWaris = document.createElement('div');
-            newWaris.className = 'p-4 bg-blue-50 rounded-xl border border-blue-100';
-            newWaris.innerHTML = `
-                <div class="flex items-center justify-between mb-3">
-                    <span class="text-sm font-semibold text-blue-800">Ahli Waris #${jumlahAhliWarisEdit}</span>
-                    <span class="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">Opsional</span>
-                </div>
-                <div class="space-y-3">
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">Nama Lengkap</label>
-                        <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Nama ahli waris ke-${jumlahAhliWarisEdit}">
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Nomor Telepon</label>
-                            <input type="tel" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="08xxxxxxxx">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Hubungan</label>
-                            <select class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm appearance-none cursor-pointer" style="background-image: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 fill=%22none%22 viewBox=%220 0 24 24%22 stroke=%22%236b7280%22><path stroke-linecap=%22round%22 stroke-linejoin=%22round%22 stroke-width=%222%22 d=%22M19 9l-7 7-7-7%22/></svg>'); background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1em 1em; padding-right: 2rem;">
-                                <option value="">Pilih</option>
-                                <option value="anak">Anak</option>
-                                <option value="istri">Istri</option>
-                                <option value="suami">Suami</option>
-                                <option value="cucu">Cucu</option>
-                                <option value="saudara">Saudara</option>
-                                <option value="lainnya">Lainnya</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">Alamat Lengkap</label>
-                        <textarea rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Alamat lengkap ahli waris"></textarea>
-                    </div>
-                </div>
-            `;
-            container.appendChild(newWaris);
-            updateTombolWarisEdit();
-        }
-
-        function hapusAhliWarisTerakhirEdit() {
-            if (jumlahAhliWarisEdit <= 1) return;
-            
-            const container = document.getElementById('editAhliWarisContainer');
-            container.removeChild(container.lastElementChild);
-            jumlahAhliWarisEdit--;
-            updateTombolWarisEdit();
-        }
-
-        function updateTombolWarisEdit() {
-            const btnTambah = document.getElementById('btnTambahWarisEdit');
-            const btnHapus = document.getElementById('btnHapusWarisEdit');
-            
-            if (jumlahAhliWarisEdit >= maxAhliWaris) {
-                btnTambah.classList.add('opacity-50', 'cursor-not-allowed');
-            } else {
-                btnTambah.classList.remove('opacity-50', 'cursor-not-allowed');
-            }
-            
-            if (jumlahAhliWarisEdit > 1) {
-                btnHapus.classList.remove('hidden');
-            } else {
-                btnHapus.classList.add('hidden');
-            }
-        }
-
-        function simpanEdit() {
-            closeEditModal();
-            setTimeout(() => {
-                document.getElementById('suksesMessage').textContent = 'Data berhasil diperbarui.';
-                document.getElementById('modalSukses').classList.remove('hidden');
-            }, 300);
-        }
-
-        // Delete Modal Functions
-        function openDeleteModal(nama) {
-            currentDeleteName = nama;
-            document.getElementById('deleteNama').textContent = nama;
-            document.getElementById('deleteModal').classList.remove('hidden');
-        }
-
-        function closeDeleteModal() {
-            document.getElementById('deleteModal').classList.add('hidden');
-        }
-
-        function confirmDelete() {
-            closeDeleteModal();
-            setTimeout(() => {
-                document.getElementById('suksesMessage').textContent = `Data ${currentDeleteName} berhasil dihapus.`;
-                document.getElementById('modalSukses').classList.remove('hidden');
-            }, 300);
-        }
-
+        // Fungsi untuk modal sukses
         function closeSuksesModal() {
             document.getElementById('modalSukses').classList.add('hidden');
         }
+        
+        // Expose function to global scope
+        window.closeSuksesModal = closeSuksesModal;
     </script>
 </body>
 </html>
