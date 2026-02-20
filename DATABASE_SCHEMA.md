@@ -1,16 +1,20 @@
-# 📊 Database Schema - Astana (Grave Management System)
+# 📊 Database Schema - Astana
 
-English documentation for Astana SQLite database structure.
+Dokumentasi lengkap skema database SQLite untuk Astana (Grave Management System).
 
-## 📁 Database File Location
+---
 
-| Platform | Location |
-|----------|----------|
+## 📁 Lokasi Database
+
+| Platform | Path |
+|----------|------|
 | Windows | `%LOCALAPPDATA%\com.perogeremmer.astana\astana.db` |
 | macOS | `~/Library/Application Support/com.perogeremmer.astana/astana.db` |
 | Linux | `~/.local/share/com.perogeremmer.astana/astana.db` |
 
-## 📋 Table List
+---
+
+## 📋 Entity Relationship Diagram
 
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
@@ -19,14 +23,14 @@ English documentation for Astana SQLite database structure.
 │ PK id           │     │ PK id           │     │ PK id           │
 │ UK code         │     │ FK block_id     │     │ FK grave_id     │
 │    description  │     │    deceased_name│     │    order_number │
-│    total_capacity│    │    grave_number │     │    full_name    │
+│    total_capacity│    │    number       │     │    full_name    │
 │    annual_fee   │     │    date_of_death│     │    phone_number │
 │    status       │     │    burial_date  │     │    relationship │
-│    timestamps   │     │    timestamps   │     │    address      │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-         ▲                      ▲
-         │                      │
-         │              ┌─────────────────┐
+│    timestamps   │     │    notes        │     │    address      │
+└─────────────────┘     │    timestamps   │     │    is_primary   │
+         ▲              └───────┬─────────┘     │    timestamps   │
+         │                      │               └─────────────────┘
+         │              ┌───────┴─────────┐
          │              │    payments     │
          │              ├─────────────────┤
          └──────────────│ FK grave_id     │
@@ -34,6 +38,8 @@ English documentation for Astana SQLite database structure.
                         │    payment_date │
                         │    amount       │
                         │    payment_proof│
+                        │    paid_by      │
+                        │    timestamps   │
                         └─────────────────┘
 
 ┌─────────────────┐
@@ -52,26 +58,22 @@ English documentation for Astana SQLite database structure.
 
 ---
 
-## 🏛️ Table: `blocks`
+## 🏛️ Tabel: `blocks`
 
-Stores grave block data and annual fee rates.
+Menyimpan data blok makam dan tarif iuran tahunan.
 
-| Column | Type | Constraint | Description |
-|--------|------|------------|-------------|
-| `id` | INTEGER | PK, AUTOINCREMENT | Unique ID |
-| `code` | TEXT | NOT NULL, UNIQUE | Block code (A, B, C, D, E, ...) |
-| `description` | TEXT | - | Location/facility description |
-| `total_capacity` | INTEGER | NOT NULL, DEFAULT 0 | Maximum graves in block |
-| `annual_fee` | INTEGER | NOT NULL, DEFAULT 0 | Annual fee per grave (Rupiah) |
+| Kolom | Tipe | Constraint | Deskripsi |
+|-------|------|------------|-----------|
+| `id` | INTEGER | PK, AUTOINCREMENT | ID unik |
+| `code` | TEXT | NOT NULL, UNIQUE | Kode blok (A, B, C, ...) |
+| `description` | TEXT | - | Deskripsi lokasi/fasilitas |
+| `total_capacity` | INTEGER | NOT NULL, DEFAULT 0 | Jumlah maksimal makam |
+| `annual_fee` | INTEGER | NOT NULL, DEFAULT 0 | Iuran tahunan per makam (Rp) |
 | `status` | TEXT | NOT NULL, DEFAULT 'active' | active/inactive |
-| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Creation time |
-| `updated_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Update time |
+| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Waktu dibuat |
+| `updated_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Waktu diupdate |
 
-### Default Data
-
-Tidak ada data default. Blok ditambahkan melalui aplikasi.
-
-### Example Queries
+### Contoh Query
 
 ```sql
 -- Get all active blocks
@@ -91,31 +93,30 @@ GROUP BY b.id;
 
 ---
 
-## ⚰️ Table: `graves`
+## ⚰️ Tabel: `graves`
 
-Stores deceased person data.
+Menyimpan data almarhum.
 
-| Column | Type | Constraint | Description |
-|--------|------|------------|-------------|
-| `id` | INTEGER | PK, AUTOINCREMENT | Unique ID |
-| `deceased_name` | TEXT | NOT NULL | Full name of deceased |
-| `block_id` | INTEGER | NOT NULL, FK → blocks(id) | Reference to block |
-| `number` | TEXT | NOT NULL | Grave number (12, 05A, etc.) |
-| `date_of_death` | DATE | NOT NULL | Date of death (YYYY-MM-DD) |
-| `burial_date` | DATE | - | Burial date |
-| `burial_date` | DATE | - | Burial date |
-| `notes` | TEXT | - | Additional notes |
-| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Creation time |
-| `updated_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Update time |
+| Kolom | Tipe | Constraint | Deskripsi |
+|-------|------|------------|-----------|
+| `id` | INTEGER | PK, AUTOINCREMENT | ID unik |
+| `deceased_name` | TEXT | NOT NULL | Nama lengkap almarhum |
+| `block_id` | INTEGER | NOT NULL, FK → blocks(id) | Referensi ke blok |
+| `number` | TEXT | NOT NULL | Nomor makam (12, 05A, ...) |
+| `date_of_death` | DATE | NOT NULL | Tanggal wafat (YYYY-MM-DD) |
+| `burial_date` | DATE | - | Tanggal dimakamkan |
+| `notes` | TEXT | - | Catatan tambahan |
+| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Waktu dibuat |
+| `updated_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Waktu diupdate |
 
 ### Constraints
 
-- **UNIQUE(block_id, grave_number)**: No duplicate grave numbers in one block
+- **UNIQUE(block_id, number)**: Tidak boleh ada nomor makam duplikat dalam satu blok
 
-### Example Queries
+### Contoh Query
 
 ```sql
--- Search deceased by name
+-- Search by name
 SELECT * FROM graves WHERE deceased_name LIKE '%Ahmad%';
 
 -- Get graves with block info
@@ -123,45 +124,38 @@ SELECT
     g.id,
     g.deceased_name,
     g.number,
-    b.code,
+    b.code as block_code,
     g.date_of_death
 FROM graves g
 JOIN blocks b ON g.block_id = b.id
 ORDER BY b.code, g.number;
-
--- Search by date range (using date_of_death index)
-SELECT * FROM graves 
-WHERE date_of_death BETWEEN '2020-01-01' AND '2020-12-31';
-
--- Search by grave number (using number index)
-SELECT * FROM graves WHERE number = '12A';
 ```
 
 ---
 
-## 👨‍👩‍👧 Table: `heirs`
+## 👨‍👩‍👧 Tabel: `heirs`
 
-Stores heir data (1-3 persons per grave).
+Menyimpan data ahli waris (1-3 orang per makam).
 
-| Column | Type | Constraint | Description |
-|--------|------|------------|-------------|
-| `id` | INTEGER | PK, AUTOINCREMENT | Unique ID |
-| `grave_id` | INTEGER | NOT NULL, FK → graves(id) | Reference to grave |
-| `order_number` | INTEGER | NOT NULL, DEFAULT 1 | Heir order (1, 2, 3) |
-| `full_name` | TEXT | NOT NULL | Full name of heir |
-| `phone_number` | TEXT | - | Phone/WhatsApp number |
+| Kolom | Tipe | Constraint | Deskripsi |
+|-------|------|------------|-----------|
+| `id` | INTEGER | PK, AUTOINCREMENT | ID unik |
+| `grave_id` | INTEGER | NOT NULL, FK → graves(id) | Referensi ke makam |
+| `order_number` | INTEGER | NOT NULL, DEFAULT 1 | Urutan (1, 2, 3) |
+| `full_name` | TEXT | NOT NULL | Nama lengkap ahli waris |
+| `phone_number` | TEXT | - | Nomor telepon/WhatsApp |
 | `relationship` | TEXT | - | child, spouse, grandchild, sibling, other |
-| `address` | TEXT | - | Full address |
-| `is_primary` | BOOLEAN | DEFAULT 0 | 1 = primary heir |
-| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Creation time |
-| `updated_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Update time |
+| `address` | TEXT | - | Alamat lengkap |
+| `is_primary` | BOOLEAN | DEFAULT 0 | 1 = ahli waris utama |
+| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Waktu dibuat |
+| `updated_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Waktu diupdate |
 
 ### Constraints
 
-- **UNIQUE(grave_id, order_number)**: Max 1 heir per order per grave
-- **ON DELETE CASCADE**: Delete heirs when grave is deleted
+- **UNIQUE(grave_id, order_number)**: Maksimal 1 ahli waris per urutan
+- **ON DELETE CASCADE**: Hapus ahli waris saat makam dihapus
 
-### Example Queries
+### Contoh Query
 
 ```sql
 -- Get heirs for a grave
@@ -176,7 +170,7 @@ WHERE g.id = 1
 ORDER BY h.order_number;
 
 -- Search graves by heir name
-SELECT DISTINCT g.*, b.block_code
+SELECT DISTINCT g.*, b.code as block_code
 FROM graves g
 JOIN heirs h ON g.id = h.grave_id
 JOIN blocks b ON g.block_id = b.id
@@ -185,29 +179,29 @@ WHERE h.full_name LIKE '%Budi%';
 
 ---
 
-## 💰 Table: `payments`
+## 💰 Tabel: `payments`
 
-Stores annual fee payment history.
+Menyimpan historis pembayaran iuran tahunan.
 
-| Column | Type | Constraint | Description |
-|--------|------|------------|-------------|
-| `id` | INTEGER | PK, AUTOINCREMENT | Unique ID |
-| `grave_id` | INTEGER | NOT NULL, FK → graves(id) | Reference to grave |
-| `year` | INTEGER | NOT NULL | Payment year (2022, 2023, ...) |
-| `payment_date` | DATE | NOT NULL | Payment date |
-| `amount` | INTEGER | NOT NULL | Payment amount |
+| Kolom | Tipe | Constraint | Deskripsi |
+|-------|------|------------|-----------|
+| `id` | INTEGER | PK, AUTOINCREMENT | ID unik |
+| `grave_id` | INTEGER | NOT NULL, FK → graves(id) | Referensi ke makam |
+| `year` | INTEGER | NOT NULL | Tahun pembayaran |
+| `payment_date` | DATE | NOT NULL | Tanggal pembayaran |
+| `amount` | INTEGER | NOT NULL | Jumlah pembayaran |
 | `payment_method` | TEXT | DEFAULT 'cash' | cash, transfer, qris, etc. |
-| `payment_proof` | TEXT | - | Path to payment proof file |
-| `paid_by` | TEXT | - | Name of payer |
-| `notes` | TEXT | - | Payment notes |
-| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Creation time |
-| `updated_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Update time |
+| `payment_proof` | TEXT | - | Path file bukti pembayaran |
+| `paid_by` | TEXT | - | Nama pembayar (jika beda dari ahli waris) |
+| `notes` | TEXT | - | Catatan pembayaran |
+| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Waktu dibuat |
+| `updated_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Waktu diupdate |
 
 ### Constraints
 
-- **UNIQUE(grave_id, year)**: One payment per year per grave
+- **UNIQUE(grave_id, year)**: Satu pembayaran per tahun per makam
 
-### Example Queries
+### Contoh Query
 
 ```sql
 -- Check payment status by year
@@ -230,51 +224,29 @@ SELECT
 FROM payments
 GROUP BY year
 ORDER BY year DESC;
-
--- Payments in date range (using payment_date index)
-SELECT * FROM payments 
-WHERE payment_date BETWEEN '2024-01-01' AND '2024-01-31';
-
--- Overdue payments
-SELECT 
-    g.deceased_name,
-    b.code,
-    b.annual_fee * (2026 - 2022 + 1 - COUNT(p.id)) as total_arrears
-FROM graves g
-JOIN blocks b ON g.block_id = b.id
-LEFT JOIN payments p ON g.id = p.grave_id 
-    AND p.year BETWEEN 2022 AND 2026
-GROUP BY g.id
-HAVING total_arrears > 0;
 ```
 
 ---
 
-## ⚙️ Table: `settings`
+## ⚙️ Tabel: `settings`
 
-Stores application configuration (single row table).
+Menyimpan konfigurasi aplikasi (single row table).
 
-| Column | Type | Constraint | Description |
-|--------|------|------------|-------------|
+| Kolom | Tipe | Constraint | Deskripsi |
+|-------|------|------------|-----------|
 | `id` | INTEGER | PK, CHECK (id = 1) | Fixed ID = 1 |
-| `foundation_name` | TEXT | NOT NULL, DEFAULT | Foundation/graveyard name |
-| `address` | TEXT | - | Full address |
-| `phone` | TEXT | - | Phone number |
-| `email` | TEXT | - | Foundation email |
-| `logo_path` | TEXT | - | Logo file path |
-| `active_year` | INTEGER | DEFAULT CURRENT_YEAR | Active application year |
-| `last_backup` | TIMESTAMP | - | Last backup time |
+| `foundation_name` | TEXT | NOT NULL, DEFAULT | Nama yayasan/makam |
+| `address` | TEXT | - | Alamat lengkap |
+| `phone` | TEXT | - | Nomor telepon |
+| `email` | TEXT | - | Email yayasan |
+| `logo_path` | TEXT | - | Path file logo |
+| `active_year` | INTEGER | DEFAULT CURRENT_YEAR | Tahun aktif aplikasi |
+| `last_backup` | TIMESTAMP | - | Waktu backup terakhir |
 | `auto_backup` | INTEGER | DEFAULT 1 | 0=off, 1=on |
-| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Creation time |
-| `updated_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Update time |
+| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Waktu dibuat |
+| `updated_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Waktu diupdate |
 
-### Default Data
-
-| id | foundation_name | address | phone | active_year |
-|----|-----------------|---------|-------|-------------|
-| 1 | Yayasan Wakaf Makam Al-Ikhlas | Jl. Raya Cipaku No. 123, Bandung City | (022) 1234567 | 2026 |
-
-### Example Queries
+### Contoh Query
 
 ```sql
 -- Get settings
@@ -282,30 +254,21 @@ SELECT * FROM settings WHERE id = 1;
 
 -- Update active year
 UPDATE settings SET active_year = 2027 WHERE id = 1;
-
--- Update last backup
-UPDATE settings SET last_backup = CURRENT_TIMESTAMP WHERE id = 1;
 ```
 
 ---
 
 ## 🔍 Indexes
 
-Indexes created for query optimization:
+Index yang dibuat untuk optimasi query:
 
 ```sql
 -- Grave indexes
 CREATE INDEX idx_graves_block_id ON graves(block_id);
 CREATE INDEX idx_graves_deceased_name ON graves(deceased_name);
-
--- Grave number index (for faster lookup)
 CREATE INDEX idx_graves_number ON graves(number);
-
--- Date indexes (for date range queries and reports)
 CREATE INDEX idx_graves_date_of_death ON graves(date_of_death);
 CREATE INDEX idx_graves_burial_date ON graves(burial_date);
-
--- Composite index for block + grave number searches
 CREATE INDEX idx_graves_block_number ON graves(block_id, number);
 
 -- Heir indexes
@@ -317,107 +280,25 @@ CREATE INDEX idx_heirs_phone ON heirs(phone_number);
 CREATE INDEX idx_payments_grave_id ON payments(grave_id);
 CREATE INDEX idx_payments_year ON payments(year);
 CREATE INDEX idx_payments_grave_year ON payments(grave_id, year);
-
--- Payment date index (for date range queries)
 CREATE INDEX idx_payments_payment_date ON payments(payment_date);
-
--- Composite index for year + payment date (for annual reports)
 CREATE INDEX idx_payments_year_date ON payments(year, payment_date);
-```
-
-### Index Usage Examples
-
-```sql
--- Uses: idx_graves_date_of_death
-SELECT * FROM graves 
-WHERE date_of_death BETWEEN '2020-01-01' AND '2020-12-31';
-
--- Uses: idx_graves_grave_number
-SELECT * FROM graves WHERE grave_number = '12A';
-
--- Uses: idx_graves_block_grave_num
-SELECT * FROM graves WHERE block_id = 1 AND grave_number = '12A';
-
--- Uses: idx_payments_payment_date
-SELECT * FROM payments 
-WHERE payment_date BETWEEN '2024-01-01' AND '2024-01-31';
-
--- Uses: idx_payments_year_date
-SELECT * FROM payments 
-WHERE year = 2024 AND payment_date >= '2024-06-01';
 ```
 
 ---
 
 ## 🔄 Triggers
 
-Auto-update timestamp when record is updated:
+Auto-update timestamp saat record diupdate:
 
 ```sql
--- Trigger for blocks table
+-- Blocks trigger
 CREATE TRIGGER update_blocks_timestamp 
 AFTER UPDATE ON blocks
 BEGIN
     UPDATE blocks SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
 END;
-```
 
-(Similar triggers exist for: graves, heirs, payments, settings tables)
-
----
-
-## 📈 Views (Recommended)
-
-Some complex queries that can be created as VIEW:
-
-### View: `v_payment_status`
-```sql
-CREATE VIEW v_payment_status AS
-SELECT 
-    g.id as grave_id,
-    g.deceased_name,
-    b.block_code,
-    b.annual_fee,
-    strftime('%Y', 'now') as current_year,
-    CASE WHEN p.id IS NOT NULL THEN 1 ELSE 0 END as is_paid
-FROM graves g
-JOIN blocks b ON g.block_id = b.id
-LEFT JOIN payments p ON g.id = p.grave_id 
-    AND p.year = CAST(strftime('%Y', 'now') AS INTEGER);
-```
-
-### View: `v_block_summary`
-```sql
-CREATE VIEW v_block_summary AS
-SELECT 
-    b.id,
-    b.block_code,
-    b.total_capacity,
-    COUNT(g.id) as occupied,
-    (b.total_capacity - COUNT(g.id)) as available,
-    b.annual_fee
-FROM blocks b
-LEFT JOIN graves g ON b.id = g.block_id
-GROUP BY b.id;
-```
-
-### View: `v_arrears_report`
-```sql
-CREATE VIEW v_arrears_report AS
-SELECT 
-    g.id as grave_id,
-    g.deceased_name,
-    b.block_code,
-    b.annual_fee,
-    (SELECT active_year FROM settings WHERE id = 1) - 2022 + 1 as total_years,
-    COUNT(p.id) as paid_years,
-    ((SELECT active_year FROM settings WHERE id = 1) - 2022 + 1 - COUNT(p.id)) * b.annual_fee as arrears_amount
-FROM graves g
-JOIN blocks b ON g.block_id = b.id
-LEFT JOIN payments p ON g.id = p.grave_id 
-    AND p.year BETWEEN 2022 AND (SELECT active_year FROM settings WHERE id = 1)
-GROUP BY g.id
-HAVING paid_years < total_years;
+-- Similar triggers exist for: graves, heirs, payments, settings
 ```
 
 ---
@@ -442,41 +323,9 @@ db.backup_to(PathBuf::from("backup/astana_2024.db"))?;
 
 ### Restore Database
 
-1. Close application
-2. Replace `astana.db` with backup file
-3. Reopen application
-
----
-
-## 📋 ERD (Entity Relationship Diagram)
-
-```
-┌──────────────┐         ┌──────────────┐
-│    blocks    │1      * │    graves    │
-├──────────────┤◄────────├──────────────┤
-│ PK id        │         │ PK id        │
-│    block_code│         │ FK block_id  │
-│    ...       │         │    deceased_name
-└──────────────┘         └──────┬───────┘
-                                │
-                     ┌──────────┴──────────┐
-                     │                     │
-              ┌──────▼──────┐       ┌──────▼──────┐
-              │    heirs    │       │   payments  │
-              ├─────────────┤       ├─────────────┤
-              │ PK id       │       │ PK id       │
-              │ FK grave_id │       │ FK grave_id │
-              │    order_number    │    year     │
-              │    full_name│       │    amount   │
-              └─────────────┘       └─────────────┘
-
-┌──────────────┐
-│   settings   │ (Single Row)
-├──────────────┤
-│ PK id (=1)   │
-│    ...       │
-└──────────────┘
-```
+1. Tutup aplikasi
+2. Ganti file `astana.db` dengan file backup
+3. Buka aplikasi kembali
 
 ---
 
@@ -491,26 +340,23 @@ db.backup_to(PathBuf::from("backup/astana_2024.db"))?;
 
 ## 📊 Performance Tips
 
-### Optimized Queries Using Indexes
+### Optimized Queries
 
 ```sql
 -- ✅ Use index: idx_graves_date_of_death
 SELECT * FROM graves 
-WHERE date_of_death >= '2020-01-01';
+WHERE date_of_death BETWEEN '2020-01-01' AND '2020-12-31';
 
--- ✅ Use index: idx_graves_grave_number
-SELECT * FROM graves WHERE grave_number = '12A';
+-- ✅ Use index: idx_graves_number
+SELECT * FROM graves WHERE number = '12A';
 
--- ✅ Use composite index: idx_graves_block_grave_num
+-- ✅ Use composite index: idx_graves_block_number
 SELECT * FROM graves 
-WHERE block_id = 1 AND grave_number = '12A';
+WHERE block_id = 1 AND number = '12A';
 
 -- ✅ Use index: idx_payments_year_date
 SELECT * FROM payments 
 WHERE year = 2024 AND payment_date >= '2024-01-01';
-
--- ✅ Use index: idx_heirs_full_name
-SELECT * FROM heirs WHERE full_name LIKE '%Budi%';
 ```
 
 ### Query Patterns to Avoid
@@ -520,9 +366,4 @@ SELECT * FROM heirs WHERE full_name LIKE '%Budi%';
 SELECT * FROM graves WHERE YEAR(date_of_death) = 2020;
 -- ✅ Better:
 SELECT * FROM graves WHERE date_of_death BETWEEN '2020-01-01' AND '2020-12-31';
-
--- ❌ Avoid: Leading wildcard on indexed column
-SELECT * FROM heirs WHERE full_name LIKE '%Budi%';
--- ✅ Better (if possible):
-SELECT * FROM heirs WHERE full_name LIKE 'Budi%';
 ```
