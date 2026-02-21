@@ -12,8 +12,44 @@
         .scrollbar-thin::-webkit-scrollbar-track { background: #f1f5f9; }
         .scrollbar-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Force white background for all form elements */
+        input, select, textarea {
+            background-color: white !important;
+            color: #1f2937 !important;
+        }
+        
+        input[readonly], input:disabled {
+            background-color: #f3f4f6 !important;
+        }
+        
+        /* Select specific styling */
+        select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E") !important;
+            background-repeat: no-repeat !important;
+            background-position: right 0.5rem center !important;
+            background-size: 1.5em 1.5em !important;
+            padding-right: 2.5rem !important;
+        }
+        
+        select option {
+            background-color: white !important;
+            color: #1f2937 !important;
+        }
+        
+        /* Date input calendar icon styling */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(0.4);
+            cursor: pointer;
+        }
     </style>
     <script type="module" src="/main.js"></script>
+    <script type="module" src="/pembayaran.js"></script>
+    <!-- SheetJS for Excel export -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </head>
 <body class="bg-gray-50 text-gray-800">
 
@@ -175,7 +211,7 @@
                             </select>
                         </div>
                         <div class="flex-1"></div>
-                        <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2 transition-colors">
+                        <button onclick="openExportExcelModal()" class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2 transition-colors">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
                             </svg>
@@ -352,6 +388,90 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- MODAL EXPORT EXCEL - PILIH TAHUN -->
+    <div id="exportExcelModal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/50" onclick="closeExportExcelModal()"></div>
+        <div class="absolute inset-0 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all" id="exportExcelPanel">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-800">Export Data Pembayaran</h3>
+                                <p class="text-sm text-gray-500">Pilih range tahun pembayaran</p>
+                            </div>
+                        </div>
+                        <button onclick="closeExportExcelModal()" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <!-- Info jumlah data -->
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-gray-600">Data yang akan diexport:</span>
+                                <span class="font-semibold text-emerald-600" id="exportDataCount">-</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Range Tahun -->
+                        <div class="space-y-3">
+                            <label class="block text-sm font-medium text-gray-700">Range Tahun Pembayaran</label>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1.5">Dari Tahun</label>
+                                    <select id="exportStartYear" class="w-full h-10 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" style="background-color: white !important; color: #1f2937 !important;">
+                                        <!-- Options will be populated by JS -->
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1.5">Sampai Tahun</label>
+                                    <select id="exportEndYear" class="w-full h-10 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" style="background-color: white !important; color: #1f2937 !important;">
+                                        <!-- Options will be populated by JS -->
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- Quick select buttons -->
+                            <div class="flex flex-wrap gap-2" id="quickSelectButtons">
+                                <button onclick="setExportRange(3)" data-range="3" class="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors quick-select-btn">3 Tahun Terakhir</button>
+                                <button onclick="setExportRange(5)" data-range="5" class="px-3 py-1.5 text-xs bg-emerald-100 text-emerald-700 hover:bg-emerald-200 rounded-lg transition-colors font-medium quick-select-btn active">5 Tahun Terakhir</button>
+                                <button onclick="setExportRange(10)" data-range="10" class="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors quick-select-btn">10 Tahun Terakhir</button>
+                                <button onclick="setExportRange('all')" data-range="all" class="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors quick-select-btn">Semua</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Preview tahun yang akan diexport -->
+                        <div class="bg-blue-50 rounded-lg p-4">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-blue-700">Tahun yang akan diexport:</span>
+                                <span class="text-sm font-semibold text-blue-800" id="previewYears">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-3 mt-6">
+                        <button onclick="closeExportExcelModal()" class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors">Batal</button>
+                        <button onclick="confirmExportExcel()" class="flex-1 px-4 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                            </svg>
+                            Export Excel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- MODAL DETAIL PEMBAYARAN -->

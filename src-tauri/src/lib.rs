@@ -117,6 +117,120 @@ async fn get_grave_by_id(
     db.get_grave_by_id(id)
 }
 
+/// Export graves data with heirs
+#[tauri::command]
+async fn export_graves(
+    app_handle: tauri::AppHandle,
+    search: Option<String>,
+    block_id: Option<i64>,
+    start_year: Option<i32>,
+    end_year: Option<i32>,
+) -> Result<ExportGravesResult, String> {
+    let db = db::Database::init(&app_handle)?;
+    
+    // Get all graves with heirs and payments
+    let graves = db.get_all_graves_with_heirs(search, block_id)?;
+    
+    // Determine year range from data if "all" is selected
+    let (actual_start_year, actual_end_year) = if start_year.is_none() || end_year.is_none() {
+        // Find min and max year from all payments
+        let mut years: Vec<i32> = Vec::new();
+        for grave in &graves {
+            for payment in &grave.payments {
+                years.push(payment.year);
+            }
+        }
+        
+        if years.is_empty() {
+            // No payments at all, use a reasonable default range
+            (2022, 2026)
+        } else {
+            years.sort_unstable();
+            years.dedup();
+            (*years.first().unwrap(), *years.last().unwrap())
+        }
+    } else {
+        (start_year.unwrap(), end_year.unwrap())
+    };
+    
+    Ok(ExportGravesResult {
+        graves,
+        start_year: actual_start_year,
+        end_year: actual_end_year,
+    })
+}
+
+/// Export result with year range info
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ExportGravesResult {
+    pub graves: Vec<db::GraveExportData>,
+    pub start_year: i32,
+    pub end_year: i32,
+}
+
+/// Save Excel file with dialog - auto open in Downloads or Documents
+#[tauri::command]
+async fn save_excel_file(
+    app_handle: tauri::AppHandle,
+    window: tauri::Window,
+    file_data: Vec<u8>,
+    default_name: String,
+) -> Result<Option<String>, String> {
+    use tauri_plugin_dialog::DialogExt;
+    use tauri::Manager;
+    
+    // Get OS type
+    let os_type = tauri_plugin_os::type_();
+    
+    // Determine default directory (Downloads > Documents > Home)
+    let default_dir: Option<std::path::PathBuf> = app_handle
+        .path()
+        .download_dir()
+        .or_else(|_| app_handle.path().document_dir())
+        .or_else(|_| app_handle.path().home_dir())
+        .ok();
+    
+    log::info!("OS detected: {}, Default save dir: {:?}", 
+        match os_type {
+            tauri_plugin_os::OsType::Windows => "Windows",
+            tauri_plugin_os::OsType::Macos => "macOS",
+            tauri_plugin_os::OsType::Linux => "Linux",
+            _ => "Other",
+        }, 
+        default_dir
+    );
+    
+    // Build dialog with starting directory
+    let file_path = if let Some(dir) = default_dir {
+        app_handle.dialog()
+            .file()
+            .set_parent(&window)
+            .set_file_name(&default_name)
+            .add_filter("Excel Files", &["xlsx"])
+            .set_directory(dir)
+            .blocking_save_file()
+    } else {
+        app_handle.dialog()
+            .file()
+            .set_parent(&window)
+            .set_file_name(&default_name)
+            .add_filter("Excel Files", &["xlsx"])
+            .blocking_save_file()
+    };
+    
+    match file_path {
+        Some(path) => {
+            // Get path as string
+            let path_str = path.to_string();
+            // Write file
+            std::fs::write(&path_str, file_data)
+                .map_err(|e| format!("Gagal menulis file: {}", e))?;
+            Ok(Some(path_str))
+        }
+        None => Ok(None), // User cancelled
+    }
+}
+
 /// Create new grave with heirs
 #[tauri::command]
 async fn create_grave_with_heirs(
@@ -251,6 +365,131 @@ pub struct GraveDetail {
     pub heirs: Vec<db::Heir>,
 }
 
+// ==================== PAYMENTS COMMANDS ====================
+
+/// Get payments by grave ID
+#[tauri::command]
+async fn get_payments_by_grave(
+    app_handle: tauri::AppHandle,
+    grave_id: i64,
+) -> Result<Vec<db::Payment>, String> {
+    let db = db::Database::init(&app_handle)?;
+    db.get_payments_by_grave(grave_id)
+}
+
+/// Get payment by grave and year
+#[tauri::command]
+async fn get_payment_by_grave_and_year(
+    app_handle: tauri::AppHandle,
+    grave_id: i64,
+    year: i32,
+) -> Result<Option<db::Payment>, String> {
+    let db = db::Database::init(&app_handle)?;
+    db.get_payment_by_grave_and_year(grave_id, year)
+}
+
+/// Create new payment
+#[tauri::command]
+async fn create_payment(
+    app_handle: tauri::AppHandle,
+    payment: db::CreatePaymentRequest,
+) -> Result<i64, String> {
+    let db = db::Database::init(&app_handle)?;
+    db.create_payment(&payment)
+}
+
+/// Update payment
+#[tauri::command]
+async fn update_payment(
+    app_handle: tauri::AppHandle,
+    id: i64,
+    payment: db::CreatePaymentRequest,
+) -> Result<(), String> {
+    let db = db::Database::init(&app_handle)?;
+    // Use create payment request as update (simplified)
+    db.create_payment(&payment)?;
+    Ok(())
+}
+
+/// Delete payment
+#[tauri::command]
+async fn delete_payment(
+    app_handle: tauri::AppHandle,
+    id: i64,
+) -> Result<(), String> {
+    let db = db::Database::init(&app_handle)?;
+    db.delete_payment(id)
+}
+
+/// Get graves with payment summary for payment page
+#[tauri::command]
+async fn get_graves_with_payment_summary(
+    app_handle: tauri::AppHandle,
+    search: Option<String>,
+    block_id: Option<i64>,
+    year: i32,
+    limit: i64,
+    offset: i64,
+) -> Result<Vec<GravePaymentSummary>, String> {
+    let db = db::Database::init(&app_handle)?;
+    
+    // Get graves
+    let graves = db.get_graves(search.clone(), block_id, limit, offset)?;
+    
+    let mut result = Vec::new();
+    for grave in graves {
+        // Get payments for this grave
+        let payments = db.get_payments_by_grave(grave.id)?;
+        
+        // Check if paid for requested year
+        let payment_for_year = payments.iter().find(|p| p.year == year).cloned();
+        
+        // Get last 5 years payment status
+        let current_year = year;
+        let mut recent_payments = Vec::new();
+        for y in (current_year - 4)..=current_year {
+            let p = payments.iter().find(|p| p.year == y);
+            recent_payments.push(YearPaymentStatus {
+                year: y,
+                is_paid: p.is_some(),
+                amount: p.map(|pay| pay.amount),
+            });
+        }
+        
+        result.push(GravePaymentSummary {
+            grave_id: grave.id,
+            deceased_name: grave.deceased_name,
+            block_code: grave.code,
+            number: grave.number,
+            annual_fee: grave.annual_fee,
+            current_year_payment: payment_for_year,
+            recent_payments,
+        });
+    }
+    
+    Ok(result)
+}
+
+/// Year payment status
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct YearPaymentStatus {
+    pub year: i32,
+    pub is_paid: bool,
+    pub amount: Option<i64>,
+}
+
+/// Grave payment summary for payment page
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct GravePaymentSummary {
+    pub grave_id: i64,
+    pub deceased_name: String,
+    pub block_code: String,
+    pub number: String,
+    pub annual_fee: i64,
+    pub current_year_payment: Option<db::Payment>,
+    pub recent_payments: Vec<YearPaymentStatus>,
+}
+
 /// Setup handler - dijalankan saat aplikasi mulai
 fn setup_handler(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     // Inisiasi database
@@ -297,6 +536,8 @@ pub fn run() {
     
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_os::init())
         .setup(setup_handler)
         .invoke_handler(tauri::generate_handler![
             greet,
@@ -318,12 +559,21 @@ pub fn run() {
             update_grave,
             delete_grave,
             get_grave_detail,
+            export_graves,
+            save_excel_file,
             // Heirs
             get_heirs_by_grave,
             create_heir,
             update_heir,
             delete_heir,
             update_grave_heirs,
+            // Payments
+            get_payments_by_grave,
+            get_payment_by_grave_and_year,
+            create_payment,
+            update_payment,
+            delete_payment,
+            get_graves_with_payment_summary,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

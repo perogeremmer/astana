@@ -46,6 +46,18 @@ function setupEventListeners() {
             await loadGraves();
         });
     }
+    
+    // Export modal year selectors
+    const startYearSelect = document.getElementById('exportStartYear');
+    const endYearSelect = document.getElementById('exportEndYear');
+    
+    if (startYearSelect) {
+        startYearSelect.addEventListener('change', updateYearPreview);
+    }
+    
+    if (endYearSelect) {
+        endYearSelect.addEventListener('change', updateYearPreview);
+    }
 }
 
 function debounce(func, wait) {
@@ -765,6 +777,388 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
 
+// ==================== EXPORT EXCEL ====================
+
+// Global variable for export range
+let exportStartYear = null;
+let exportEndYear = null;
+
+function openExportExcelModal() {
+    const modal = document.getElementById('exportExcelModal');
+    modal.classList.remove('hidden');
+    
+    // Populate year options
+    populateYearOptions();
+    
+    // Set default range (5 years back)
+    setExportRange(5);
+    
+    // Update data count
+    updateExportDataCount();
+}
+
+function closeExportExcelModal() {
+    document.getElementById('exportExcelModal').classList.add('hidden');
+}
+
+function populateYearOptions() {
+    const currentYear = new Date().getFullYear();
+    const startSelect = document.getElementById('exportStartYear');
+    const endSelect = document.getElementById('exportEndYear');
+    
+    // Clear existing options
+    startSelect.innerHTML = '';
+    endSelect.innerHTML = '';
+    
+    // Generate years from 2000 to current year + 5
+    for (let year = 2000; year <= currentYear + 5; year++) {
+        const startOption = document.createElement('option');
+        startOption.value = year;
+        startOption.textContent = year;
+        startSelect.appendChild(startOption);
+        
+        const endOption = document.createElement('option');
+        endOption.value = year;
+        endOption.textContent = year;
+        endSelect.appendChild(endOption);
+    }
+}
+
+function setExportRange(range) {
+    const currentYear = new Date().getFullYear();
+    const startYearSelect = document.getElementById('exportStartYear');
+    const endYearSelect = document.getElementById('exportEndYear');
+    const yearSelectorsDiv = startYearSelect.closest('.grid');
+    
+    if (range === 'all') {
+        // Hide year selectors when "All" is selected
+        if (yearSelectorsDiv) {
+            yearSelectorsDiv.style.display = 'none';
+        }
+        exportStartYear = null;
+        exportEndYear = null;
+    } else {
+        // Show year selectors
+        if (yearSelectorsDiv) {
+            yearSelectorsDiv.style.display = 'grid';
+        }
+        exportEndYear = currentYear;
+        exportStartYear = currentYear - range + 1;
+        
+        // Update select elements
+        startYearSelect.value = exportStartYear;
+        endYearSelect.value = exportEndYear;
+    }
+    
+    // Update active button state
+    document.querySelectorAll('.quick-select-btn').forEach(btn => {
+        btn.classList.remove('bg-emerald-100', 'text-emerald-700', 'active');
+        btn.classList.add('bg-gray-100');
+    });
+    
+    const activeBtn = document.querySelector(`button[data-range="${range}"]`);
+    if (activeBtn) {
+        activeBtn.classList.remove('bg-gray-100');
+        activeBtn.classList.add('bg-emerald-100', 'text-emerald-700', 'active');
+    }
+    
+    // Update preview
+    updateYearPreview();
+}
+
+function updateYearPreview() {
+    const startYearSelect = document.getElementById('exportStartYear');
+    const endYearSelect = document.getElementById('exportEndYear');
+    const previewElement = document.getElementById('previewYears');
+    
+    // Check if "Semua" is selected (all button has active class)
+    const allBtn = document.querySelector('button[data-range="all"]');
+    if (allBtn && allBtn.classList.contains('active')) {
+        previewElement.textContent = 'Semua Data (Otomatis berdasarkan data di database)';
+        return;
+    }
+    
+    exportStartYear = parseInt(startYearSelect.value);
+    exportEndYear = parseInt(endYearSelect.value);
+    
+    // Validate
+    if (exportStartYear > exportEndYear) {
+        exportEndYear = exportStartYear;
+        endYearSelect.value = exportEndYear;
+    }
+    
+    const yearCount = exportEndYear - exportStartYear + 1;
+    previewElement.textContent = `${exportStartYear} - ${exportEndYear} (${yearCount} tahun)`;
+}
+
+async function updateExportDataCount() {
+    try {
+        const searchInput = document.querySelector('input[type="text"][placeholder*="Cari"]');
+        const search = searchInput ? searchInput.value : '';
+        
+        const blockSelect = document.querySelector('aside + main select');
+        const blockId = blockSelect && blockSelect.value ? parseInt(blockSelect.value) : null;
+        
+        const count = await invoke('count_graves', {
+            search: search || null,
+            blockId: blockId
+        });
+        
+        document.getElementById('exportDataCount').textContent = `${count} data makam`;
+    } catch (error) {
+        document.getElementById('exportDataCount').textContent = '-';
+    }
+}
+
+async function confirmExportExcel() {
+    closeExportExcelModal();
+    await exportToExcel(exportStartYear, exportEndYear);
+}
+
+async function exportToExcel(startYear, endYear) {
+    try {
+        showLoading(true);
+        
+        // Get current filter values
+        const searchInput = document.querySelector('input[type="text"][placeholder*="Cari"]');
+        const search = searchInput ? searchInput.value : '';
+        
+        const blockSelect = document.querySelector('aside + main select');
+        const blockId = blockSelect && blockSelect.value ? parseInt(blockSelect.value) : null;
+        
+        // Check if "Semua" is selected
+        const allBtn = document.querySelector('button[data-range="all"]');
+        const isAll = allBtn && allBtn.classList.contains('active');
+        
+        // Fetch all graves with heirs for export
+        const result = await invoke('export_graves', {
+            search: search || null,
+            blockId: blockId,
+            startYear: isAll ? null : startYear,
+            endYear: isAll ? null : endYear
+        });
+        
+        const exportData = result.graves;
+        const actualStartYear = result.start_year;
+        const actualEndYear = result.end_year;
+        
+        if (exportData.length === 0) {
+            showToast('Tidak ada data untuk diexport', 'error');
+            showLoading(false);
+            return;
+        }
+        
+        // Determine years to show - use actual years from database if "all"
+        const yearsToShow = [];
+        const displayStartYear = isAll ? actualStartYear : startYear;
+        const displayEndYear = isAll ? actualEndYear : endYear;
+        
+        for (let year = displayStartYear; year <= displayEndYear; year++) {
+            yearsToShow.push(year);
+        }
+        
+        // Prepare data for Excel
+        const excelData = exportData.map((item, index) => {
+            const row = {
+                'No': index + 1,
+                'Nama Almarhum': item.deceased_name,
+                'Blok': item.block_code,
+                'Nomor Makam': item.number,
+                'Tanggal Wafat': formatDateForExport(item.date_of_death),
+                'Tanggal Pemakaman': item.burial_date ? formatDateForExport(item.burial_date) : '-',
+                'Iuran Tahunan': item.annual_fee ? formatRupiah(item.annual_fee) : '-',
+                'Catatan': item.notes || '-',
+            };
+            
+            // Add heir data (up to 3)
+            for (let i = 0; i < 3; i++) {
+                const heir = item.heirs[i];
+                const num = i + 1;
+                if (heir) {
+                    row[`Ahli Waris ${num}`] = heir.full_name;
+                    row[`No. HP ${num}`] = heir.phone_number || '-';
+                    row[`Hubungan ${num}`] = formatRelationship(heir.relationship);
+                    row[`Alamat ${num}`] = heir.address || '-';
+                } else {
+                    row[`Ahli Waris ${num}`] = '-';
+                    row[`No. HP ${num}`] = '-';
+                    row[`Hubungan ${num}`] = '-';
+                    row[`Alamat ${num}`] = '-';
+                }
+            }
+            
+            // Add payment status for each year
+            let totalPaid = 0;
+            let yearsPaid = 0;
+            
+            yearsToShow.forEach(year => {
+                const payment = item.payments.find(p => p.year === year);
+                if (payment) {
+                    row[`Status ${year}`] = `Lunas (${formatRupiah(payment.amount)})`;
+                    row[`Tgl Bayar ${year}`] = formatDateForExport(payment.payment_date);
+                    totalPaid += payment.amount;
+                    yearsPaid++;
+                } else {
+                    const isPast = year < currentYear;
+                    row[`Status ${year}`] = isPast ? 'Tunggakan' : 'Belum Jatuh Tempo';
+                    row[`Tgl Bayar ${year}`] = '-';
+                }
+            });
+            
+            // Summary columns
+            row['Total Dibayar'] = formatRupiah(totalPaid);
+            row['Jumlah Tahun Lunas'] = yearsPaid;
+            
+            return row;
+        });
+        
+        // Create workbook
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(excelData);
+        
+        // Set column widths
+        const colWidths = [
+            { wch: 5 },   // No
+            { wch: 25 },  // Nama Almarhum
+            { wch: 8 },   // Blok
+            { wch: 12 },  // Nomor Makam
+            { wch: 15 },  // Tanggal Wafat
+            { wch: 15 },  // Tanggal Pemakaman
+            { wch: 15 },  // Iuran Tahunan
+            { wch: 20 },  // Catatan
+            { wch: 20 },  // Ahli Waris 1
+            { wch: 15 },  // No. HP 1
+            { wch: 12 },  // Hubungan 1
+            { wch: 25 },  // Alamat 1
+            { wch: 20 },  // Ahli Waris 2
+            { wch: 15 },  // No. HP 2
+            { wch: 12 },  // Hubungan 2
+            { wch: 25 },  // Alamat 2
+            { wch: 20 },  // Ahli Waris 3
+            { wch: 15 },  // No. HP 3
+            { wch: 12 },  // Hubungan 3
+            { wch: 25 },  // Alamat 3
+            { wch: 20 },  // Status tahun
+            { wch: 15 },  // Tgl Bayar tahun
+            { wch: 20 },  // Status tahun
+            { wch: 15 },  // Tgl Bayar tahun
+            { wch: 20 },  // Status tahun
+            { wch: 15 },  // Tgl Bayar tahun
+            { wch: 20 },  // Status tahun
+            { wch: 15 },  // Tgl Bayar tahun
+            { wch: 15 },  // Total Dibayar
+            { wch: 10 },  // Jumlah Tahun Lunas
+        ];
+        ws['!cols'] = colWidths;
+        
+        // Add worksheet to workbook
+        XLSX.utils.book_append_sheet(wb, ws, 'Data Makam');
+        
+        // Generate filename with timestamp
+        const now = new Date();
+        const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+        const defaultFilename = `Data_Makam_${timestamp}.xlsx`;
+        
+        // Write to array buffer
+        const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        
+        // Check if running in Tauri
+        if (window.__TAURI__) {
+            try {
+                // Convert blob to array
+                const arrayBuffer = await blob.arrayBuffer();
+                const uint8Array = new Uint8Array(arrayBuffer);
+                
+                // Convert to regular array for Tauri
+                const fileData = Array.from(uint8Array);
+                
+                // Use Tauri command to save with dialog
+                const savedPath = await invoke('save_excel_file', {
+                    fileData: fileData,
+                    defaultName: defaultFilename
+                });
+                
+                if (savedPath) {
+                    showToast(`Berhasil export ${exportData.length} data ke:\n${savedPath}`, 'success');
+                } else {
+                    // User cancelled
+                    showToast('Export dibatalkan', 'info');
+                }
+            } catch (tauriError) {
+                console.error('Tauri save failed:', tauriError);
+                // Fallback to browser download
+                fallbackDownload(blob, defaultFilename, exportData.length);
+            }
+        } else {
+            // Browser mode - fallback download
+            fallbackDownload(blob, defaultFilename, exportData.length);
+        }
+        
+    } catch (error) {
+        console.error('Failed to export:', error);
+        showToast('Gagal mengexport data: ' + error, 'error');
+    } finally {
+        showLoading(false);
+    }
+}
+
+function fallbackDownload(blob, filename, dataCount) {
+    // Create download link
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    // Get OS info for message
+    const osInfo = getOSInfo();
+    showToast(`Berhasil export ${dataCount} data ke folder Downloads (${osInfo})`, 'success');
+}
+
+function getOSInfo() {
+    const userAgent = navigator.userAgent;
+    let os = 'Unknown OS';
+    
+    if (userAgent.indexOf('Win') !== -1) os = 'Windows';
+    else if (userAgent.indexOf('Mac') !== -1) os = 'macOS';
+    else if (userAgent.indexOf('Linux') !== -1) os = 'Linux';
+    else if (userAgent.indexOf('X11') !== -1) os = 'UNIX';
+    
+    return os;
+}
+
+function formatDateForExport(dateString) {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('id-ID', { 
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric' 
+    });
+}
+
+function formatRelationship(relationship) {
+    if (!relationship) return '-';
+    const map = {
+        'anak': 'Anak',
+        'istri': 'Istri',
+        'suami': 'Suami',
+        'cucu': 'Cucu',
+        'saudara': 'Saudara',
+        'lainnya': 'Lainnya'
+    };
+    return map[relationship] || relationship;
+}
+
+function formatRupiah(amount) {
+    if (!amount || amount === 0) return 'Rp 0';
+    return 'Rp ' + amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
 // Expose functions to global scope for onclick handlers
 window.openModal = openModal;
 window.closeModal = closeModal;
@@ -780,3 +1174,9 @@ window.openDeleteModal = openDeleteModal;
 window.closeDeleteModal = closeDeleteModal;
 window.confirmDelete = confirmDelete;
 window.goToPage = goToPage;
+window.exportToExcel = exportToExcel;
+window.openExportExcelModal = openExportExcelModal;
+window.closeExportExcelModal = closeExportExcelModal;
+window.setExportRange = setExportRange;
+window.confirmExportExcel = confirmExportExcel;
+window.updateYearPreview = updateYearPreview;

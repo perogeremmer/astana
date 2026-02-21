@@ -495,6 +495,81 @@ impl Database {
         Ok(count)
     }
     
+    /// Get all graves with heirs for export (no pagination)
+    pub fn get_all_graves_with_heirs(&self, search: Option<String>, block_id: Option<i64>) -> Result<Vec<GraveExportData>, String> {
+        // Build query for graves
+        let mut query = String::from(
+            "SELECT g.id, g.deceased_name, g.block_id, g.number, g.date_of_death, g.burial_date, g.notes, g.created_at, g.updated_at,
+                    b.code, b.annual_fee
+                    FROM graves g
+                    JOIN blocks b ON g.block_id = b.id
+                    WHERE 1=1"
+        );
+        
+        let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+        
+        if let Some(s) = &search {
+            query.push_str(" AND (g.deceased_name LIKE ? OR g.number LIKE ?)");
+            let pattern = format!("%{}%", s);
+            params.push(Box::new(pattern.clone()));
+            params.push(Box::new(pattern));
+        }
+        
+        if let Some(bid) = block_id {
+            query.push_str(" AND g.block_id = ?");
+            params.push(Box::new(bid));
+        }
+        
+        query.push_str(" ORDER BY b.code, g.number");
+        
+        let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+        
+        let mut stmt = self.conn
+            .prepare(&query)
+            .map_err(|e| format!("Failed to prepare query: {}", e))?;
+        
+        let graves = stmt
+            .query_map(param_refs.as_slice(), |row| {
+                Ok(GraveWithBlock {
+                    id: row.get(0)?,
+                    deceased_name: row.get(1)?,
+                    block_id: row.get(2)?,
+                    number: row.get(3)?,
+                    date_of_death: row.get(4)?,
+                    burial_date: row.get(5)?,
+                    notes: row.get(6)?,
+                    created_at: row.get(7)?,
+                    updated_at: row.get(8)?,
+                    code: row.get(9)?,
+                    annual_fee: row.get(10)?,
+                })
+            })
+            .map_err(|e| format!("Failed to query graves: {}", e))?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("Failed to collect graves: {}", e))?;
+        
+        // Now get heirs and payments for each grave
+        let mut result = Vec::new();
+        for grave in graves {
+            let heirs = self.get_heirs_by_grave(grave.id)?;
+            let payments = self.get_payments_by_grave(grave.id)?;
+            result.push(GraveExportData {
+                id: grave.id,
+                deceased_name: grave.deceased_name,
+                block_code: grave.code,
+                number: grave.number,
+                date_of_death: grave.date_of_death,
+                burial_date: grave.burial_date,
+                notes: grave.notes,
+                annual_fee: grave.annual_fee,
+                heirs,
+                payments,
+            });
+        }
+        
+        Ok(result)
+    }
+    
     // ==================== HEIRS CRUD ====================
     
     /// Get heirs by grave ID
@@ -696,6 +771,14 @@ impl Database {
         Ok(self.conn.last_insert_rowid())
     }
     
+    /// Delete payment
+    pub fn delete_payment(&self, id: i64) -> Result<(), String> {
+        self.conn
+            .execute("DELETE FROM payments WHERE id = ?1", [id])
+            .map_err(|e| format!("Failed to delete payment: {}", e))?;
+        Ok(())
+    }
+    
     // ==================== SETTINGS ====================
     
     /// Get settings
@@ -872,6 +955,21 @@ pub struct UpdateGraveRequest {
     pub date_of_death: Option<String>,
     pub burial_date: Option<String>,
     pub notes: Option<String>,
+}
+
+/// Grave export data structure (includes heirs and payments)
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct GraveExportData {
+    pub id: i64,
+    pub deceased_name: String,
+    pub block_code: String,
+    pub number: String,
+    pub date_of_death: String,
+    pub burial_date: Option<String>,
+    pub notes: Option<String>,
+    pub annual_fee: i64,
+    pub heirs: Vec<Heir>,
+    pub payments: Vec<Payment>,
 }
 
 /// Heir data structure
