@@ -15,11 +15,13 @@ Aplikasi desktop untuk manajemen data makam dan iuran makam berbasis [Tauri](htt
 |-------|--------|------------|
 | Manajemen Data Blok | ✅ | CRUD blok makam dengan kapasitas & tarif iuran |
 | Data Makam | ✅ | Pencatatan data almarhum dan ahli waris (1-3 orang) |
-| Pembayaran Iuran | 🚧 | Pencatatan pembayaran dengan historis multi-tahun |
-| Laporan Keuangan | 🚧 | Rekap pembayaran dan tunggakan per blok |
+| Pembayaran Iuran | ✅ | Pencatatan pembayaran dengan historis multi-tahun |
+| Laporan Keuangan | ✅ | Rekap pembayaran dan tunggakan per blok |
 | Pengaturan | ✅ | Konfigurasi yayasan |
-| Backup/Restore | 🚧 | Backup otomatis & restore database |
+| Backup/Restore | ✅ | Backup otomatis & restore database |
 | UI Modern | ✅ | Tampilan bersih dengan Tailwind CSS |
+
+> **Developer?** Lihat **[DEVELOPMENT.md](./DEVELOPMENT.md)** untuk panduan setup dan development.
 
 > **Keterangan:** ✅ = Ready | 🚧 = In Progress | ❌ = Not Started
 
@@ -29,7 +31,7 @@ Aplikasi desktop untuk manajemen data makam dan iuran makam berbasis [Tauri](htt
 
 | Halaman | Deskripsi | Status |
 |---------|-----------|--------|
-| **Dashboard** | Ringkasan statistik, peringatan penting, pembayaran terbaru | 🚧 |
+| **Dashboard** | Ringkasan statistik, peringatan penting, pembayaran terbaru | ✅ |
 | **Data Blok** | Manajemen blok makam (CRUD), kapasitas, dan tarif iuran | ✅ |
 | **Data Makam** | Daftar almarhum, data ahli waris, filter dan pencarian | ✅ |
 | **Pembayaran** | Input pembayaran iuran, status lunas/belum per tahun | 🚧 |
@@ -44,35 +46,36 @@ Aplikasi desktop untuk manajemen data makam dan iuran makam berbasis [Tauri](htt
 
 Pastikan telah terinstall:
 - [Rust](https://rustup.rs/) (versi terbaru)
-- [Node.js](https://nodejs.org/) (versi 18+)
+- System dependencies (sesuai OS - lihat detail di bawah)
 - Sistem operasi: Windows, macOS, atau Linux
 
-### 1. Clone Repository
+> ⚠️ **Catatan:** Project ini **tidak menggunakan Node.js/npm**. Aplikasi ini pure Tauri (Rust) dengan frontend vanilla HTML/CSS/JS.
+
+### Setup Development
+
+Untuk panduan setup lengkap di mesin baru, lihat **[DEVELOPMENT.md](./DEVELOPMENT.md)**
+
+### Quick Start (jika semua prerequisites sudah terinstall)
 
 ```bash
+# 1. Clone repository
 git clone <repository-url>
 cd astana
+
+# 2. Install Tauri CLI (satu kali saja)
+cargo install tauri-cli
+
+# 3. Jalankan aplikasi (development mode)
+cargo tauri dev
 ```
 
-### 2. Install Dependencies
+### Build Aplikasi (Production)
 
 ```bash
-npm install
+cargo tauri build
 ```
 
-### 3. Jalankan Aplikasi (Development)
-
-```bash
-npm run tauri dev
-```
-
-### 4. Build Aplikasi (Production)
-
-```bash
-npm run tauri build
-```
-
-> Hasil build akan ada di `src-tauri/target/release/`
+> Hasil build akan ada di `src-tauri/target/release/bundle/`
 
 ---
 
@@ -103,8 +106,11 @@ astana/
 │   └── tauri.conf.json          # Konfigurasi Tauri
 │
 ├── DATABASE_SCHEMA.md           # Dokumentasi skema database
+├── DEVELOPMENT.md               # Panduan development lengkap
 └── README.md                    # File ini
 ```
+
+> **Catatan:** Project ini tidak memiliki `package.json` karena menggunakan **Tauri v2** dengan frontend vanilla HTML/CSS/JS. Tailwind CSS di-load via CDN, jadi tidak perlu build step untuk frontend.
 
 ---
 
@@ -160,24 +166,30 @@ Lihat detail lengkap di **[DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md)**
 
 ## 🔧 Troubleshooting
 
-### Masalah Build
+Lihat **[DEVELOPMENT.md](./DEVELOPMENT.md)** untuk panduan troubleshooting lengkap.
 
-```bash
-# Update Rust ke versi terbaru
-rustup update
-
-# Bersihkan cache build
-cargo clean
-npm run tauri build
-```
-
-### Masalah Runtime
+### Masalah Umum
 
 | Masalah | Solusi |
 |---------|--------|
+| Build gagal / linker error | Install system dependencies (lihat DEVELOPMENT.md) |
 | Database tidak terbaca | Cek permission folder aplikasi |
-| Port sudah digunakan | Tutup aplikasi lain atau restart PC |
 | Error saat build | Pastikan semua prerequisites terinstall |
+| `cargo tauri` command not found | Install Tauri CLI: `cargo install tauri-cli` |
+
+### Update Rust
+
+```bash
+rustup update
+```
+
+### Bersihkan Cache Build
+
+```bash
+cd src-tauri
+cargo clean
+cargo tauri build
+```
 
 ---
 
