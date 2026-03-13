@@ -126,32 +126,32 @@
             </header>
 
             <!-- CONTENT -->
-            <div class="p-8 space-y-6">
+            <div class="p-6 space-y-4">
                 
                 <!-- PERINGATAN PENTING (YANG PERLU PERHATIAN) -->
-                <div class="bg-amber-50 border border-amber-200 rounded-xl p-5">
-                    <div class="flex items-start gap-4">
-                        <div class="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                            <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                             </svg>
                         </div>
                         <div class="flex-1">
-                            <h2 class="font-semibold text-amber-800 mb-2">Perlu Perhatian!</h2>
-                            <div class="grid grid-cols-3 gap-4">
-                                <div class="bg-white rounded-lg p-4 border border-amber-100">
-                                    <p id="warning-unpaid-count" class="text-2xl font-bold text-amber-600">0</p>
-                                    <p class="text-sm text-amber-700">Belum bayar iuran <span id="warning-year">2026</span></p>
+                            <h2 class="font-semibold text-amber-800 mb-2 text-sm">Perlu Perhatian!</h2>
+                            <div class="grid grid-cols-3 gap-3">
+                                <div class="bg-white rounded-md p-3 border border-amber-100">
+                                    <p id="warning-unpaid-count" class="text-xl font-bold text-amber-600">0</p>
+                                    <p class="text-xs text-amber-700">Belum bayar iuran <span id="warning-year">2026</span></p>
                                     <a href="pembayaran.html" class="text-xs text-amber-600 hover:underline mt-1 inline-block">Lihat detail →</a>
                                 </div>
-                                <div class="bg-white rounded-lg p-4 border border-amber-100">
-                                    <p id="warning-new-graves" class="text-2xl font-bold text-amber-600">0</p>
-                                    <p class="text-sm text-amber-700">Makam baru bulan ini</p>
+                                <div class="bg-white rounded-md p-3 border border-amber-100">
+                                    <p id="warning-new-graves" class="text-xl font-bold text-amber-600">0</p>
+                                    <p class="text-xs text-amber-700">Makam baru bulan ini</p>
                                     <a href="data-makam.html" class="text-xs text-amber-600 hover:underline mt-1 inline-block">Input pembayaran →</a>
                                 </div>
-                                <div class="bg-white rounded-lg p-4 border border-amber-100">
-                                    <p id="backup-days" class="text-2xl font-bold text-amber-600">-</p>
-                                    <p class="text-sm text-amber-700">Terakhir backup data</p>
+                                <div class="bg-white rounded-md p-3 border border-amber-100">
+                                    <p id="backup-days" class="text-xl font-bold text-amber-600">-</p>
+                                    <p class="text-xs text-amber-700">Terakhir backup data</p>
                                     <a href="pengaturan.html" class="text-xs text-amber-600 hover:underline mt-1 inline-block">Backup sekarang →</a>
                                 </div>
                             </div>
@@ -160,127 +160,127 @@
                 </div>
 
                 <!-- STATISTIK RINGKASAN -->
-                <div class="grid grid-cols-4 gap-6">
-                    <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
-                        <div class="flex items-center justify-between mb-3">
-                            <p class="text-sm text-gray-500">Total Makam</p>
-                            <div class="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
-                                <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="grid grid-cols-4 gap-4">
+                    <div class="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-2">
+                            <p class="text-xs text-gray-500">Total Makam</p>
+                            <div class="w-8 h-8 bg-emerald-100 rounded-md flex items-center justify-center">
+                                <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                                 </svg>
                             </div>
                         </div>
-                        <p id="stat-total-makam" class="text-3xl font-bold text-gray-800">0</p>
-                        <p id="stat-total-blok" class="text-xs text-gray-400 mt-1">- blok</p>
+                        <p id="stat-total-makam" class="text-2xl font-bold text-gray-800">0</p>
+                        <p id="stat-total-blok" class="text-xs text-gray-400">- blok</p>
                     </div>
 
-                    <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
-                        <div class="flex items-center justify-between mb-3">
-                            <p class="text-sm text-gray-500">Total Ahli Waris</p>
-                            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-2">
+                            <p class="text-xs text-gray-500">Total Ahli Waris</p>
+                            <div class="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center">
+                                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
                                 </svg>
                             </div>
                         </div>
-                        <p id="stat-total-ahli-waris" class="text-3xl font-bold text-gray-800">0</p>
-                        <p class="text-xs text-gray-400 mt-1">terdaftar</p>
+                        <p id="stat-total-ahli-waris" class="text-2xl font-bold text-gray-800">0</p>
+                        <p class="text-xs text-gray-400">terdaftar</p>
                     </div>
 
-                    <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
-                        <div class="flex items-center justify-between mb-3">
-                            <p class="text-sm text-gray-500">Pemasukan <span id="stat-pemasukan-year">2026</span></p>
-                            <div class="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-                                <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-2">
+                            <p class="text-xs text-gray-500">Pemasukan <span id="stat-pemasukan-year">2026</span></p>
+                            <div class="w-8 h-8 bg-amber-100 rounded-md flex items-center justify-center">
+                                <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
                             </div>
                         </div>
-                        <p id="stat-pemasukan" class="text-3xl font-bold text-gray-800">Rp 0</p>
-                        <p class="text-xs text-gray-400 mt-1">Total pemasukan</p>
+                        <p id="stat-pemasukan" class="text-2xl font-bold text-gray-800">Rp 0</p>
+                        <p class="text-xs text-gray-400">Total pemasukan</p>
                     </div>
 
-                    <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
-                        <div class="flex items-center justify-between mb-3">
-                            <p class="text-sm text-gray-500">Tunggakan <span id="stat-tunggakan-year">2026</span></p>
-                            <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                                <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-2">
+                            <p class="text-xs text-gray-500">Tunggakan <span id="stat-tunggakan-year">2026</span></p>
+                            <div class="w-8 h-8 bg-red-100 rounded-md flex items-center justify-center">
+                                <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
                             </div>
                         </div>
-                        <p id="stat-tunggakan" class="text-3xl font-bold text-gray-800">Rp 0</p>
-                        <p id="stat-tunggakan-count" class="text-xs text-gray-400 mt-1">- makam</p>
+                        <p id="stat-tunggakan" class="text-2xl font-bold text-gray-800">Rp 0</p>
+                        <p id="stat-tunggakan-count" class="text-xs text-gray-400">- makam</p>
                     </div>
                 </div>
 
-                <!-- AKSI CEPAT (TOMBOL BESAR UNTUK GAPTEK) -->
+                <!-- AKSI CEPAT -->
                 <div>
-                    <h2 class="text-lg font-semibold text-gray-800 mb-4">Aksi Cepat</h2>
-                    <div class="grid grid-cols-3 gap-4">
-                        <a href="data-makam.html" class="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl p-6 transition-colors flex items-center gap-4">
-                            <div class="w-14 h-14 bg-emerald-500 rounded-xl flex items-center justify-center">
-                                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <h2 class="text-base font-semibold text-gray-800 mb-3">Aksi Cepat</h2>
+                    <div class="grid grid-cols-3 gap-3">
+                        <a href="data-makam.html" class="bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg p-4 transition-colors flex items-center gap-3">
+                            <div class="w-10 h-10 bg-emerald-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
                                 </svg>
                             </div>
                             <div>
-                                <p class="font-semibold text-lg">Tambah Data Makam</p>
-                                <p class="text-emerald-200 text-sm">Almarhum baru / ganti blok</p>
+                                <p class="font-semibold text-sm">Tambah Data Makam</p>
+                                <p class="text-emerald-200 text-xs">Almarhum baru / ganti blok</p>
                             </div>
                         </a>
 
-                        <a href="pembayaran.html" class="bg-blue-600 hover:bg-blue-700 text-white rounded-xl p-6 transition-colors flex items-center gap-4">
-                            <div class="w-14 h-14 bg-blue-500 rounded-xl flex items-center justify-center">
-                                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <a href="pembayaran.html" class="bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-4 transition-colors flex items-center gap-3">
+                            <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
                                 </svg>
                             </div>
                             <div>
-                                <p class="font-semibold text-lg">Input Pembayaran</p>
-                                <p class="text-blue-200 text-sm">Catat iuran tahunan</p>
+                                <p class="font-semibold text-sm">Input Pembayaran</p>
+                                <p class="text-blue-200 text-xs">Catat iuran tahunan</p>
                             </div>
                         </a>
 
-                        <a href="laporan.html" class="bg-purple-600 hover:bg-purple-700 text-white rounded-xl p-6 transition-colors flex items-center gap-4">
-                            <div class="w-14 h-14 bg-purple-500 rounded-xl flex items-center justify-center">
-                                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <a href="laporan.html" class="bg-purple-600 hover:bg-purple-700 text-white rounded-lg p-4 transition-colors flex items-center gap-3">
+                            <div class="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                 </svg>
                             </div>
                             <div>
-                                <p class="font-semibold text-lg">Lihat Laporan</p>
-                                <p class="text-purple-200 text-sm">Rekap keuangan & data</p>
+                                <p class="font-semibold text-sm">Lihat Laporan</p>
+                                <p class="text-purple-200 text-xs">Rekap keuangan & data</p>
                             </div>
                         </a>
                     </div>
                 </div>
 
                 <!-- 2 KOLOM BAWAH -->
-                <div class="grid grid-cols-2 gap-6">
+                <div class="grid grid-cols-2 gap-4">
                     
                     <!-- PEMBAYARAN TERBARU -->
-                    <div class="bg-white rounded-xl border border-gray-200 shadow-sm">
-                        <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
-                            <h3 class="font-semibold text-gray-800">Pembayaran Terbaru</h3>
-                            <a href="pembayaran.html" class="text-sm text-emerald-600 hover:underline">Lihat semua</a>
+                    <div class="bg-white rounded-lg border border-gray-200 shadow-sm">
+                        <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                            <h3 class="font-semibold text-gray-800 text-sm">Pembayaran Terbaru</h3>
+                            <a href="pembayaran.html" class="text-xs text-emerald-600 hover:underline">Lihat semua</a>
                         </div>
                         <div id="recent-payments-list" class="divide-y divide-gray-100">
-                            <div class="px-5 py-8 text-center text-gray-400">
-                                <p>Memuat data...</p>
+                            <div class="px-4 py-6 text-center text-gray-400">
+                                <p class="text-sm">Memuat data...</p>
                             </div>
                         </div>
                     </div>
 
                     <!-- MAKAM BARU TERDAFTAR -->
-                    <div class="bg-white rounded-xl border border-gray-200 shadow-sm">
-                        <div class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
-                            <h3 class="font-semibold text-gray-800">Makam Baru Terdaftar</h3>
-                            <a href="data-makam.html" class="text-sm text-emerald-600 hover:underline">Lihat semua</a>
+                    <div class="bg-white rounded-lg border border-gray-200 shadow-sm">
+                        <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                            <h3 class="font-semibold text-gray-800 text-sm">Makam Baru Terdaftar</h3>
+                            <a href="data-makam.html" class="text-xs text-emerald-600 hover:underline">Lihat semua</a>
                         </div>
                         <div id="recent-graves-list" class="divide-y divide-gray-100">
-                            <div class="px-5 py-8 text-center text-gray-400">
-                                <p>Memuat data...</p>
+                            <div class="px-4 py-6 text-center text-gray-400">
+                                <p class="text-sm">Memuat data...</p>
                             </div>
                         </div>
                     </div>
@@ -363,7 +363,7 @@
             
             if (payments.length === 0) {
                 container.innerHTML = `
-                    <div class="px-5 py-8 text-center text-gray-500">
+                    <div class="px-4 py-6 text-center text-gray-500 text-sm">
                         <p>Belum ada pembayaran</p>
                     </div>
                 `;
@@ -371,12 +371,12 @@
             }
             
             container.innerHTML = payments.map(payment => `
-                <div class="px-5 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                <div class="px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 transition-colors">
                     <div>
-                        <p class="font-medium text-gray-800">${payment.deceased_name}</p>
+                        <p class="font-medium text-gray-800 text-sm">${payment.deceased_name}</p>
                         <p class="text-xs text-gray-500">${payment.block_code}-${payment.grave_number} • ${payment.year}</p>
                     </div>
-                    <span class="font-semibold text-emerald-600">${formatRupiah(payment.amount)}</span>
+                    <span class="font-semibold text-emerald-600 text-sm">${formatRupiah(payment.amount)}</span>
                 </div>
             `).join('');
         }
@@ -387,7 +387,7 @@
             
             if (graves.length === 0) {
                 container.innerHTML = `
-                    <div class="px-5 py-8 text-center text-gray-500">
+                    <div class="px-4 py-6 text-center text-gray-500 text-sm">
                         <p>Belum ada makam terdaftar</p>
                     </div>
                 `;
@@ -396,13 +396,13 @@
             
             container.innerHTML = graves.map(grave => {
                 const statusBadge = grave.has_paid_current_year 
-                    ? '<span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded">Sudah bayar</span>'
-                    : '<span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded">Belum bayar</span>';
+                    ? '<span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">Sudah bayar</span>'
+                    : '<span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">Belum bayar</span>';
                 
                 return `
-                    <div class="px-5 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                    <div class="px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 transition-colors">
                         <div>
-                            <p class="font-medium text-gray-800">${grave.deceased_name}</p>
+                            <p class="font-medium text-gray-800 text-sm">${grave.deceased_name}</p>
                             <p class="text-xs text-gray-500">${grave.block_code}-${grave.grave_number} • Wafat: ${formatTanggal(grave.date_of_death)}</p>
                         </div>
                         ${statusBadge}
