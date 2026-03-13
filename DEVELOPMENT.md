@@ -141,6 +141,168 @@ Hasil build akan ada di:
 
 ---
 
+## 🐳 Docker Setup (Recommended)
+
+**Keuntungan menggunakan Docker:**
+- ✅ Tidak perlu install Rust/system dependencies di host
+- ✅ Sama persis di semua OS (Ubuntu 20/22/24, Windows, macOS)
+- ✅ Isolated environment - no "works on my machine" issues
+- ✅ Hot reload tetap berfungsi
+- ✅ GUI ditampilkan di desktop host
+
+### Prerequisites Docker
+
+```bash
+# Install Docker
+curl -fsSL https://get.docker.com | sh
+
+# Atau untuk Ubuntu:
+sudo apt update
+sudo apt install -y docker.io docker-compose-plugin
+
+# Verifikasi
+docker --version
+docker compose version
+```
+
+### Quick Start dengan Docker
+
+#### 1. Development Mode (dengan GUI)
+
+```bash
+# Jalankan development dengan hot reload dan GUI
+./scripts/docker-dev.sh
+
+# Atau manual:
+docker compose -f docker/docker-compose.yml run --rm dev
+```
+
+**Fitur:**
+- ✅ GUI muncul di desktop host via X11 forwarding
+- ✅ Edit file di host → Auto-reload di container
+- ✅ Database persist di Docker volume
+- ✅ User permissions otomatis mapped
+
+#### 2. Build Production
+
+```bash
+# Build semua format (AppImage, DEB, etc.)
+./scripts/docker-build.sh
+
+# Build AppImage only
+./scripts/docker-build.sh --appimage
+
+# Build DEB only
+./scripts/docker-build.sh --deb
+```
+
+**Output:** Binary ada di folder `dist/`
+
+#### 3. Shell Access (untuk debugging)
+
+```bash
+# Masuk ke container untuk debugging manual
+./scripts/docker-shell.sh
+
+# Commands yang tersedia di dalam container:
+# - cargo tauri dev
+# - cargo tauri build
+# - cargo check
+# - cargo test
+# - sqlite3 ~/.local/share/com.perogeremmer.astana/astana.db
+```
+
+### Docker Services
+
+#### Service: `dev`
+- **Purpose:** Development dengan hot reload
+- **GUI:** Yes (X11 forwarding)
+- **Volumes:** Source code, database, cargo cache
+- **Command:** `cargo tauri dev`
+
+#### Service: `build`
+- **Purpose:** Build all production formats
+- **Output:** `dist/` folder
+- **Command:** `cargo tauri build`
+
+#### Service: `build-appimage`
+- **Purpose:** Build AppImage only
+- **Output:** `dist/*.AppImage`
+
+#### Service: `build-deb`
+- **Purpose:** Build DEB package only
+- **Output:** `dist/*.deb`
+
+#### Service: `shell`
+- **Purpose:** Interactive shell untuk debugging
+- **Access:** Manual commands
+
+### Docker Configuration
+
+#### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LOCAL_USER_ID` | 1000 | User ID host (untuk permission) |
+| `LOCAL_GROUP_ID` | 1000 | Group ID host (untuk permission) |
+| `DISPLAY` | :0 | X11 display port |
+| `RUST_LOG` | debug | Logging level |
+
+#### Volumes
+
+| Volume | Purpose |
+|--------|---------|
+| `./src` | Frontend source (hot reload) |
+| `./src-tauri/src` | Backend source (hot reload) |
+| `astana-data` | Database persistence |
+| `/tmp/.X11-unix` | X11 socket (GUI) |
+| `cargo-cache` | Cargo registry cache |
+| `target-cache` | Build cache |
+
+### Troubleshooting Docker
+
+#### Issue: GUI tidak muncul (Linux)
+
+```bash
+# Allow Docker access to X11
+xhost +local:docker
+
+# Atau
+xhost +
+```
+
+#### Issue: Permission denied di folder project
+
+```bash
+# Fix permission
+sudo chown -R $(id -u):$(id -g) .
+
+# Atau rebuild dengan user ID yang benar
+LOCAL_USER_ID=$(id -u) LOCAL_GROUP_ID=$(id -g) ./scripts/docker-dev.sh
+```
+
+#### Issue: Container tidak bisa start
+
+```bash
+# Rebuild image
+docker compose -f docker/docker-compose.yml build --no-cache
+
+# Clean volumes (⚠️ akan hapus database!)
+docker compose -f docker/docker-compose.yml down -v
+```
+
+#### Issue: Port冲突/Address already in use
+
+```bash
+# Kill existing containers
+docker compose -f docker/docker-compose.yml down
+
+# Force remove
+docker rm -f astana-dev astana-build 2>/dev/null || true
+```
+
+---
+
 ## 🧪 Testing
 
 ### Run Tests

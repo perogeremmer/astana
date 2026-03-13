@@ -1,0 +1,156 @@
+version: '3.8'
+
+services:
+  # Development service with hot reload and GUI display
+  dev:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: astana-dev
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - LOCAL_USER_ID=${LOCAL_USER_ID:-1000}
+      - LOCAL_GROUP_ID=${LOCAL_GROUP_ID:-1000}
+      - RUST_LOG=debug
+      - RUST_BACKTRACE=1
+    volumes:
+      # Mount source code for hot reload
+      - ../src:/app/src:rw
+      - ../src-tauri/src:/app/src-tauri/src:rw
+      - ../src-tauri/migrations:/app/src-tauri/migrations:ro
+      - ../src-tauri/Cargo.toml:/app/src-tauri/Cargo.toml:ro
+      - ../src-tauri/tauri.conf.json:/app/src-tauri/tauri.conf.json:ro
+      # Database persistence
+      - astana-data:/home/appuser/.local/share/com.perogeremmer.astana
+      # X11 socket for GUI display
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      # Cargo cache for faster rebuilds
+      - cargo-cache:/home/appuser/.cargo/registry
+      - cargo-git:/home/appuser/.cargo/git
+      - target-cache:/app/src-tauri/target
+    network_mode: host
+    stdin_open: true
+    tty: true
+    command: >
+      sh -c "
+        echo '🔧 Starting Astana in development mode...' &&
+        echo '⏳ Running cargo tauri dev...' &&
+        cd /app/src-tauri &&
+        cargo tauri dev
+      "
+
+  # Build service for production binaries
+  build:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: astana-build
+    environment:
+      - LOCAL_USER_ID=${LOCAL_USER_ID:-1000}
+      - LOCAL_GROUP_ID=${LOCAL_GROUP_ID:-1000}
+      - RUST_LOG=info
+    volumes:
+      # Mount source code
+      - ../src:/app/src:ro
+      - ../src-tauri:/app/src-tauri:ro
+      # Output directory for built binaries
+      - ../dist:/app/dist:rw
+      # Cargo cache
+      - cargo-cache:/home/appuser/.cargo/registry
+      - cargo-git:/home/appuser/.cargo/git
+    command: >
+      sh -c "
+        echo '🔨 Building Astana production binary...' &&
+        mkdir -p /app/dist &&
+        cd /app/src-tauri &&
+        cargo tauri build &&
+        echo '✅ Build complete!' &&
+        echo '📦 Copying binaries to dist/' &&
+        cp target/release/bundle/appimage/*.AppImage /app/dist/ 2>/dev/null || true &&
+        cp target/release/bundle/deb/*.deb /app/dist/ 2>/dev/null || true &&
+        ls -lh /app/dist/
+      "
+
+  # Build AppImage only
+  build-appimage:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: astana-build-appimage
+    environment:
+      - LOCAL_USER_ID=${LOCAL_USER_ID:-1000}
+      - LOCAL_GROUP_ID=${LOCAL_GROUP_ID:-1000}
+    volumes:
+      - ../src:/app/src:ro
+      - ../src-tauri:/app/src-tauri:ro
+      - ../dist:/app/dist:rw
+      - cargo-cache:/home/appuser/.cargo/registry
+      - cargo-git:/home/appuser/.cargo/git
+    command: >
+      sh -c "
+        echo '🔨 Building AppImage...' &&
+        mkdir -p /app/dist &&
+        cd /app/src-tauri &&
+        cargo tauri build --bundles appimage &&
+        cp target/release/bundle/appimage/*.AppImage /app/dist/ &&
+        echo '✅ AppImage built successfully!' &&
+        ls -lh /app/dist/*.AppImage
+      "
+
+  # Build DEB package only
+  build-deb:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: astana-build-deb
+    environment:
+      - LOCAL_USER_ID=${LOCAL_USER_ID:-1000}
+      - LOCAL_GROUP_ID=${LOCAL_GROUP_ID:-1000}
+    volumes:
+      - ../src:/app/src:ro
+      - ../src-tauri:/app/src-tauri:ro
+      - ../dist:/app/dist:rw
+      - cargo-cache:/home/appuser/.cargo/registry
+      - cargo-git:/home/appuser/.cargo/git
+    command: >
+      sh -c "
+        echo '🔨 Building DEB package...' &&
+        mkdir -p /app/dist &&
+        cd /app/src-tauri &&
+        cargo tauri build --bundles deb &&
+        cp target/release/bundle/deb/*.deb /app/dist/ &&
+        echo '✅ DEB package built successfully!' &&
+        ls -lh /app/dist/*.deb
+      "
+
+  # Shell access for debugging
+  shell:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: astana-shell
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - LOCAL_USER_ID=${LOCAL_USER_ID:-1000}
+      - LOCAL_GROUP_ID=${LOCAL_GROUP_ID:-1000}
+    volumes:
+      - ../src:/app/src:rw
+      - ../src-tauri:/app/src-tauri:rw
+      - astana-data:/home/appuser/.local/share/com.perogeremmer.astana
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - cargo-cache:/home/appuser/.cargo/registry
+      - cargo-git:/home/appuser/.cargo/git
+    network_mode: host
+    stdin_open: true
+    tty: true
+    command: /bin/bash
+
+volumes:
+  astana-data:
+    driver: local
+  cargo-cache:
+    driver: local
+  cargo-git:
+    driver: local
+  target-cache:
+    driver: local

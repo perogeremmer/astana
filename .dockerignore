@@ -1,0 +1,54 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Docker
+.dockerignore
+docker/Dockerfile
+docker/docker-compose.yml
+docker/entrypoint.sh
+
+# Documentation
+README.md
+DEVELOPMENT.md
+DATABASE_SCHEMA.md
+
+# Build artifacts
+dist/
+*.AppImage
+*.deb
+*.rpm
+*.dmg
+*.msi
+*.exe
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Database (will be in volume)
+*.db
+*.db-shm
+*.db-wal
+
+# Node (if any)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Temporary files
+tmp/
+temp/
+*.tmp
