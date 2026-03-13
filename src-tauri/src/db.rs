@@ -1,11 +1,11 @@
 //! Database module for Astana - Grave Management System
-//! 
+//!
 //! This module handles SQLite database initialization and connection.
 //! Database is created automatically when the app runs for the first time.
 
+use rusqlite::{Connection, OptionalExtension};
 use std::fs;
 use std::path::PathBuf;
-use rusqlite::{Connection, OptionalExtension};
 
 use tauri::AppHandle;
 use tauri::Manager;
@@ -24,52 +24,52 @@ pub struct Database {
 impl Database {
     /// Initialize database - creates new DB file if not exists
     /// and runs migrations
-    /// 
+    ///
     /// # Arguments
     /// * `app_handle` - Tauri AppHandle to get application paths
-    /// 
+    ///
     /// # Returns
     /// * `Ok(Database)` - If initialization succeeds
     /// * `Err(String)` - If error occurs
     pub fn init(app_handle: &AppHandle) -> Result<Self, String> {
         let db_path = Self::get_db_path(app_handle)?;
-        
+
         // Ensure data folder exists
         if let Some(parent) = db_path.parent() {
             fs::create_dir_all(parent)
                 .map_err(|e| format!("Failed to create database folder: {}", e))?;
         }
-        
+
         // Open or create database
-        let conn = Connection::open(&db_path)
-            .map_err(|e| format!("Failed to open database: {}", e))?;
-        
+        let conn =
+            Connection::open(&db_path).map_err(|e| format!("Failed to open database: {}", e))?;
+
         let db = Self { conn };
-        
+
         // Run migrations
         db.run_migrations()?;
-        
+
         log::info!("Database successfully initialized at: {:?}", db_path);
         Ok(db)
     }
-    
+
     /// Initialize database with custom path (for restore/backup)
-    /// 
+    ///
     /// # Arguments
     /// * `db_path` - Path to database file
     pub fn init_with_path(db_path: PathBuf) -> Result<Self, String> {
-        let conn = Connection::open(&db_path)
-            .map_err(|e| format!("Failed to open database: {}", e))?;
-        
+        let conn =
+            Connection::open(&db_path).map_err(|e| format!("Failed to open database: {}", e))?;
+
         let db = Self { conn };
         db.run_migrations()?;
-        
+
         log::info!("Database successfully initialized at: {:?}", db_path);
         Ok(db)
     }
-    
+
     /// Get database path based on platform
-    /// 
+    ///
     /// Windows: %LOCALAPPDATA%/com.perogeremmer.astana/astana.db
     /// macOS: ~/Library/Application Support/com.perogeremmer.astana/astana.db
     /// Linux: ~/.local/share/com.perogeremmer.astana/astana.db
@@ -78,16 +78,16 @@ impl Database {
             .path()
             .app_data_dir()
             .map_err(|e| format!("Failed to get app data dir: {:?}", e))?;
-        
+
         Ok(app_data_dir.join(DB_FILENAME))
     }
-    
+
     /// Get database path for display to user
     pub fn get_database_path(app_handle: &AppHandle) -> Result<String, String> {
         let path = Self::get_db_path(app_handle)?;
         Ok(path.to_string_lossy().to_string())
     }
-    
+
     /// Run SQL migrations
     fn run_migrations(&self) -> Result<(), String> {
         self.conn
@@ -95,22 +95,22 @@ impl Database {
             .map_err(|e| format!("Failed to run migrations: {}", e))?;
         Ok(())
     }
-    
+
     /// Get reference to connection
     pub fn connection(&self) -> &Connection {
         &self.conn
     }
-    
+
     /// Get mutable reference to connection
     pub fn connection_mut(&mut self) -> &mut Connection {
         &mut self.conn
     }
-    
+
     /// Check if database is properly initialized
     pub fn verify(&self) -> Result<bool, String> {
         // Check main tables
         let tables = vec!["blocks", "graves", "heirs", "payments", "settings"];
-        
+
         for table in tables {
             let count: i64 = self
                 .conn
@@ -120,15 +120,15 @@ impl Database {
                     |row| row.get(0),
                 )
                 .map_err(|e| format!("Failed to verify table {}: {}", table, e))?;
-            
+
             if count == 0 {
                 return Ok(false);
             }
         }
-        
+
         Ok(true)
     }
-    
+
     /// Get database statistics
     pub fn get_stats(&self) -> Result<DatabaseStats, String> {
         // Count records per table
@@ -136,23 +136,27 @@ impl Database {
             .conn
             .query_row("SELECT COUNT(*) FROM graves", [], |row| row.get(0))
             .unwrap_or(0);
-        
+
         let heirs_count: i64 = self
             .conn
             .query_row("SELECT COUNT(*) FROM heirs", [], |row| row.get(0))
             .unwrap_or(0);
-        
+
         let payments_count: i64 = self
             .conn
             .query_row("SELECT COUNT(*) FROM payments", [], |row| row.get(0))
             .unwrap_or(0);
-        
+
         // Calculate database size
         let page_count: i64 = self
             .conn
-            .query_row("SELECT page_count * page_size FROM pragma_page_count(), pragma_page_size()", [], |row| row.get(0))
+            .query_row(
+                "SELECT page_count * page_size FROM pragma_page_count(), pragma_page_size()",
+                [],
+                |row| row.get(0),
+            )
             .unwrap_or(0);
-        
+
         Ok(DatabaseStats {
             graves_count,
             heirs_count,
@@ -160,31 +164,31 @@ impl Database {
             size_bytes: page_count,
         })
     }
-    
+
     /// Backup database to specific path
     pub fn backup_to(&self, backup_path: PathBuf) -> Result<(), String> {
         // Use SQLite backup API
         let mut dst = Connection::open(backup_path)
             .map_err(|e| format!("Failed to create backup file: {}", e))?;
-        
+
         let backup = rusqlite::backup::Backup::new(&self.conn, &mut dst)
             .map_err(|e| format!("Failed to initialize backup: {}", e))?;
-        
+
         backup
             .step(-1)
             .map_err(|e| format!("Failed to perform backup: {}", e))?;
-        
+
         Ok(())
     }
-    
+
     // ==================== BLOCKS CRUD ====================
-    
+
     /// Get all blocks
     pub fn get_all_blocks(&self) -> Result<Vec<Block>, String> {
         let mut stmt = self.conn
             .prepare("SELECT id, code, description, total_capacity, annual_fee, status, created_at, updated_at FROM blocks ORDER BY code")
             .map_err(|e| format!("Failed to prepare query: {}", e))?;
-        
+
         let blocks = stmt
             .query_map([], |row| {
                 Ok(Block {
@@ -201,10 +205,10 @@ impl Database {
             .map_err(|e| format!("Failed to query blocks: {}", e))?
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| format!("Failed to collect blocks: {}", e))?;
-        
+
         Ok(blocks)
     }
-    
+
     /// Get block by ID
     pub fn get_block_by_id(&self, id: i64) -> Result<Option<Block>, String> {
         let block = self.conn
@@ -226,10 +230,10 @@ impl Database {
             )
             .optional()
             .map_err(|e| format!("Failed to get block: {}", e))?;
-        
+
         Ok(block)
     }
-    
+
     /// Create new block
     pub fn create_block(&self, block: &CreateBlockRequest) -> Result<i64, String> {
         self.conn
@@ -244,10 +248,10 @@ impl Database {
                 ],
             )
             .map_err(|e| format!("Failed to create block: {}", e))?;
-        
+
         Ok(self.conn.last_insert_rowid())
     }
-    
+
     /// Update block
     pub fn update_block(&self, id: i64, block: &UpdateBlockRequest) -> Result<(), String> {
         self.conn
@@ -269,61 +273,73 @@ impl Database {
                 ],
             )
             .map_err(|e| format!("Failed to update block: {}", e))?;
-        
+
         Ok(())
     }
-    
+
     /// Delete block
     pub fn delete_block(&self, id: i64) -> Result<(), String> {
         // Check if block has graves
-        let grave_count: i64 = self.conn
+        let grave_count: i64 = self
+            .conn
             .query_row(
                 "SELECT COUNT(*) FROM graves WHERE block_id = ?1",
                 [id],
                 |row| row.get(0),
             )
             .map_err(|e| format!("Failed to check graves: {}", e))?;
-        
+
         if grave_count > 0 {
-            return Err(format!("Cannot delete block: {} grave(s) still associated", grave_count));
+            return Err(format!(
+                "Cannot delete block: {} grave(s) still associated",
+                grave_count
+            ));
         }
-        
+
         self.conn
             .execute("DELETE FROM blocks WHERE id = ?1", [id])
             .map_err(|e| format!("Failed to delete block: {}", e))?;
-        
+
         Ok(())
     }
-    
+
     /// Get block stats (occupied count)
     pub fn get_block_stats(&self, block_id: i64) -> Result<BlockStats, String> {
-        let total_capacity: i64 = self.conn
+        let total_capacity: i64 = self
+            .conn
             .query_row(
                 "SELECT total_capacity FROM blocks WHERE id = ?1",
                 [block_id],
                 |row| row.get(0),
             )
             .map_err(|e| format!("Failed to get block capacity: {}", e))?;
-        
-        let occupied: i64 = self.conn
+
+        let occupied: i64 = self
+            .conn
             .query_row(
                 "SELECT COUNT(*) FROM graves WHERE block_id = ?1",
                 [block_id],
                 |row| row.get(0),
             )
             .map_err(|e| format!("Failed to count graves: {}", e))?;
-        
+
         Ok(BlockStats {
             total_capacity,
             occupied,
             available: total_capacity - occupied,
         })
     }
-    
+
     // ==================== GRAVES CRUD ====================
-    
+
     /// Get graves with pagination and search
-    pub fn get_graves(&self, search: Option<String>, block_id: Option<i64>, limit: i64, offset: i64) -> Result<Vec<GraveWithBlock>, String> {
+    pub fn get_graves(
+        &self,
+        search: Option<String>,
+        block_id: Option<i64>,
+        limit: i64,
+        offset: i64,
+    ) -> Result<Vec<GraveWithBlock>, String> {
         let mut query = String::from(
             "SELECT g.id, g.deceased_name, g.block_id, g.number, g.date_of_death, g.burial_date, g.notes, g.created_at, g.updated_at,
                     b.code, b.annual_fee
@@ -331,31 +347,32 @@ impl Database {
                     JOIN blocks b ON g.block_id = b.id
                     WHERE 1=1"
         );
-        
+
         let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
-        
+
         if let Some(s) = search {
             query.push_str(" AND (g.deceased_name LIKE ? OR g.number LIKE ?)");
             let pattern = format!("%{}%", s);
             params.push(Box::new(pattern.clone()));
             params.push(Box::new(pattern));
         }
-        
+
         if let Some(bid) = block_id {
             query.push_str(" AND g.block_id = ?");
             params.push(Box::new(bid));
         }
-        
+
         query.push_str(" ORDER BY g.created_at DESC LIMIT ? OFFSET ?");
         params.push(Box::new(limit));
         params.push(Box::new(offset));
-        
+
         let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
-        
-        let mut stmt = self.conn
+
+        let mut stmt = self
+            .conn
             .prepare(&query)
             .map_err(|e| format!("Failed to prepare query: {}", e))?;
-        
+
         let graves = stmt
             .query_map(param_refs.as_slice(), |row| {
                 Ok(GraveWithBlock {
@@ -375,10 +392,10 @@ impl Database {
             .map_err(|e| format!("Failed to query graves: {}", e))?
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| format!("Failed to collect graves: {}", e))?;
-        
+
         Ok(graves)
     }
-    
+
     /// Create new grave
     pub fn create_grave(&self, grave: &CreateGraveRequest) -> Result<i64, String> {
         self.conn
@@ -394,10 +411,10 @@ impl Database {
                 ],
             )
             .map_err(|e| format!("Failed to create grave: {}", e))?;
-        
+
         Ok(self.conn.last_insert_rowid())
     }
-    
+
     /// Get grave by ID
     pub fn get_grave_by_id(&self, id: i64) -> Result<Option<GraveWithBlock>, String> {
         let grave = self.conn
@@ -426,10 +443,10 @@ impl Database {
             )
             .optional()
             .map_err(|e| format!("Failed to get grave: {}", e))?;
-        
+
         Ok(grave)
     }
-    
+
     /// Update grave
     pub fn update_grave(&self, id: i64, grave: &UpdateGraveRequest) -> Result<(), String> {
         self.conn
@@ -453,50 +470,57 @@ impl Database {
                 ],
             )
             .map_err(|e| format!("Failed to update grave: {}", e))?;
-        
+
         Ok(())
     }
-    
+
     /// Delete grave (will cascade delete heirs and payments)
     pub fn delete_grave(&self, id: i64) -> Result<(), String> {
         self.conn
             .execute("DELETE FROM graves WHERE id = ?1", [id])
             .map_err(|e| format!("Failed to delete grave: {}", e))?;
-        
+
         Ok(())
     }
-    
+
     /// Count graves for pagination
-    pub fn count_graves(&self, search: Option<String>, block_id: Option<i64>) -> Result<i64, String> {
-        let mut query = String::from(
-            "SELECT COUNT(*) FROM graves g WHERE 1=1"
-        );
-        
+    pub fn count_graves(
+        &self,
+        search: Option<String>,
+        block_id: Option<i64>,
+    ) -> Result<i64, String> {
+        let mut query = String::from("SELECT COUNT(*) FROM graves g WHERE 1=1");
+
         let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
-        
+
         if let Some(s) = search {
             query.push_str(" AND (g.deceased_name LIKE ? OR g.number LIKE ?)");
             let pattern = format!("%{}%", s);
             params.push(Box::new(pattern.clone()));
             params.push(Box::new(pattern));
         }
-        
+
         if let Some(bid) = block_id {
             query.push_str(" AND g.block_id = ?");
             params.push(Box::new(bid));
         }
-        
+
         let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
-        
-        let count: i64 = self.conn
+
+        let count: i64 = self
+            .conn
             .query_row(&query, param_refs.as_slice(), |row| row.get(0))
             .map_err(|e| format!("Failed to count graves: {}", e))?;
-        
+
         Ok(count)
     }
-    
+
     /// Get all graves with heirs for export (no pagination)
-    pub fn get_all_graves_with_heirs(&self, search: Option<String>, block_id: Option<i64>) -> Result<Vec<GraveExportData>, String> {
+    pub fn get_all_graves_with_heirs(
+        &self,
+        search: Option<String>,
+        block_id: Option<i64>,
+    ) -> Result<Vec<GraveExportData>, String> {
         // Build query for graves
         let mut query = String::from(
             "SELECT g.id, g.deceased_name, g.block_id, g.number, g.date_of_death, g.burial_date, g.notes, g.created_at, g.updated_at,
@@ -505,29 +529,30 @@ impl Database {
                     JOIN blocks b ON g.block_id = b.id
                     WHERE 1=1"
         );
-        
+
         let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
-        
+
         if let Some(s) = &search {
             query.push_str(" AND (g.deceased_name LIKE ? OR g.number LIKE ?)");
             let pattern = format!("%{}%", s);
             params.push(Box::new(pattern.clone()));
             params.push(Box::new(pattern));
         }
-        
+
         if let Some(bid) = block_id {
             query.push_str(" AND g.block_id = ?");
             params.push(Box::new(bid));
         }
-        
+
         query.push_str(" ORDER BY b.code, g.number");
-        
+
         let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
-        
-        let mut stmt = self.conn
+
+        let mut stmt = self
+            .conn
             .prepare(&query)
             .map_err(|e| format!("Failed to prepare query: {}", e))?;
-        
+
         let graves = stmt
             .query_map(param_refs.as_slice(), |row| {
                 Ok(GraveWithBlock {
@@ -547,7 +572,7 @@ impl Database {
             .map_err(|e| format!("Failed to query graves: {}", e))?
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| format!("Failed to collect graves: {}", e))?;
-        
+
         // Now get heirs and payments for each grave
         let mut result = Vec::new();
         for grave in graves {
@@ -566,18 +591,18 @@ impl Database {
                 payments,
             });
         }
-        
+
         Ok(result)
     }
-    
+
     // ==================== HEIRS CRUD ====================
-    
+
     /// Get heirs by grave ID
     pub fn get_heirs_by_grave(&self, grave_id: i64) -> Result<Vec<Heir>, String> {
         let mut stmt = self.conn
             .prepare("SELECT id, grave_id, order_number, full_name, phone_number, relationship, address, is_primary, created_at, updated_at FROM heirs WHERE grave_id = ?1 ORDER BY order_number")
             .map_err(|e| format!("Failed to prepare query: {}", e))?;
-        
+
         let heirs = stmt
             .query_map([grave_id], |row| {
                 Ok(Heir {
@@ -596,10 +621,10 @@ impl Database {
             .map_err(|e| format!("Failed to query heirs: {}", e))?
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| format!("Failed to collect heirs: {}", e))?;
-        
+
         Ok(heirs)
     }
-    
+
     /// Create new heir
     pub fn create_heir(&self, heir: &CreateHeirRequest) -> Result<i64, String> {
         self.conn
@@ -616,10 +641,10 @@ impl Database {
                 ],
             )
             .map_err(|e| format!("Failed to create heir: {}", e))?;
-        
+
         Ok(self.conn.last_insert_rowid())
     }
-    
+
     /// Get heir by ID
     pub fn get_heir_by_id(&self, id: i64) -> Result<Option<Heir>, String> {
         let heir = self.conn
@@ -644,10 +669,10 @@ impl Database {
             )
             .optional()
             .map_err(|e| format!("Failed to get heir: {}", e))?;
-        
+
         Ok(heir)
     }
-    
+
     /// Update heir
     pub fn update_heir(&self, id: i64, heir: &UpdateHeirRequest) -> Result<(), String> {
         self.conn
@@ -664,41 +689,43 @@ impl Database {
                     &heir.phone_number,
                     &heir.relationship,
                     &heir.address,
-                    &heir.is_primary.map(|b| if b { "1" } else { "0" }.to_string()),
+                    &heir
+                        .is_primary
+                        .map(|b| if b { "1" } else { "0" }.to_string()),
                     &id as &dyn rusqlite::ToSql,
                 ],
             )
             .map_err(|e| format!("Failed to update heir: {}", e))?;
-        
+
         Ok(())
     }
-    
+
     /// Delete heir
     pub fn delete_heir(&self, id: i64) -> Result<(), String> {
         self.conn
             .execute("DELETE FROM heirs WHERE id = ?1", [id])
             .map_err(|e| format!("Failed to delete heir: {}", e))?;
-        
+
         Ok(())
     }
-    
+
     /// Delete all heirs by grave ID (for bulk update)
     pub fn delete_heirs_by_grave(&self, grave_id: i64) -> Result<(), String> {
         self.conn
             .execute("DELETE FROM heirs WHERE grave_id = ?1", [grave_id])
             .map_err(|e| format!("Failed to delete heirs: {}", e))?;
-        
+
         Ok(())
     }
-    
+
     // ==================== PAYMENTS CRUD ====================
-    
+
     /// Get payments by grave ID
     pub fn get_payments_by_grave(&self, grave_id: i64) -> Result<Vec<Payment>, String> {
         let mut stmt = self.conn
             .prepare("SELECT id, grave_id, year, payment_date, amount, payment_method, payment_proof, paid_by, notes, created_at, updated_at FROM payments WHERE grave_id = ?1 ORDER BY year DESC")
             .map_err(|e| format!("Failed to prepare query: {}", e))?;
-        
+
         let payments = stmt
             .query_map([grave_id], |row| {
                 Ok(Payment {
@@ -718,12 +745,16 @@ impl Database {
             .map_err(|e| format!("Failed to query payments: {}", e))?
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| format!("Failed to collect payments: {}", e))?;
-        
+
         Ok(payments)
     }
-    
+
     /// Check if payment exists for grave and year
-    pub fn get_payment_by_grave_and_year(&self, grave_id: i64, year: i32) -> Result<Option<Payment>, String> {
+    pub fn get_payment_by_grave_and_year(
+        &self,
+        grave_id: i64,
+        year: i32,
+    ) -> Result<Option<Payment>, String> {
         let payment = self.conn
             .query_row(
                 "SELECT id, grave_id, year, payment_date, amount, payment_method, payment_proof, paid_by, notes, created_at, updated_at FROM payments WHERE grave_id = ?1 AND year = ?2",
@@ -746,10 +777,10 @@ impl Database {
             )
             .optional()
             .map_err(|e| format!("Failed to get payment: {}", e))?;
-        
+
         Ok(payment)
     }
-    
+
     /// Create new payment
     pub fn create_payment(&self, payment: &CreatePaymentRequest) -> Result<i64, String> {
         self.conn
@@ -767,10 +798,10 @@ impl Database {
                 ],
             )
             .map_err(|e| format!("Failed to create payment: {}", e))?;
-        
+
         Ok(self.conn.last_insert_rowid())
     }
-    
+
     /// Delete payment
     pub fn delete_payment(&self, id: i64) -> Result<(), String> {
         self.conn
@@ -778,9 +809,9 @@ impl Database {
             .map_err(|e| format!("Failed to delete payment: {}", e))?;
         Ok(())
     }
-    
+
     // ==================== SETTINGS ====================
-    
+
     /// Get settings
     pub fn get_settings(&self) -> Result<Settings, String> {
         let settings = self.conn
@@ -804,10 +835,10 @@ impl Database {
                 },
             )
             .map_err(|e| format!("Failed to get settings: {}", e))?;
-        
+
         Ok(settings)
     }
-    
+
     /// Update settings
     pub fn update_settings(&self, settings: &UpdateSettingsRequest) -> Result<(), String> {
         self.conn
@@ -824,10 +855,10 @@ impl Database {
                 ],
             )
             .map_err(|e| format!("Failed to update settings: {}", e))?;
-        
+
         Ok(())
     }
-    
+
     /// Update last backup time
     pub fn update_last_backup(&self) -> Result<(), String> {
         self.conn
@@ -837,6 +868,221 @@ impl Database {
             )
             .map_err(|e| format!("Failed to update last backup: {}", e))?;
         Ok(())
+    }
+
+    // ==================== DASHBOARD QUERIES ====================
+
+    /// Get recent payments with grave info
+    pub fn get_recent_payments(&self, limit: i64) -> Result<Vec<RecentPayment>, String> {
+        let mut stmt = self
+            .conn
+            .prepare(
+                "SELECT p.id, p.grave_id, p.year, p.payment_date, p.amount, 
+                        g.deceased_name, b.code, g.number
+                 FROM payments p
+                 JOIN graves g ON p.grave_id = g.id
+                 JOIN blocks b ON g.block_id = b.id
+                 ORDER BY p.payment_date DESC, p.created_at DESC
+                 LIMIT ?1",
+            )
+            .map_err(|e| format!("Failed to prepare recent payments query: {}", e))?;
+
+        let payments = stmt
+            .query_map([limit], |row| {
+                Ok(RecentPayment {
+                    id: row.get(0)?,
+                    grave_id: row.get(1)?,
+                    year: row.get(2)?,
+                    payment_date: row.get(3)?,
+                    amount: row.get(4)?,
+                    deceased_name: row.get(5)?,
+                    block_code: row.get(6)?,
+                    grave_number: row.get(7)?,
+                })
+            })
+            .map_err(|e| format!("Failed to query recent payments: {}", e))?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("Failed to collect recent payments: {}", e))?;
+
+        Ok(payments)
+    }
+
+    /// Get recently registered graves
+    pub fn get_recent_graves(&self, limit: i64) -> Result<Vec<RecentGrave>, String> {
+        let mut stmt = self
+            .conn
+            .prepare(
+                "SELECT g.id, g.deceased_name, g.date_of_death, g.created_at, 
+                        b.code, g.number,
+                        CASE 
+                            WHEN EXISTS (
+                                SELECT 1 FROM payments p 
+                                WHERE p.grave_id = g.id 
+                                AND p.year = (SELECT active_year FROM settings WHERE id = 1)
+                            ) THEN 1 
+                            ELSE 0 
+                        END as has_paid
+                 FROM graves g
+                 JOIN blocks b ON g.block_id = b.id
+                 ORDER BY g.created_at DESC
+                 LIMIT ?1",
+            )
+            .map_err(|e| format!("Failed to prepare recent graves query: {}", e))?;
+
+        let graves = stmt
+            .query_map([limit], |row| {
+                Ok(RecentGrave {
+                    id: row.get(0)?,
+                    deceased_name: row.get(1)?,
+                    date_of_death: row.get(2)?,
+                    created_at: row.get(3)?,
+                    block_code: row.get(4)?,
+                    grave_number: row.get(5)?,
+                    has_paid_current_year: row.get::<_, i64>(6)? != 0,
+                })
+            })
+            .map_err(|e| format!("Failed to query recent graves: {}", e))?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("Failed to collect recent graves: {}", e))?;
+
+        Ok(graves)
+    }
+
+    /// Get financial summary for dashboard
+    pub fn get_financial_summary(&self, year: i32) -> Result<FinancialSummary, String> {
+        // Get total revenue for the year
+        let total_revenue: i64 = self
+            .conn
+            .query_row(
+                "SELECT COALESCE(SUM(amount), 0) FROM payments WHERE year = ?1",
+                [year],
+                |row| row.get(0),
+            )
+            .unwrap_or(0);
+
+        // Get count of graves without payment for current year
+        let unpaid_count: i64 = self
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM graves g
+                 WHERE NOT EXISTS (
+                     SELECT 1 FROM payments p 
+                     WHERE p.grave_id = g.id AND p.year = ?1
+                 )",
+                [year],
+                |row| row.get(0),
+            )
+            .unwrap_or(0);
+
+        // Calculate total arrears (annual_fee * unpaid graves)
+        let total_arrears: i64 = self
+            .conn
+            .query_row(
+                "SELECT COALESCE(SUM(b.annual_fee), 0) 
+                 FROM graves g
+                 JOIN blocks b ON g.block_id = b.id
+                 WHERE NOT EXISTS (
+                     SELECT 1 FROM payments p 
+                     WHERE p.grave_id = g.id AND p.year = ?1
+                 )",
+                [year],
+                |row| row.get(0),
+            )
+            .unwrap_or(0);
+
+        // Get new graves this month
+        let new_graves_this_month: i64 = self
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM graves 
+                 WHERE strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now')",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(0);
+
+        // Get new graves this year
+        let new_graves_this_year: i64 = self
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM graves 
+                 WHERE strftime('%Y', created_at) = strftime('%Y', 'now')",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(0);
+
+        Ok(FinancialSummary {
+            year,
+            total_revenue,
+            unpaid_count,
+            total_arrears,
+            new_graves_this_month,
+            new_graves_this_year,
+        })
+    }
+
+    /// Get dashboard statistics
+    pub fn get_dashboard_stats(&self) -> Result<DashboardStats, String> {
+        // Get active year from settings
+        let active_year: i32 = self
+            .conn
+            .query_row("SELECT active_year FROM settings WHERE id = 1", [], |row| {
+                row.get(0)
+            })
+            .unwrap_or(2026);
+
+        // Total graves count
+        let total_graves: i64 = self
+            .conn
+            .query_row("SELECT COUNT(*) FROM graves", [], |row| row.get(0))
+            .unwrap_or(0);
+
+        // Total blocks count
+        let total_blocks: i64 = self
+            .conn
+            .query_row("SELECT COUNT(*) FROM blocks", [], |row| row.get(0))
+            .unwrap_or(0);
+
+        // Total heirs count
+        let total_heirs: i64 = self
+            .conn
+            .query_row("SELECT COUNT(*) FROM heirs", [], |row| row.get(0))
+            .unwrap_or(0);
+
+        // Get financial summary
+        let financial = self.get_financial_summary(active_year)?;
+
+        Ok(DashboardStats {
+            active_year,
+            total_graves,
+            total_blocks,
+            total_heirs,
+            total_revenue: financial.total_revenue,
+            total_arrears: financial.total_arrears,
+            unpaid_count: financial.unpaid_count,
+            new_graves_this_month: financial.new_graves_this_month,
+            new_graves_this_year: financial.new_graves_this_year,
+        })
+    }
+
+    /// Get days since last backup
+    pub fn get_days_since_backup(&self) -> Result<i64, String> {
+        let result = self
+            .conn
+            .query_row(
+                "SELECT 
+                    CASE 
+                        WHEN last_backup IS NULL THEN 999
+                        ELSE CAST((julianday('now') - julianday(last_backup)) AS INTEGER)
+                    END
+                 FROM settings WHERE id = 1",
+                [],
+                |row| row.get::<_, i64>(0),
+            )
+            .unwrap_or(999);
+
+        Ok(result)
     }
 }
 
@@ -851,6 +1097,56 @@ pub struct DatabaseStats {
     pub size_bytes: i64,
 }
 
+/// Recent payment for dashboard
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct RecentPayment {
+    pub id: i64,
+    pub grave_id: i64,
+    pub year: i32,
+    pub payment_date: String,
+    pub amount: i64,
+    pub deceased_name: String,
+    pub block_code: String,
+    pub grave_number: String,
+}
+
+/// Recent grave for dashboard
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct RecentGrave {
+    pub id: i64,
+    pub deceased_name: String,
+    pub date_of_death: String,
+    pub created_at: String,
+    pub block_code: String,
+    pub grave_number: String,
+    pub has_paid_current_year: bool,
+}
+
+/// Financial summary for dashboard
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct FinancialSummary {
+    pub year: i32,
+    pub total_revenue: i64,
+    pub unpaid_count: i64,
+    pub total_arrears: i64,
+    pub new_graves_this_month: i64,
+    pub new_graves_this_year: i64,
+}
+
+/// Dashboard statistics
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct DashboardStats {
+    pub active_year: i32,
+    pub total_graves: i64,
+    pub total_blocks: i64,
+    pub total_heirs: i64,
+    pub total_revenue: i64,
+    pub total_arrears: i64,
+    pub unpaid_count: i64,
+    pub new_graves_this_month: i64,
+    pub new_graves_this_year: i64,
+}
+
 impl DatabaseStats {
     /// Format database size to readable string
     pub fn formatted_size(&self) -> String {
@@ -863,7 +1159,7 @@ impl DatabaseStats {
             format!("{:.1} MB", size / (1024.0 * 1024.0))
         }
     }
-    
+
     /// Total records
     pub fn total_records(&self) -> i64 {
         self.graves_count + self.heirs_count + self.payments_count
@@ -1094,41 +1390,41 @@ pub fn backup_database_command(app_handle: AppHandle, backup_path: String) -> Re
 mod tests {
     use super::*;
     use std::env;
-    
+
     #[test]
     fn test_database_init() {
         let temp_path = env::temp_dir().join("test_astana.db");
-        
+
         // Delete old file if exists
         if temp_path.exists() {
             fs::remove_file(&temp_path).unwrap();
         }
-        
+
         // Test initialization
         let db = Database::init_with_path(temp_path.clone()).unwrap();
-        
+
         // Verify tables created
         assert!(db.verify().unwrap());
-        
+
         // Cleanup
         fs::remove_file(&temp_path).unwrap();
     }
-    
+
     #[test]
     fn test_database_stats() {
         let temp_path = env::temp_dir().join("test_astana_stats.db");
-        
+
         if temp_path.exists() {
             fs::remove_file(&temp_path).unwrap();
         }
-        
+
         let db = Database::init_with_path(temp_path.clone()).unwrap();
         let stats = db.get_stats().unwrap();
-        
+
         // Verify stats
         assert!(stats.graves_count >= 0);
         assert!(stats.size_bytes >= 0);
-        
+
         fs::remove_file(&temp_path).unwrap();
     }
 }

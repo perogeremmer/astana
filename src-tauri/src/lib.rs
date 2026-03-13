@@ -490,6 +490,56 @@ pub struct GravePaymentSummary {
     pub recent_payments: Vec<YearPaymentStatus>,
 }
 
+// ==================== DASHBOARD COMMANDS ====================
+
+/// Get dashboard statistics
+#[tauri::command]
+async fn get_dashboard_stats(
+    app_handle: tauri::AppHandle,
+) -> Result<db::DashboardStats, String> {
+    let db = db::Database::init(&app_handle)?;
+    db.get_dashboard_stats()
+}
+
+/// Get recent payments for dashboard
+#[tauri::command]
+async fn get_recent_payments(
+    app_handle: tauri::AppHandle,
+    limit: i64,
+) -> Result<Vec<db::RecentPayment>, String> {
+    let db = db::Database::init(&app_handle)?;
+    db.get_recent_payments(limit)
+}
+
+/// Get recently registered graves
+#[tauri::command]
+async fn get_recent_graves(
+    app_handle: tauri::AppHandle,
+    limit: i64,
+) -> Result<Vec<db::RecentGrave>, String> {
+    let db = db::Database::init(&app_handle)?;
+    db.get_recent_graves(limit)
+}
+
+/// Get financial summary
+#[tauri::command]
+async fn get_financial_summary(
+    app_handle: tauri::AppHandle,
+    year: i32,
+) -> Result<db::FinancialSummary, String> {
+    let db = db::Database::init(&app_handle)?;
+    db.get_financial_summary(year)
+}
+
+/// Get days since last backup
+#[tauri::command]
+async fn get_days_since_backup(
+    app_handle: tauri::AppHandle,
+) -> Result<i64, String> {
+    let db = db::Database::init(&app_handle)?;
+    db.get_days_since_backup()
+}
+
 /// Setup handler - dijalankan saat aplikasi mulai
 fn setup_handler(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     // Inisiasi database
@@ -574,6 +624,12 @@ pub fn run() {
             update_payment,
             delete_payment,
             get_graves_with_payment_summary,
+            // Dashboard
+            get_dashboard_stats,
+            get_recent_payments,
+            get_recent_graves,
+            get_financial_summary,
+            get_days_since_backup,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

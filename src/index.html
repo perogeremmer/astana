@@ -112,14 +112,14 @@
                     <div>
                         <p class="text-emerald-100 text-sm mb-1">Selamat datang kembali,</p>
                         <h1 class="text-2xl font-bold">Petugas Makam</h1>
-                        <p class="text-emerald-200 text-sm mt-1">Sabtu, 15 Februari 2026</p>
+                        <p id="current-date" class="text-emerald-200 text-sm mt-1">Memuat tanggal...</p>
                     </div>
                     <div class="text-right">
                         <div class="inline-flex items-center gap-2 bg-emerald-700 px-4 py-2 rounded-lg">
                             <svg class="w-5 h-5 text-emerald-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                             </svg>
-                            <span class="text-sm">Tahun Aktif: <strong>2026</strong></span>
+                            <span class="text-sm">Tahun Aktif: <strong id="active-year">2026</strong></span>
                         </div>
                     </div>
                 </div>
@@ -140,17 +140,17 @@
                             <h2 class="font-semibold text-amber-800 mb-2">Perlu Perhatian!</h2>
                             <div class="grid grid-cols-3 gap-4">
                                 <div class="bg-white rounded-lg p-4 border border-amber-100">
-                                    <p class="text-2xl font-bold text-amber-600">328</p>
-                                    <p class="text-sm text-amber-700">Belum bayar iuran 2026</p>
+                                    <p id="warning-unpaid-count" class="text-2xl font-bold text-amber-600">0</p>
+                                    <p class="text-sm text-amber-700">Belum bayar iuran <span id="warning-year">2026</span></p>
                                     <a href="pembayaran.html" class="text-xs text-amber-600 hover:underline mt-1 inline-block">Lihat detail →</a>
                                 </div>
                                 <div class="bg-white rounded-lg p-4 border border-amber-100">
-                                    <p class="text-2xl font-bold text-amber-600">12</p>
+                                    <p id="warning-new-graves" class="text-2xl font-bold text-amber-600">0</p>
                                     <p class="text-sm text-amber-700">Makam baru bulan ini</p>
                                     <a href="data-makam.html" class="text-xs text-amber-600 hover:underline mt-1 inline-block">Input pembayaran →</a>
                                 </div>
                                 <div class="bg-white rounded-lg p-4 border border-amber-100">
-                                    <p class="text-2xl font-bold text-amber-600">3 hari</p>
+                                    <p id="backup-days" class="text-2xl font-bold text-amber-600">-</p>
                                     <p class="text-sm text-amber-700">Terakhir backup data</p>
                                     <a href="pengaturan.html" class="text-xs text-amber-600 hover:underline mt-1 inline-block">Backup sekarang →</a>
                                 </div>
@@ -170,8 +170,8 @@
                                 </svg>
                             </div>
                         </div>
-                        <p class="text-3xl font-bold text-gray-800">1,247</p>
-                        <p class="text-xs text-gray-400 mt-1">di 5 blok</p>
+                        <p id="stat-total-makam" class="text-3xl font-bold text-gray-800">0</p>
+                        <p id="stat-total-blok" class="text-xs text-gray-400 mt-1">- blok</p>
                     </div>
 
                     <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
@@ -183,34 +183,34 @@
                                 </svg>
                             </div>
                         </div>
-                        <p class="text-3xl font-bold text-gray-800">2,156</p>
+                        <p id="stat-total-ahli-waris" class="text-3xl font-bold text-gray-800">0</p>
                         <p class="text-xs text-gray-400 mt-1">terdaftar</p>
                     </div>
 
                     <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
                         <div class="flex items-center justify-between mb-3">
-                            <p class="text-sm text-gray-500">Pemasukan 2026</p>
+                            <p class="text-sm text-gray-500">Pemasukan <span id="stat-pemasukan-year">2026</span></p>
                             <div class="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
                                 <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
                             </div>
                         </div>
-                        <p class="text-3xl font-bold text-gray-800">Rp 42.5jt</p>
-                        <p class="text-xs text-green-500 mt-1">+12% dari tahun lalu</p>
+                        <p id="stat-pemasukan" class="text-3xl font-bold text-gray-800">Rp 0</p>
+                        <p class="text-xs text-gray-400 mt-1">Total pemasukan</p>
                     </div>
 
                     <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
                         <div class="flex items-center justify-between mb-3">
-                            <p class="text-sm text-gray-500">Tunggakan 2026</p>
+                            <p class="text-sm text-gray-500">Tunggakan <span id="stat-tunggakan-year">2026</span></p>
                             <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
                                 <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
                             </div>
                         </div>
-                        <p class="text-3xl font-bold text-gray-800">Rp 89.2jt</p>
-                        <p class="text-xs text-gray-400 mt-1">dari 328 makam</p>
+                        <p id="stat-tunggakan" class="text-3xl font-bold text-gray-800">Rp 0</p>
+                        <p id="stat-tunggakan-count" class="text-xs text-gray-400 mt-1">- makam</p>
                     </div>
                 </div>
 
@@ -265,34 +265,9 @@
                             <h3 class="font-semibold text-gray-800">Pembayaran Terbaru</h3>
                             <a href="pembayaran.html" class="text-sm text-emerald-600 hover:underline">Lihat semua</a>
                         </div>
-                        <div class="divide-y divide-gray-100">
-                            <div class="px-5 py-3 flex items-center justify-between">
-                                <div>
-                                    <p class="font-medium text-gray-800">Ahmad Sudirman</p>
-                                    <p class="text-xs text-gray-500">Blok A-12 • 2026</p>
-                                </div>
-                                <span class="font-semibold text-emerald-600">Rp 100.000</span>
-                            </div>
-                            <div class="px-5 py-3 flex items-center justify-between">
-                                <div>
-                                    <p class="font-medium text-gray-800">Siti Aminah</p>
-                                    <p class="text-xs text-gray-500">Blok A-13 • 2026</p>
-                                </div>
-                                <span class="font-semibold text-emerald-600">Rp 100.000</span>
-                            </div>
-                            <div class="px-5 py-3 flex items-center justify-between">
-                                <div>
-                                    <p class="font-medium text-gray-800">H. Muhammad Ridwan</p>
-                                    <p class="text-xs text-gray-500">Blok B-05 • 2025, 2026</p>
-                                </div>
-                                <span class="font-semibold text-emerald-600">Rp 300.000</span>
-                            </div>
-                            <div class="px-5 py-3 flex items-center justify-between">
-                                <div>
-                                    <p class="font-medium text-gray-800">Dewi Kusuma</p>
-                                    <p class="text-xs text-gray-500">Blok B-06 • 2026</p>
-                                </div>
-                                <span class="font-semibold text-emerald-600">Rp 100.000</span>
+                        <div id="recent-payments-list" class="divide-y divide-gray-100">
+                            <div class="px-5 py-8 text-center text-gray-400">
+                                <p>Memuat data...</p>
                             </div>
                         </div>
                     </div>
@@ -303,34 +278,9 @@
                             <h3 class="font-semibold text-gray-800">Makam Baru Terdaftar</h3>
                             <a href="data-makam.html" class="text-sm text-emerald-600 hover:underline">Lihat semua</a>
                         </div>
-                        <div class="divide-y divide-gray-100">
-                            <div class="px-5 py-3 flex items-center justify-between">
-                                <div>
-                                    <p class="font-medium text-gray-800">Bambang Sutrisno</p>
-                                    <p class="text-xs text-gray-500">Blok A-15 • Wafat: 10 Feb 2026</p>
-                                </div>
-                                <span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded">Belum bayar</span>
-                            </div>
-                            <div class="px-5 py-3 flex items-center justify-between">
-                                <div>
-                                    <p class="font-medium text-gray-800">Nur Hidayah</p>
-                                    <p class="text-xs text-gray-500">Blok C-02 • Wafat: 5 Feb 2026</p>
-                                </div>
-                                <span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded">Sudah bayar</span>
-                            </div>
-                            <div class="px-5 py-3 flex items-center justify-between">
-                                <div>
-                                    <p class="font-medium text-gray-800">Sri Wahyuni</p>
-                                    <p class="text-xs text-gray-500">Blok A-16 • Wafat: 1 Feb 2026</p>
-                                </div>
-                                <span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded">Sudah bayar</span>
-                            </div>
-                            <div class="px-5 py-3 flex items-center justify-between">
-                                <div>
-                                    <p class="font-medium text-gray-800">Abdul Rahman</p>
-                                    <p class="text-xs text-gray-500">Blok C-01 • Wafat: 18 Des 2017</p>
-                                </div>
-                                <span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded">Data diupdate</span>
+                        <div id="recent-graves-list" class="divide-y divide-gray-100">
+                            <div class="px-5 py-8 text-center text-gray-400">
+                                <p>Memuat data...</p>
                             </div>
                         </div>
                     </div>
@@ -340,5 +290,163 @@
         </main>
     </div>
 
+    <!-- DASHBOARD JAVASCRIPT -->
+    <script>
+        // Format rupiah
+        function formatRupiah(angka) {
+            if (angka >= 1000000) {
+                return 'Rp ' + (angka / 1000000).toFixed(1).replace('.0', '') + 'jt';
+            }
+            return 'Rp ' + angka.toLocaleString('id-ID');
+        }
+
+        // Format tanggal
+        function formatTanggal(dateString) {
+            const date = new Date(dateString);
+            const options = { day: 'numeric', month: 'short', year: 'numeric' };
+            return date.toLocaleDateString('id-ID', options);
+        }
+
+        // Format tanggal lengkap
+        function formatTanggalLengkap(dateString) {
+            const date = new Date(dateString);
+            const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+            return date.toLocaleDateString('id-ID', options);
+        }
+
+        // Load dashboard data
+        async function loadDashboardData() {
+            try {
+                const { invoke } = window.__TAURI__.core;
+                
+                // Load dashboard stats
+                const stats = await invoke('get_dashboard_stats');
+                updateStats(stats);
+                
+                // Load recent payments
+                const payments = await invoke('get_recent_payments', { limit: 5 });
+                updateRecentPayments(payments);
+                
+                // Load recent graves
+                const graves = await invoke('get_recent_graves', { limit: 5 });
+                updateRecentGraves(graves);
+                
+                // Load days since backup
+                const daysSinceBackup = await invoke('get_days_since_backup');
+                updateBackupWarning(daysSinceBackup);
+                
+                // Update current date
+                document.getElementById('current-date').textContent = formatTanggalLengkap(new Date());
+                
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+                showError('Gagal memuat data dashboard: ' + error.message);
+            }
+        }
+
+        // Update statistics cards
+        function updateStats(stats) {
+            document.getElementById('stat-total-makam').textContent = stats.total_graves.toLocaleString('id-ID');
+            document.getElementById('stat-total-blok').textContent = `di ${stats.total_blocks} blok`;
+            document.getElementById('stat-total-ahli-waris').textContent = stats.total_heirs.toLocaleString('id-ID');
+            document.getElementById('stat-pemasukan').textContent = formatRupiah(stats.total_revenue);
+            document.getElementById('stat-tunggakan').textContent = formatRupiah(stats.total_arrears);
+            document.getElementById('stat-tunggakan-count').textContent = `dari ${stats.unpaid_count} makam`;
+            document.getElementById('warning-unpaid-count').textContent = stats.unpaid_count.toLocaleString('id-ID');
+            document.getElementById('warning-new-graves').textContent = stats.new_graves_this_month.toLocaleString('id-ID');
+            document.getElementById('active-year').textContent = stats.active_year;
+        }
+
+        // Update recent payments list
+        function updateRecentPayments(payments) {
+            const container = document.getElementById('recent-payments-list');
+            
+            if (payments.length === 0) {
+                container.innerHTML = `
+                    <div class="px-5 py-8 text-center text-gray-500">
+                        <p>Belum ada pembayaran</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = payments.map(payment => `
+                <div class="px-5 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                    <div>
+                        <p class="font-medium text-gray-800">${payment.deceased_name}</p>
+                        <p class="text-xs text-gray-500">${payment.block_code}-${payment.grave_number} • ${payment.year}</p>
+                    </div>
+                    <span class="font-semibold text-emerald-600">${formatRupiah(payment.amount)}</span>
+                </div>
+            `).join('');
+        }
+
+        // Update recent graves list
+        function updateRecentGraves(graves) {
+            const container = document.getElementById('recent-graves-list');
+            
+            if (graves.length === 0) {
+                container.innerHTML = `
+                    <div class="px-5 py-8 text-center text-gray-500">
+                        <p>Belum ada makam terdaftar</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = graves.map(grave => {
+                const statusBadge = grave.has_paid_current_year 
+                    ? '<span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded">Sudah bayar</span>'
+                    : '<span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded">Belum bayar</span>';
+                
+                return `
+                    <div class="px-5 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                        <div>
+                            <p class="font-medium text-gray-800">${grave.deceased_name}</p>
+                            <p class="text-xs text-gray-500">${grave.block_code}-${grave.grave_number} • Wafat: ${formatTanggal(grave.date_of_death)}</p>
+                        </div>
+                        ${statusBadge}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Update backup warning
+        function updateBackupWarning(days) {
+            const element = document.getElementById('backup-days');
+            if (days >= 999) {
+                element.textContent = 'Belum pernah';
+                element.classList.add('text-red-600');
+            } else if (days === 0) {
+                element.textContent = 'Hari ini';
+                element.classList.add('text-emerald-600');
+            } else if (days === 1) {
+                element.textContent = '1 hari';
+                element.classList.add('text-emerald-600');
+            } else {
+                element.textContent = days + ' hari';
+                if (days > 7) {
+                    element.classList.add('text-red-600');
+                } else if (days > 3) {
+                    element.classList.add('text-amber-600');
+                } else {
+                    element.classList.add('text-emerald-600');
+                }
+            }
+        }
+
+        // Show error message
+        function showError(message) {
+            console.error(message);
+            // You could add a toast notification here
+        }
+
+        // Load data when page is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadDashboardData);
+        } else {
+            loadDashboardData();
+        }
+    </script>
 </body>
 </html>
