@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Development service with hot reload and GUI display
   dev:
@@ -20,13 +18,13 @@ services:
       - ../src-tauri/migrations:/app/src-tauri/migrations:ro
       - ../src-tauri/Cargo.toml:/app/src-tauri/Cargo.toml:ro
       - ../src-tauri/tauri.conf.json:/app/src-tauri/tauri.conf.json:ro
+      - ../src-tauri/build.rs:/app/src-tauri/build.rs:ro
+      - ../src-tauri/icons:/app/src-tauri/icons:ro
       # Database persistence
       - astana-data:/home/appuser/.local/share/com.perogeremmer.astana
       # X11 socket for GUI display
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      # Cargo cache for faster rebuilds
-      - cargo-cache:/home/appuser/.cargo/registry
-      - cargo-git:/home/appuser/.cargo/git
+      # Target cache for faster rebuilds (built code)
       - target-cache:/app/src-tauri/target
     network_mode: host
     stdin_open: true
@@ -34,8 +32,11 @@ services:
     command: >
       sh -c "
         echo '🔧 Starting Astana in development mode...' &&
-        echo '⏳ Running cargo tauri dev...' &&
+        echo '⏳ Initial build (first time)...' &&
         cd /app/src-tauri &&
+        cargo build &&
+        echo '✅ Initial build complete!' &&
+        echo '🚀 Running cargo tauri dev...' &&
         cargo tauri dev
       "
 
@@ -53,11 +54,10 @@ services:
       # Mount source code
       - ../src:/app/src:ro
       - ../src-tauri:/app/src-tauri:ro
+      # Target directory needs to be writable for build
+      - target-cache:/app/src-tauri/target
       # Output directory for built binaries
       - ../dist:/app/dist:rw
-      # Cargo cache
-      - cargo-cache:/home/appuser/.cargo/registry
-      - cargo-git:/home/appuser/.cargo/git
     command: >
       sh -c "
         echo '🔨 Building Astana production binary...' &&
@@ -68,6 +68,7 @@ services:
         echo '📦 Copying binaries to dist/' &&
         cp target/release/bundle/appimage/*.AppImage /app/dist/ 2>/dev/null || true &&
         cp target/release/bundle/deb/*.deb /app/dist/ 2>/dev/null || true &&
+        chown -R ${LOCAL_USER_ID:-1000}:${LOCAL_GROUP_ID:-1000} /app/dist &&
         ls -lh /app/dist/
       "
 
@@ -83,9 +84,8 @@ services:
     volumes:
       - ../src:/app/src:ro
       - ../src-tauri:/app/src-tauri:ro
+      - target-cache:/app/src-tauri/target
       - ../dist:/app/dist:rw
-      - cargo-cache:/home/appuser/.cargo/registry
-      - cargo-git:/home/appuser/.cargo/git
     command: >
       sh -c "
         echo '🔨 Building AppImage...' &&
@@ -109,9 +109,8 @@ services:
     volumes:
       - ../src:/app/src:ro
       - ../src-tauri:/app/src-tauri:ro
+      - target-cache:/app/src-tauri/target
       - ../dist:/app/dist:rw
-      - cargo-cache:/home/appuser/.cargo/registry
-      - cargo-git:/home/appuser/.cargo/git
     command: >
       sh -c "
         echo '🔨 Building DEB package...' &&
@@ -138,8 +137,6 @@ services:
       - ../src-tauri:/app/src-tauri:rw
       - astana-data:/home/appuser/.local/share/com.perogeremmer.astana
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
-      - cargo-cache:/home/appuser/.cargo/registry
-      - cargo-git:/home/appuser/.cargo/git
     network_mode: host
     stdin_open: true
     tty: true
@@ -147,10 +144,6 @@ services:
 
 volumes:
   astana-data:
-    driver: local
-  cargo-cache:
-    driver: local
-  cargo-git:
     driver: local
   target-cache:
     driver: local

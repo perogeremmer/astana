@@ -1,7 +1,7 @@
 // Astana - Manajemen Iuran Makam
 // Library utama untuk aplikasi Tauri
 
-
+use tauri::Manager;
 
 // Modul database
 pub mod db;
@@ -540,6 +540,134 @@ async fn get_days_since_backup(
     db.get_days_since_backup()
 }
 
+// ==================== REPORT COMMANDS ====================
+
+/// Get yearly report
+#[tauri::command]
+async fn get_yearly_report(
+    app_handle: tauri::AppHandle,
+    year: i32,
+) -> Result<db::YearlyReport, String> {
+    let db = db::Database::init(&app_handle)?;
+    db.get_yearly_report(year)
+}
+
+/// Get available years for reports
+#[tauri::command]
+async fn get_available_years(
+    app_handle: tauri::AppHandle,
+) -> Result<Vec<i32>, String> {
+    let db = db::Database::init(&app_handle)?;
+    db.get_available_years()
+}
+
+// ==================== SETTINGS COMMANDS ====================
+
+/// Get settings
+#[tauri::command]
+async fn get_settings(
+    app_handle: tauri::AppHandle,
+) -> Result<db::Settings, String> {
+    let db = db::Database::init(&app_handle)?;
+    db.get_settings()
+}
+
+/// Update settings
+#[tauri::command]
+async fn update_settings(
+    app_handle: tauri::AppHandle,
+    settings: db::UpdateSettingsRequest,
+) -> Result<(), String> {
+    let db = db::Database::init(&app_handle)?;
+    db.update_settings(&settings)
+}
+
+/// Update last backup time
+#[tauri::command]
+async fn update_last_backup(
+    app_handle: tauri::AppHandle,
+) -> Result<(), String> {
+    let db = db::Database::init(&app_handle)?;
+    db.update_last_backup()
+}
+
+/// Upload logo file and save to public/images folder
+#[tauri::command]
+async fn upload_logo(
+    app_handle: tauri::AppHandle,
+    file_data: Vec<u8>,
+    file_name: String,
+) -> Result<String, String> {
+    // Get app data directory
+    let app_data_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("Failed to get app data dir: {:?}", e))?;
+    
+    // Create images folder if not exists
+    let images_dir = app_data_dir.join("images");
+    std::fs::create_dir_all(&images_dir)
+        .map_err(|e| format!("Failed to create images directory: {}", e))?;
+    
+    // Generate unique filename
+    let timestamp = chrono::Local::now().timestamp();
+    let ext = std::path::Path::new(&file_name)
+        .extension()
+        .and_then(|e: &std::ffi::OsStr| e.to_str())
+        .unwrap_or("png");
+    let new_filename = format!("logo_{}.{}", timestamp, ext);
+    let file_path = images_dir.join(&new_filename);
+    
+    // Write file
+    std::fs::write(&file_path, file_data)
+        .map_err(|e| format!("Failed to write logo file: {}", e))?;
+    
+    // Return relative path
+    Ok(format!("images/{}", new_filename))
+}
+
+/// Get logo file as base64 data URL
+#[tauri::command]
+async fn get_logo_data(
+    app_handle: tauri::AppHandle,
+) -> Result<Option<String>, String> {
+    let db = db::Database::init(&app_handle)?;
+    let settings = db.get_settings()?;
+    
+    if let Some(logo_path) = settings.logo_path {
+        let app_data_dir = app_handle
+            .path()
+            .app_data_dir()
+            .map_err(|e| format!("Failed to get app data dir: {:?}", e))?;
+        
+        let full_path = app_data_dir.join(&logo_path);
+        
+        if full_path.exists() {
+            let file_data = std::fs::read(&full_path)
+                .map_err(|e| format!("Failed to read logo file: {}", e))?;
+            
+            // Detect mime type
+            let ext = full_path
+                .extension()
+                .and_then(|e| e.to_str())
+                .unwrap_or("png");
+            let mime_type = match ext.to_lowercase().as_str() {
+                "jpg" | "jpeg" => "image/jpeg",
+                "png" => "image/png",
+                "gif" => "image/gif",
+                _ => "image/png",
+            };
+            
+            let base64_data = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &file_data);
+            Ok(Some(format!("data:{};base64,{}", mime_type, base64_data)))
+        } else {
+            Ok(None)
+        }
+    } else {
+        Ok(None)
+    }
+}
+
 /// Setup handler - dijalankan saat aplikasi mulai
 fn setup_handler(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     // Inisiasi database
@@ -630,6 +758,15 @@ pub fn run() {
             get_recent_graves,
             get_financial_summary,
             get_days_since_backup,
+            // Reports
+            get_yearly_report,
+            get_available_years,
+            // Settings
+            get_settings,
+            update_settings,
+            update_last_backup,
+            upload_logo,
+            get_logo_data,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

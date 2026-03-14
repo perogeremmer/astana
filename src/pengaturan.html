@@ -14,6 +14,7 @@
         .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
     <script type="module" src="/main.js"></script>
+    <script type="module" src="/pengaturan.js"></script>
 </head>
 <body class="bg-gray-50 text-gray-800">
 
@@ -129,7 +130,7 @@
                             <!-- Nama Makam -->
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Nama Yayasan / Makam</label>
-                                <input type="text" value="Yayasan Wakaf Makam Al-Ikhlas" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Masukkan nama yayasan atau makam">
+                                <input type="text" id="foundationName" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Masukkan nama yayasan atau makam">
                                 <p class="text-xs text-gray-500 mt-1">Nama ini akan muncul di header aplikasi dan laporan.</p>
                             </div>
 
@@ -137,7 +138,7 @@
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Logo Aplikasi</label>
                                 <div class="flex items-center gap-4">
-                                    <div class="w-20 h-20 bg-emerald-100 rounded-xl flex items-center justify-center border-2 border-dashed border-emerald-300">
+                                    <div id="logoPreview" class="w-20 h-20 bg-emerald-100 rounded-xl flex items-center justify-center border-2 border-dashed border-emerald-300">
                                         <svg class="w-10 h-10 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                                         </svg>
@@ -155,16 +156,21 @@
                             <!-- Info Tambahan -->
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Alamat Makam</label>
-                                <textarea rows="2" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Masukkan alamat lengkap makam">Jl. Raya Cipaku No. 123, Kel. Bahagia, Kec. Sejahtera, Kota Bandung</textarea>
+                                <textarea id="foundationAddress" rows="2" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Masukkan alamat lengkap makam"></textarea>
                             </div>
 
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Nomor Telepon Yayasan</label>
-                                <input type="text" value="(022) 1234567" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Contoh: (022) 1234567">
+                                <input type="text" id="foundationPhone" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Contoh: (022) 1234567">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Email Yayasan</label>
+                                <input type="email" id="foundationEmail" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Contoh: admin@yayasan.com">
                             </div>
 
                             <div class="pt-3">
-                                <button class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors">
+                                <button onclick="saveSettings()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors">
                                     Simpan Perubahan
                                 </button>
                             </div>
@@ -188,13 +194,13 @@
                                 <div class="bg-gray-50 rounded-lg p-4">
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Lokasi File Database</label>
                                     <div class="flex items-center gap-2">
-                                        <input type="text" value="C:\\Users\\Admin\\AppData\\Local\\WakafMakam\\data.db" readonly class="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-600 font-mono">
+                                        <input type="text" id="dbPathInput" readonly class="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-600 font-mono">
                                         <button onclick="copyPath()" class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg transition-colors" title="Copy Path">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                                             </svg>
                                         </button>
-                                        <button class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg transition-colors" title="Buka Folder">
+                                        <button onclick="openDatabaseFolder()" class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg transition-colors" title="Buka Folder">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"></path>
                                             </svg>
@@ -263,12 +269,8 @@
 
                                             <div class="space-y-2">
                                                 <label class="flex items-center gap-2">
-                                                    <input type="checkbox" checked class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500">
+                                                    <input type="checkbox" id="autoBackup" class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500">
                                                     <span class="text-sm text-emerald-700">Backup otomatis setiap hari</span>
-                                                </label>
-                                                <label class="flex items-center gap-2">
-                                                    <input type="checkbox" class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500">
-                                                    <span class="text-sm text-emerald-700">Backup sebelum menutup aplikasi</span>
                                                 </label>
                                             </div>
                                         </div>
@@ -283,7 +285,7 @@
                                         </svg>
                                         Backup Sekarang
                                     </button>
-                                    <button class="px-4 py-3 border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg transition-colors flex items-center justify-center gap-2">
+                                    <button onclick="exportDatabase()" class="px-4 py-3 border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg transition-colors flex items-center justify-center gap-2">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
                                         </svg>
@@ -347,11 +349,8 @@
                                     </div>
                                 </div>
                                 <div class="flex gap-3">
-                                    <button class="flex-1 px-4 py-2.5 border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg transition-colors">
+                                    <button onclick="restoreDatabase()" class="flex-1 px-4 py-2.5 border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg transition-colors">
                                         Pilih File Backup
-                                    </button>
-                                    <button class="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition-colors">
-                                        Restore dari Google Drive
                                     </button>
                                 </div>
                             </div>

@@ -7,7 +7,6 @@
 .dockerignore
 docker/Dockerfile
 docker/docker-compose.yml
-docker/entrypoint.sh
 
 # Documentation
 README.md

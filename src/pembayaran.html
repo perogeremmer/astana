@@ -158,7 +158,7 @@
                     <!-- TAHUN AKTIF - POJOK KANAN ATAS -->
                     <div class="ml-6 bg-emerald-50 rounded-xl border border-emerald-200 px-5 py-3">
                         <p class="text-xs text-emerald-600 mb-0.5">Tahun Aktif</p>
-                        <p class="text-xl font-bold text-emerald-700">2026</p>
+                        <p class="text-xl font-bold text-emerald-700" id="current-year">2026</p>
                     </div>
                 </div>
             </header>
@@ -536,6 +536,9 @@
     </div>
 
     <script>
+        // Set current year from computer
+        document.getElementById('current-year').textContent = new Date().getFullYear();
+        
         // Data simulasi - sudah ada bukti atau belum
         const dataBukti = {
             'Ahmad Sudirman': { '2022': true, '2023': true, '2024': true },

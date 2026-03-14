@@ -14,6 +14,7 @@
         .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
     <script type="module" src="/main.js"></script>
+    <script type="module" src="/laporan.js"></script>
 </head>
 <body class="bg-gray-50 text-gray-800">
 
@@ -109,7 +110,7 @@
             <header class="bg-white border-b border-gray-200 px-6 py-4">
                 <div class="flex items-center justify-between">
                     <h1 class="text-xl font-bold text-gray-800">Laporan Keuangan & Data Makam</h1>
-                    <button class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2">
+                    <button onclick="exportToPDF()" class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
                         </svg>
@@ -125,13 +126,17 @@
                 <div class="bg-white rounded-xl border border-gray-200 p-5 mb-6">
                     <div class="flex items-center gap-4">
                         <label class="text-base font-semibold text-gray-700">Pilih Tahun:</label>
-                        <select id="tahunSelect" onchange="updateLaporan()" class="px-4 py-2.5 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white min-w-[120px]">
+                        <select id="tahunSelect" class="px-4 py-2.5 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white min-w-[120px]">
                             <option value="2022">2022</option>
                             <option value="2023">2023</option>
                             <option value="2024">2024</option>
-                            <option value="2025" selected>2025</option>
+                            <option value="2025">2025</option>
                             <option value="2026">2026</option>
                         </select>
+                        <script>
+                            // Set default selected year to current year
+                            document.getElementById('tahunSelect').value = new Date().getFullYear().toString();
+                        </script>
                         <span class="text-sm text-gray-500 ml-4">Data akan otomatis terupdate berdasarkan tahun yang dipilih</span>
                     </div>
                 </div>
@@ -351,41 +356,5 @@
             </div>
         </main>
     </div>
-
-    <script>
-        // Data dummy untuk simulasi
-        const dataLaporan = {
-            2022: { sudah: 1100, belum: 85, baru: 32, pendapatan: "Rp 125.5jt", makamBaru: 32 },
-            2023: { sudah: 1050, belum: 135, baru: 28, pendapatan: "Rp 118.2jt", makamBaru: 28 },
-            2024: { sudah: 980, belum: 210, baru: 38, pendapatan: "Rp 98.5jt", makamBaru: 38 },
-            2025: { sudah: 892, belum: 355, baru: 45, pendapatan: "Rp 89.2jt", makamBaru: 45 },
-            2026: { sudah: 420, belum: 827, baru: 12, pendapatan: "Rp 42.1jt", makamBaru: 12 }
-        };
-
-        function updateLaporan() {
-            const tahun = document.getElementById('tahunSelect').value;
-            const data = dataLaporan[tahun];
-            
-            // Update statistik
-            document.getElementById('statSudahBayar').textContent = data.sudah;
-            document.getElementById('statBelumBayar').textContent = data.belum;
-            document.getElementById('statMakamBaru').textContent = data.baru;
-            document.getElementById('statPendapatan').textContent = data.pendapatan;
-            document.getElementById('labelTahun').textContent = tahun;
-            document.getElementById('makamBaruCount').textContent = data.makamBaru;
-            
-            // Update label tahun di semua elemen
-            document.querySelectorAll('.tahun-label').forEach(el => {
-                el.textContent = tahun;
-            });
-            
-            // Update persentase
-            const total = data.sudah + data.belum;
-            const pctSudah = ((data.sudah / total) * 100).toFixed(1);
-            const pctBelum = ((data.belum / total) * 100).toFixed(1);
-            document.getElementById('pctSudah').textContent = pctSudah + '%';
-            document.getElementById('pctBelum').textContent = pctBelum + '%';
-        }
-    </script>
 </body>
 </html>

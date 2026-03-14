@@ -3,6 +3,7 @@
 //! This module handles SQLite database initialization and connection.
 //! Database is created automatically when the app runs for the first time.
 
+use chrono::Datelike;
 use rusqlite::{Connection, OptionalExtension};
 use std::fs;
 use std::path::PathBuf;
@@ -1084,6 +1085,184 @@ impl Database {
 
         Ok(result)
     }
+
+    // ==================== REPORT QUERIES ====================
+
+    /// Get yearly report data for all blocks
+    pub fn get_yearly_report(&self, year: i32) -> Result<YearlyReport, String> {
+        // Get active year
+        let active_year: i32 = self
+            .conn
+            .query_row("SELECT active_year FROM settings WHERE id = 1", [], |row| {
+                row.get(0)
+            })
+            .unwrap_or(year);
+
+        // Get report per block
+        let mut stmt = self
+            .conn
+            .prepare(
+                "SELECT 
+                b.id,
+                b.code,
+                b.annual_fee,
+                COUNT(g.id) as total_graves,
+                COUNT(CASE WHEN p.id IS NOT NULL THEN 1 END) as paid_count,
+                COUNT(CASE WHEN p.id IS NULL THEN 1 END) as unpaid_count,
+                COALESCE(SUM(p.amount), 0) as total_revenue
+             FROM blocks b
+             LEFT JOIN graves g ON b.id = g.block_id
+             LEFT JOIN payments p ON g.id = p.grave_id AND p.year = ?1
+             GROUP BY b.id, b.code, b.annual_fee
+             ORDER BY b.code",
+            )
+            .map_err(|e| format!("Failed to prepare yearly report query: {}", e))?;
+
+        let block_reports: Vec<BlockReport> = stmt
+            .query_map([year], |row| {
+                let total_graves: i64 = row.get(3)?;
+                let paid_count: i64 = row.get(4)?;
+                let unpaid_count: i64 = row.get(5)?;
+                let annual_fee: i64 = row.get(2)?;
+                let total_revenue: i64 = row.get(6)?;
+                let expected_revenue = total_graves * annual_fee;
+
+                Ok(BlockReport {
+                    block_id: row.get(0)?,
+                    block_code: row.get(1)?,
+                    total_graves,
+                    paid_count,
+                    unpaid_count,
+                    annual_fee,
+                    total_revenue,
+                    expected_revenue,
+                    collection_rate: if total_graves > 0 {
+                        (paid_count as f64 / total_graves as f64) * 100.0
+                    } else {
+                        0.0
+                    },
+                })
+            })
+            .map_err(|e| format!("Failed to query yearly report: {}", e))?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("Failed to collect block reports: {}", e))?;
+
+        // Calculate totals
+        let total_graves: i64 = block_reports.iter().map(|r| r.total_graves).sum();
+        let total_paid: i64 = block_reports.iter().map(|r| r.paid_count).sum();
+        let total_unpaid: i64 = block_reports.iter().map(|r| r.unpaid_count).sum();
+        let total_revenue: i64 = block_reports.iter().map(|r| r.total_revenue).sum();
+        let total_expected: i64 = block_reports.iter().map(|r| r.expected_revenue).sum();
+
+        // Get new graves count for the year
+        let new_graves_count: i64 = self
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM graves WHERE strftime('%Y', created_at) = ?1",
+                [year.to_string()],
+                |row| row.get(0),
+            )
+            .unwrap_or(0);
+
+        // Get new graves per block
+        let mut stmt_new = self
+            .conn
+            .prepare(
+                "SELECT 
+                b.id,
+                COUNT(g.id) as new_count
+             FROM blocks b
+             LEFT JOIN graves g ON b.id = g.block_id 
+                AND strftime('%Y', g.created_at) = ?1
+             GROUP BY b.id
+             ORDER BY b.code",
+            )
+            .map_err(|e| format!("Failed to prepare new graves query: {}", e))?;
+
+        let new_graves_per_block: Vec<(i64, i64)> = stmt_new
+            .query_map([year.to_string()], |row| Ok((row.get(0)?, row.get(1)?)))
+            .map_err(|e| format!("Failed to query new graves: {}", e))?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("Failed to collect new graves: {}", e))?;
+
+        // Create new graves map
+        let new_graves_map: std::collections::HashMap<i64, i64> =
+            new_graves_per_block.into_iter().collect();
+
+        Ok(YearlyReport {
+            year,
+            active_year,
+            total_graves,
+            total_paid,
+            total_unpaid,
+            total_revenue,
+            total_expected_revenue: total_expected,
+            overall_collection_rate: if total_graves > 0 {
+                (total_paid as f64 / total_graves as f64) * 100.0
+            } else {
+                0.0
+            },
+            new_graves_count,
+            block_reports,
+            new_graves_per_block: new_graves_map,
+        })
+    }
+
+    /// Get available years for reports (from payments and grave creation)
+    pub fn get_available_years(&self) -> Result<Vec<i32>, String> {
+        let mut years: Vec<i32> = Vec::new();
+
+        // Get years from payments
+        let mut stmt = self
+            .conn
+            .prepare("SELECT DISTINCT year FROM payments ORDER BY year DESC")
+            .map_err(|e| format!("Failed to prepare years query: {}", e))?;
+
+        let payment_years: Vec<i32> = stmt
+            .query_map([], |row| row.get(0))
+            .map_err(|e| format!("Failed to query payment years: {}", e))?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("Failed to collect payment years: {}", e))?;
+
+        years.extend(payment_years);
+
+        // Get years from grave creation
+        let mut stmt2 = self
+            .conn
+            .prepare(
+                "SELECT DISTINCT CAST(strftime('%Y', created_at) AS INTEGER) 
+             FROM graves 
+             ORDER BY created_at DESC",
+            )
+            .map_err(|e| format!("Failed to prepare grave years query: {}", e))?;
+
+        let grave_years: Vec<i32> = stmt2
+            .query_map([], |row| row.get(0))
+            .map_err(|e| format!("Failed to query grave years: {}", e))?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("Failed to collect grave years: {}", e))?;
+
+        years.extend(grave_years);
+
+        // Add current year and active year
+        let current_year: i32 = chrono::Local::now().year();
+        years.push(current_year);
+
+        let active_year: i32 = self
+            .conn
+            .query_row("SELECT active_year FROM settings WHERE id = 1", [], |row| {
+                row.get(0)
+            })
+            .unwrap_or(current_year);
+        years.push(active_year);
+
+        // Remove duplicates and sort
+        years.sort_unstable();
+        years.dedup();
+        years.reverse();
+
+        Ok(years)
+    }
 }
 
 // ==================== DATA STRUCTURES ====================
@@ -1356,6 +1535,38 @@ pub struct UpdateSettingsRequest {
     pub logo_path: Option<String>,
     pub active_year: Option<i32>,
     pub auto_backup: Option<bool>,
+}
+
+// ==================== REPORT DATA STRUCTURES ====================
+
+/// Yearly report data structure
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct YearlyReport {
+    pub year: i32,
+    pub active_year: i32,
+    pub total_graves: i64,
+    pub total_paid: i64,
+    pub total_unpaid: i64,
+    pub total_revenue: i64,
+    pub total_expected_revenue: i64,
+    pub overall_collection_rate: f64,
+    pub new_graves_count: i64,
+    pub block_reports: Vec<BlockReport>,
+    pub new_graves_per_block: std::collections::HashMap<i64, i64>,
+}
+
+/// Block-level report data
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct BlockReport {
+    pub block_id: i64,
+    pub block_code: String,
+    pub total_graves: i64,
+    pub paid_count: i64,
+    pub unpaid_count: i64,
+    pub annual_fee: i64,
+    pub total_revenue: i64,
+    pub expected_revenue: i64,
+    pub collection_rate: f64,
 }
 
 // ==================== HELPER FUNCTIONS ====================

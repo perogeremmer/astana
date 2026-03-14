@@ -346,7 +346,14 @@
 
         // Update statistics cards
         function updateStats(stats) {
+            // Use current year from computer
+            const currentYear = new Date().getFullYear();
+            
             document.getElementById('stat-total-makam').textContent = stats.total_graves.toLocaleString('id-ID');
+            document.getElementById('active-year').textContent = currentYear;
+            document.getElementById('warning-year').textContent = currentYear;
+            document.getElementById('stat-pemasukan-year').textContent = currentYear;
+            document.getElementById('stat-tunggakan-year').textContent = currentYear;
             document.getElementById('stat-total-blok').textContent = `di ${stats.total_blocks} blok`;
             document.getElementById('stat-total-ahli-waris').textContent = stats.total_heirs.toLocaleString('id-ID');
             document.getElementById('stat-pemasukan').textContent = formatRupiah(stats.total_revenue);
@@ -354,7 +361,6 @@
             document.getElementById('stat-tunggakan-count').textContent = `dari ${stats.unpaid_count} makam`;
             document.getElementById('warning-unpaid-count').textContent = stats.unpaid_count.toLocaleString('id-ID');
             document.getElementById('warning-new-graves').textContent = stats.new_graves_this_month.toLocaleString('id-ID');
-            document.getElementById('active-year').textContent = stats.active_year;
         }
 
         // Update recent payments list
