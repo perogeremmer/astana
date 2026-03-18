@@ -4,6 +4,7 @@
 //! Database is created automatically when the app runs for the first time.
 
 use chrono::Datelike;
+use rand::Rng;
 use rusqlite::{Connection, OptionalExtension};
 use std::fs;
 use std::path::PathBuf;
@@ -14,8 +15,9 @@ use tauri::Manager;
 /// Database file name
 const DB_FILENAME: &str = "astana.db";
 
-/// Embedded SQL migration script
-const MIGRATION_SQL: &str = include_str!("../migrations/001_initial.sql");
+/// Embedded SQL migration scripts
+const MIGRATION_SQL_V1: &str = include_str!("../migrations/001_initial.sql");
+const MIGRATION_SQL_V2: &str = include_str!("../migrations/002_auth.sql");
 
 /// Database management structure
 pub struct Database {
@@ -91,9 +93,16 @@ impl Database {
 
     /// Run SQL migrations
     fn run_migrations(&self) -> Result<(), String> {
+        // Run V1 migration
         self.conn
-            .execute_batch(MIGRATION_SQL)
-            .map_err(|e| format!("Failed to run migrations: {}", e))?;
+            .execute_batch(MIGRATION_SQL_V1)
+            .map_err(|e| format!("Failed to run V1 migrations: {}", e))?;
+
+        // Run V2 migration (auth tables)
+        self.conn
+            .execute_batch(MIGRATION_SQL_V2)
+            .map_err(|e| format!("Failed to run V2 migrations: {}", e))?;
+
         Ok(())
     }
 
@@ -1595,6 +1604,662 @@ pub fn backup_database_command(app_handle: AppHandle, backup_path: String) -> Re
     db.backup_to(path)
 }
 
+// ==================== AUTHENTICATION & USER MANAGEMENT ====================
+
+/// User data structure
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct User {
+    pub id: i64,
+    pub username: String,
+    pub role: String,
+    pub is_active: bool,
+    pub is_password_changed: bool,
+    pub created_by: Option<i64>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// User with password hash (internal use)
+pub struct UserWithHash {
+    pub id: i64,
+    pub username: String,
+    pub password_hash: String,
+    pub role: String,
+    pub is_active: bool,
+    pub is_password_changed: bool,
+    pub created_by: Option<i64>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// Create user request
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct CreateUserRequest {
+    pub username: String,
+    pub password: String,
+    pub role: String,
+}
+
+/// Update user request
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct UpdateUserRequest {
+    pub role: Option<String>,
+    pub is_active: Option<bool>,
+}
+
+/// Audit log entry
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct AuditLog {
+    pub id: i64,
+    pub user_id: Option<i64>,
+    pub username: Option<String>,
+    pub action: String,
+    pub entity_type: String,
+    pub entity_id: Option<i64>,
+    pub old_data: Option<String>,
+    pub new_data: Option<String>,
+    pub details: Option<String>,
+    pub created_at: String,
+}
+
+/// Login result
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct LoginResult {
+    pub success: bool,
+    pub user: Option<User>,
+    pub message: String,
+    pub must_change_password: bool,
+}
+
+/// Session data
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct Session {
+    pub user_id: i64,
+    pub username: String,
+    pub role: String,
+    pub token: String,
+    pub expires_at: i64, // Unix timestamp
+}
+
+impl Database {
+    /// Generate random password (12 alphanumeric characters)
+    pub fn generate_random_password() -> String {
+        const CHARSET: &str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        let mut rng = rand::thread_rng();
+        (0..12)
+            .map(|_| {
+                let idx = rng.gen_range(0..CHARSET.len());
+                CHARSET.chars().nth(idx).unwrap()
+            })
+            .collect()
+    }
+
+    /// Hash password using Argon2
+    pub fn hash_password(password: &str) -> Result<String, String> {
+        use argon2::{
+            password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
+            Argon2,
+        };
+
+        let salt = SaltString::generate(&mut OsRng);
+        let argon2 = Argon2::default();
+
+        let password_hash = argon2
+            .hash_password(password.as_bytes(), &salt)
+            .map_err(|e| format!("Failed to hash password: {}", e))?
+            .to_string();
+
+        Ok(password_hash)
+    }
+
+    /// Verify password
+    pub fn verify_password(password: &str, hash: &str) -> Result<bool, String> {
+        use argon2::{
+            password_hash::{PasswordHash, PasswordVerifier},
+            Argon2,
+        };
+
+        let parsed_hash =
+            PasswordHash::new(hash).map_err(|e| format!("Failed to parse hash: {}", e))?;
+
+        let argon2 = Argon2::default();
+
+        Ok(argon2
+            .verify_password(password.as_bytes(), &parsed_hash)
+            .is_ok())
+    }
+
+    /// Check if users table is empty
+    pub fn is_users_empty(&self) -> Result<bool, String> {
+        let count: i64 = self
+            .conn
+            .query_row("SELECT COUNT(*) FROM users", [], |row| row.get(0))
+            .map_err(|e| format!("Failed to count users: {}", e))?;
+        Ok(count == 0)
+    }
+
+    /// Create initial superadmin_0 user
+    pub fn create_superadmin_0(&self, password: &str) -> Result<User, String> {
+        let password_hash = Self::hash_password(password)?;
+
+        self.conn
+            .execute(
+                "INSERT INTO users (username, password_hash, role, is_active, is_password_changed, created_by) 
+                 VALUES (?1, ?2, 'superadmin_0', 1, 0, NULL)",
+                [&"superadmin" as &dyn rusqlite::ToSql,
+                    &password_hash as &dyn rusqlite::ToSql,
+                ],
+            )
+            .map_err(|e| format!("Failed to create superadmin_0: {}", e))?;
+
+        let user_id = self.conn.last_insert_rowid();
+
+        // Return created user
+        self.get_user_by_id(user_id)?
+            .ok_or_else(|| "Failed to retrieve created user".to_string())
+    }
+
+    /// Get user by ID
+    pub fn get_user_by_id(&self, id: i64) -> Result<Option<User>, String> {
+        let user = self.conn
+            .query_row(
+                "SELECT id, username, role, is_active, is_password_changed, created_by, created_at, updated_at 
+                 FROM users WHERE id = ?1",
+                [id],
+                |row| {
+                    Ok(User {
+                        id: row.get(0)?,
+                        username: row.get(1)?,
+                        role: row.get(2)?,
+                        is_active: row.get(3)?,
+                        is_password_changed: row.get(4)?,
+                        created_by: row.get(5)?,
+                        created_at: row.get(6)?,
+                        updated_at: row.get(7)?,
+                    })
+                },
+            )
+            .optional()
+            .map_err(|e| format!("Failed to get user: {}", e))?;
+
+        Ok(user)
+    }
+
+    /// Get user by username (with hash)
+    fn get_user_by_username_with_hash(
+        &self,
+        username: &str,
+    ) -> Result<Option<UserWithHash>, String> {
+        let user = self.conn
+            .query_row(
+                "SELECT id, username, password_hash, role, is_active, is_password_changed, created_by, created_at, updated_at 
+                 FROM users WHERE LOWER(username) = LOWER(?1)",
+                [username],
+                |row| {
+                    Ok(UserWithHash {
+                        id: row.get(0)?,
+                        username: row.get(1)?,
+                        password_hash: row.get(2)?,
+                        role: row.get(3)?,
+                        is_active: row.get(4)?,
+                        is_password_changed: row.get(5)?,
+                        created_by: row.get(6)?,
+                        created_at: row.get(7)?,
+                        updated_at: row.get(8)?,
+                    })
+                },
+            )
+            .optional()
+            .map_err(|e| format!("Failed to get user by username: {}", e))?;
+
+        Ok(user)
+    }
+
+    /// Login user
+    pub fn login(&self, username: &str, password: &str) -> Result<LoginResult, String> {
+        let user_with_hash = match self.get_user_by_username_with_hash(username)? {
+            Some(u) => u,
+            None => {
+                return Ok(LoginResult {
+                    success: false,
+                    user: None,
+                    message: "Username atau password salah".to_string(),
+                    must_change_password: false,
+                });
+            }
+        };
+
+        // Check if user is active
+        if !user_with_hash.is_active {
+            return Ok(LoginResult {
+                success: false,
+                user: None,
+                message: "Akun tidak aktif. Hubungi administrator.".to_string(),
+                must_change_password: false,
+            });
+        }
+
+        // Verify password
+        let is_valid = Self::verify_password(password, &user_with_hash.password_hash)?;
+
+        if !is_valid {
+            // Log failed login attempt
+            self.log_audit(
+                None,
+                None,
+                "LOGIN_FAILED",
+                "user",
+                Some(user_with_hash.id),
+                None,
+                None,
+                Some(format!("Failed login attempt for username: {}", username).as_str()),
+            )
+            .ok();
+
+            return Ok(LoginResult {
+                success: false,
+                user: None,
+                message: "Username atau password salah".to_string(),
+                must_change_password: false,
+            });
+        }
+
+        // Log successful login
+        self.log_audit(
+            Some(user_with_hash.id),
+            Some(&user_with_hash.username),
+            "LOGIN",
+            "user",
+            Some(user_with_hash.id),
+            None,
+            None,
+            None,
+        )?;
+
+        let user = User {
+            id: user_with_hash.id,
+            username: user_with_hash.username,
+            role: user_with_hash.role,
+            is_active: user_with_hash.is_active,
+            is_password_changed: user_with_hash.is_password_changed,
+            created_by: user_with_hash.created_by,
+            created_at: user_with_hash.created_at,
+            updated_at: user_with_hash.updated_at,
+        };
+
+        Ok(LoginResult {
+            success: true,
+            user: Some(user),
+            message: "Login berhasil".to_string(),
+            must_change_password: !user_with_hash.is_password_changed,
+        })
+    }
+
+    /// Logout user
+    pub fn logout(&self, user_id: i64) -> Result<(), String> {
+        let user = self.get_user_by_id(user_id)?;
+
+        if let Some(u) = user {
+            self.log_audit(
+                Some(user_id),
+                Some(&u.username),
+                "LOGOUT",
+                "user",
+                Some(user_id),
+                None,
+                None,
+                None,
+            )?;
+        }
+
+        Ok(())
+    }
+
+    /// Change password
+    pub fn change_password(
+        &self,
+        user_id: i64,
+        old_password: Option<&str>,
+        new_password: &str,
+        is_first_change: bool,
+    ) -> Result<Result<(), String>, String> {
+        // Get user with hash
+        let user_with_hash = self
+            .conn
+            .query_row(
+                "SELECT id, username, password_hash, is_password_changed FROM users WHERE id = ?1",
+                [user_id],
+                |row| {
+                    Ok((
+                        row.get::<_, i64>(0)?,
+                        row.get::<_, String>(1)?,
+                        row.get::<_, String>(2)?,
+                        row.get::<_, bool>(3)?,
+                    ))
+                },
+            )
+            .optional()
+            .map_err(|e| format!("Failed to get user: {}", e))?
+            .ok_or("User not found")?;
+
+        // Verify old password if not first change
+        if !is_first_change {
+            if let Some(old) = old_password {
+                let is_valid = Self::verify_password(old, &user_with_hash.2)?;
+                if !is_valid {
+                    return Ok(Err("Password lama salah".to_string()));
+                }
+            } else {
+                return Ok(Err("Password lama diperlukan".to_string()));
+            }
+        }
+
+        // Hash new password
+        let new_hash = Self::hash_password(new_password)?;
+
+        // Update password
+        self.conn
+            .execute(
+                "UPDATE users SET password_hash = ?1, is_password_changed = 1 WHERE id = ?2",
+                [
+                    &new_hash as &dyn rusqlite::ToSql,
+                    &user_id as &dyn rusqlite::ToSql,
+                ],
+            )
+            .map_err(|e| format!("Failed to update password: {}", e))?;
+
+        // Log password change
+        self.log_audit(
+            Some(user_id),
+            Some(&user_with_hash.1),
+            "CHANGE_PASSWORD",
+            "user",
+            Some(user_id),
+            None,
+            None,
+            None,
+        )?;
+
+        Ok(Ok(()))
+    }
+
+    /// Get all users
+    pub fn get_all_users(&self) -> Result<Vec<User>, String> {
+        let mut stmt = self.conn
+            .prepare(
+                "SELECT id, username, role, is_active, is_password_changed, created_by, created_at, updated_at 
+                 FROM users ORDER BY created_at DESC"
+            )
+            .map_err(|e| format!("Failed to prepare users query: {}", e))?;
+
+        let users = stmt
+            .query_map([], |row| {
+                Ok(User {
+                    id: row.get(0)?,
+                    username: row.get(1)?,
+                    role: row.get(2)?,
+                    is_active: row.get(3)?,
+                    is_password_changed: row.get(4)?,
+                    created_by: row.get(5)?,
+                    created_at: row.get(6)?,
+                    updated_at: row.get(7)?,
+                })
+            })
+            .map_err(|e| format!("Failed to query users: {}", e))?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("Failed to collect users: {}", e))?;
+
+        Ok(users)
+    }
+
+    /// Create new user
+    pub fn create_user(&self, request: &CreateUserRequest, created_by: i64) -> Result<i64, String> {
+        let password_hash = Self::hash_password(&request.password)?;
+
+        self.conn
+            .execute(
+                "INSERT INTO users (username, password_hash, role, is_active, is_password_changed, created_by) 
+                 VALUES (?1, ?2, ?3, 1, 0, ?4)",
+                [
+                    &request.username as &dyn rusqlite::ToSql,
+                    &password_hash as &dyn rusqlite::ToSql,
+                    &request.role as &dyn rusqlite::ToSql,
+                    &created_by as &dyn rusqlite::ToSql,
+                ],
+            )
+            .map_err(|e| format!("Failed to create user: {}", e))?;
+
+        let user_id = self.conn.last_insert_rowid();
+
+        // Get creator username
+        let creator = self.get_user_by_id(created_by)?;
+
+        // Log user creation
+        self.log_audit(
+            Some(created_by),
+            creator.as_ref().map(|u| u.username.as_str()),
+            "CREATE",
+            "user",
+            Some(user_id),
+            None,
+            Some(&serde_json::to_string(request).unwrap_or_default()),
+            Some(
+                format!(
+                    "Created user '{}' with role '{}'",
+                    request.username, request.role
+                )
+                .as_str(),
+            ),
+        )?;
+
+        Ok(user_id)
+    }
+
+    /// Update user
+    pub fn update_user(
+        &self,
+        user_id: i64,
+        request: &UpdateUserRequest,
+        updated_by: i64,
+    ) -> Result<(), String> {
+        // Get old user data for audit
+        let old_user = self.get_user_by_id(user_id)?;
+
+        self.conn
+            .execute(
+                "UPDATE users SET 
+                    role = COALESCE(?1, role),
+                    is_active = COALESCE(?2, is_active)
+                 WHERE id = ?3",
+                [
+                    &request.role as &dyn rusqlite::ToSql,
+                    &request.is_active.map(|b| if b { 1 } else { 0 }) as &dyn rusqlite::ToSql,
+                    &user_id as &dyn rusqlite::ToSql,
+                ],
+            )
+            .map_err(|e| format!("Failed to update user: {}", e))?;
+
+        // Get updater username
+        let updater = self.get_user_by_id(updated_by)?;
+
+        // Log user update
+        self.log_audit(
+            Some(updated_by),
+            updater.as_ref().map(|u| u.username.as_str()),
+            "UPDATE",
+            "user",
+            Some(user_id),
+            old_user
+                .as_ref()
+                .map(|u| serde_json::to_string(u).unwrap_or_default())
+                .as_deref(),
+            Some(&serde_json::to_string(request).unwrap_or_default()),
+            Some(format!("Updated user ID {}", user_id).as_str()),
+        )?;
+
+        Ok(())
+    }
+
+    /// Delete user
+    pub fn delete_user(&self, user_id: i64, deleted_by: i64) -> Result<Result<(), String>, String> {
+        // Prevent deletion of superadmin_0
+        let user = self.get_user_by_id(user_id)?;
+
+        if let Some(ref u) = user {
+            if u.role == "superadmin_0" {
+                return Ok(Err("Superadmin_0 tidak dapat dihapus".to_string()));
+            }
+
+            // Prevent self-deletion
+            if u.id == deleted_by {
+                return Ok(Err("Anda tidak dapat menghapus akun sendiri".to_string()));
+            }
+        } else {
+            return Ok(Err("User tidak ditemukan".to_string()));
+        }
+
+        let user = user.unwrap();
+
+        self.conn
+            .execute("DELETE FROM users WHERE id = ?1", [user_id])
+            .map_err(|e| format!("Failed to delete user: {}", e))?;
+
+        // Get deleter username
+        let deleter = self.get_user_by_id(deleted_by)?;
+
+        // Log user deletion
+        self.log_audit(
+            Some(deleted_by),
+            deleter.as_ref().map(|u| u.username.as_str()),
+            "DELETE",
+            "user",
+            Some(user_id),
+            Some(&serde_json::to_string(&user).unwrap_or_default()),
+            None,
+            Some(format!("Deleted user '{}' (ID: {})", user.username, user_id).as_str()),
+        )?;
+
+        Ok(Ok(()))
+    }
+
+    /// Reset user password
+    pub fn reset_user_password(
+        &self,
+        user_id: i64,
+        new_password: &str,
+        reset_by: i64,
+    ) -> Result<(), String> {
+        let password_hash = Self::hash_password(new_password)?;
+
+        self.conn
+            .execute(
+                "UPDATE users SET password_hash = ?1, is_password_changed = 0 WHERE id = ?2",
+                [
+                    &password_hash as &dyn rusqlite::ToSql,
+                    &user_id as &dyn rusqlite::ToSql,
+                ],
+            )
+            .map_err(|e| format!("Failed to reset password: {}", e))?;
+
+        // Get user and resetter for audit
+        let user = self.get_user_by_id(user_id)?;
+        let resetter = self.get_user_by_id(reset_by)?;
+
+        // Log password reset
+        let details = user
+            .as_ref()
+            .map(|u| format!("Reset password for user '{}'", u.username));
+        self.log_audit(
+            Some(reset_by),
+            resetter.as_ref().map(|u| u.username.as_str()),
+            "RESET_PASSWORD",
+            "user",
+            Some(user_id),
+            None,
+            None,
+            details.as_deref(),
+        )?;
+
+        Ok(())
+    }
+
+    // ==================== AUDIT LOGGING ====================
+
+    /// Log audit entry
+    pub fn log_audit(
+        &self,
+        user_id: Option<i64>,
+        username: Option<&str>,
+        action: &str,
+        entity_type: &str,
+        entity_id: Option<i64>,
+        old_data: Option<&str>,
+        new_data: Option<&str>,
+        details: Option<&str>,
+    ) -> Result<(), String> {
+        self.conn
+            .execute(
+                "INSERT INTO audit_logs (user_id, username, action, entity_type, entity_id, old_data, new_data, details) 
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                [
+                    &user_id as &dyn rusqlite::ToSql,
+                    &username as &dyn rusqlite::ToSql,
+                    &action as &dyn rusqlite::ToSql,
+                    &entity_type as &dyn rusqlite::ToSql,
+                    &entity_id as &dyn rusqlite::ToSql,
+                    &old_data as &dyn rusqlite::ToSql,
+                    &new_data as &dyn rusqlite::ToSql,
+                    &details as &dyn rusqlite::ToSql,
+                ],
+            )
+            .map_err(|e| format!("Failed to log audit: {}", e))?;
+
+        Ok(())
+    }
+
+    /// Get audit logs (latest 100)
+    pub fn get_audit_logs(&self, limit: i64, offset: i64) -> Result<Vec<AuditLog>, String> {
+        let mut stmt = self.conn
+            .prepare(
+                "SELECT id, user_id, username, action, entity_type, entity_id, old_data, new_data, details, created_at 
+                 FROM audit_logs 
+                 ORDER BY created_at DESC 
+                 LIMIT ?1 OFFSET ?2"
+            )
+            .map_err(|e| format!("Failed to prepare audit query: {}", e))?;
+
+        let logs = stmt
+            .query_map([limit, offset], |row| {
+                Ok(AuditLog {
+                    id: row.get(0)?,
+                    user_id: row.get(1)?,
+                    username: row.get(2)?,
+                    action: row.get(3)?,
+                    entity_type: row.get(4)?,
+                    entity_id: row.get(5)?,
+                    old_data: row.get(6)?,
+                    new_data: row.get(7)?,
+                    details: row.get(8)?,
+                    created_at: row.get(9)?,
+                })
+            })
+            .map_err(|e| format!("Failed to query audit logs: {}", e))?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("Failed to collect audit logs: {}", e))?;
+
+        Ok(logs)
+    }
+
+    /// Count total audit logs
+    pub fn count_audit_logs(&self) -> Result<i64, String> {
+        let count: i64 = self
+            .conn
+            .query_row("SELECT COUNT(*) FROM audit_logs", [], |row| row.get(0))
+            .map_err(|e| format!("Failed to count audit logs: {}", e))?;
+        Ok(count)
+    }
+}
+
 // ==================== TESTS ====================
 
 #[cfg(test)]
@@ -1602,40 +2267,544 @@ mod tests {
     use super::*;
     use std::env;
 
-    #[test]
-    fn test_database_init() {
-        let temp_path = env::temp_dir().join("test_astana.db");
+    // Helper function to create a temporary database for testing
+    fn create_test_db() -> (Database, std::path::PathBuf) {
+        let temp_path = env::temp_dir().join(format!("test_astana_{}.db", uuid::Uuid::new_v4()));
 
         // Delete old file if exists
         if temp_path.exists() {
             fs::remove_file(&temp_path).unwrap();
         }
 
-        // Test initialization
         let db = Database::init_with_path(temp_path.clone()).unwrap();
+        (db, temp_path)
+    }
+
+    fn cleanup_test_db(path: &std::path::Path) {
+        if path.exists() {
+            fs::remove_file(path).unwrap();
+        }
+    }
+
+    #[test]
+    fn test_database_init() {
+        let (db, temp_path) = create_test_db();
 
         // Verify tables created
         assert!(db.verify().unwrap());
 
         // Cleanup
-        fs::remove_file(&temp_path).unwrap();
+        cleanup_test_db(&temp_path);
     }
 
     #[test]
     fn test_database_stats() {
-        let temp_path = env::temp_dir().join("test_astana_stats.db");
+        let (db, temp_path) = create_test_db();
 
-        if temp_path.exists() {
-            fs::remove_file(&temp_path).unwrap();
-        }
-
-        let db = Database::init_with_path(temp_path.clone()).unwrap();
         let stats = db.get_stats().unwrap();
 
         // Verify stats
         assert!(stats.graves_count >= 0);
         assert!(stats.size_bytes >= 0);
 
-        fs::remove_file(&temp_path).unwrap();
+        // Cleanup
+        cleanup_test_db(&temp_path);
+    }
+
+    // ==================== AUTHENTICATION TESTS ====================
+
+    #[test]
+    fn test_password_hashing_and_verification() {
+        let password = "test_password_123";
+
+        // Test hashing
+        let hash = Database::hash_password(password).unwrap();
+        assert!(!hash.is_empty());
+        assert_ne!(hash, password); // Hash should not be the same as plaintext
+
+        // Test verification with correct password
+        let is_valid = Database::verify_password(password, &hash).unwrap();
+        assert!(is_valid);
+
+        // Test verification with wrong password
+        let is_invalid = Database::verify_password("wrong_password", &hash).unwrap();
+        assert!(!is_invalid);
+    }
+
+    #[test]
+    fn test_is_users_empty() {
+        let (db, temp_path) = create_test_db();
+
+        // Should be empty initially
+        assert!(db.is_users_empty().unwrap());
+
+        // Create a user
+        let password = "test_password";
+        db.create_superadmin_0(password).unwrap();
+
+        // Should not be empty now
+        assert!(!db.is_users_empty().unwrap());
+
+        cleanup_test_db(&temp_path);
+    }
+
+    #[test]
+    fn test_create_superadmin_0() {
+        let (db, temp_path) = create_test_db();
+
+        let password = "superadmin_password";
+        let user = db.create_superadmin_0(password).unwrap();
+
+        assert_eq!(user.username, "superadmin");
+        assert_eq!(user.role, "superadmin_0");
+        assert!(user.is_active);
+        assert!(!user.is_password_changed);
+        assert!(user.created_by.is_none());
+
+        // Verify password works
+        let login_result = db.login("superadmin", password).unwrap();
+        assert!(login_result.success);
+        assert!(login_result.must_change_password); // Superadmin_0 must change password on first login
+
+        cleanup_test_db(&temp_path);
+    }
+
+    #[test]
+    fn test_login_success() {
+        let (db, temp_path) = create_test_db();
+
+        // Create superadmin
+        let password = "test_password";
+        db.create_superadmin_0(password).unwrap();
+
+        // Test successful login
+        let result = db.login("superadmin", password).unwrap();
+        assert!(result.success);
+        assert!(result.user.is_some());
+        assert_eq!(result.user.unwrap().role, "superadmin_0");
+
+        cleanup_test_db(&temp_path);
+    }
+
+    #[test]
+    fn test_login_failure_wrong_password() {
+        let (db, temp_path) = create_test_db();
+
+        // Create superadmin
+        db.create_superadmin_0("correct_password").unwrap();
+
+        // Test login with wrong password
+        let result = db.login("superadmin", "wrong_password").unwrap();
+        assert!(!result.success);
+        assert!(result.user.is_none());
+
+        cleanup_test_db(&temp_path);
+    }
+
+    #[test]
+    fn test_login_failure_invalid_username() {
+        let (db, temp_path) = create_test_db();
+
+        // Try to login with non-existent user
+        let result = db.login("nonexistent", "password").unwrap();
+        assert!(!result.success);
+        assert!(result.user.is_none());
+
+        cleanup_test_db(&temp_path);
+    }
+
+    #[test]
+    fn test_login_inactive_user() {
+        let (db, temp_path) = create_test_db();
+
+        // Create admin user
+        db.create_superadmin_0("admin_password").unwrap();
+
+        // Create another user
+        let user_req = CreateUserRequest {
+            username: "testadmin".to_string(),
+            password: "test_password".to_string(),
+            role: "admin".to_string(),
+        };
+        let user_id = db.create_user(&user_req, 1).unwrap();
+
+        // Deactivate user
+        let update_req = UpdateUserRequest {
+            role: None,
+            is_active: Some(false),
+        };
+        db.update_user(user_id, &update_req, 1).unwrap();
+
+        // Try to login with inactive user
+        let result = db.login("testadmin", "test_password").unwrap();
+        assert!(!result.success);
+        assert!(result.message.contains("tidak aktif"));
+
+        cleanup_test_db(&temp_path);
+    }
+
+    #[test]
+    fn test_change_password() {
+        let (db, temp_path) = create_test_db();
+
+        // Create superadmin
+        db.create_superadmin_0("old_password").unwrap();
+
+        // Login to get user
+        let user = db
+            .get_user_by_username_with_hash("superadmin")
+            .unwrap()
+            .unwrap();
+
+        // Change password
+        let result = db
+            .change_password(user.id, Some("old_password"), "new_password", false)
+            .unwrap();
+        assert!(result.is_ok());
+
+        // Verify old password doesn't work
+        let old_login = db.login("superadmin", "old_password").unwrap();
+        assert!(!old_login.success);
+
+        // Verify new password works
+        let new_login = db.login("superadmin", "new_password").unwrap();
+        assert!(new_login.success);
+        assert!(new_login.user.unwrap().is_password_changed);
+
+        cleanup_test_db(&temp_path);
+    }
+
+    #[test]
+    fn test_change_password_wrong_old_password() {
+        let (db, temp_path) = create_test_db();
+
+        // Create superadmin
+        db.create_superadmin_0("correct_password").unwrap();
+
+        let user = db
+            .get_user_by_username_with_hash("superadmin")
+            .unwrap()
+            .unwrap();
+
+        // Try to change with wrong old password
+        let result = db
+            .change_password(user.id, Some("wrong_password"), "new_password", false)
+            .unwrap();
+        assert!(result.is_err());
+
+        cleanup_test_db(&temp_path);
+    }
+
+    #[test]
+    fn test_create_user() {
+        let (db, temp_path) = create_test_db();
+
+        // Create superadmin first
+        db.create_superadmin_0("admin_password").unwrap();
+
+        // Create new user
+        let user_req = CreateUserRequest {
+            username: "testuser".to_string(),
+            password: "test_password".to_string(),
+            role: "admin".to_string(),
+        };
+
+        let user_id = db.create_user(&user_req, 1).unwrap();
+        assert!(user_id > 0);
+
+        // Verify user exists
+        let user = db.get_user_by_id(user_id).unwrap().unwrap();
+        assert_eq!(user.username, "testuser");
+        assert_eq!(user.role, "admin");
+        assert!(user.is_active);
+        assert!(!user.is_password_changed);
+        assert_eq!(user.created_by, Some(1));
+
+        // Verify can login
+        let login_result = db.login("testuser", "test_password").unwrap();
+        assert!(login_result.success);
+
+        cleanup_test_db(&temp_path);
+    }
+
+    #[test]
+    fn test_get_all_users() {
+        let (db, temp_path) = create_test_db();
+
+        // Create superadmin
+        db.create_superadmin_0("admin_password").unwrap();
+
+        // Create additional users
+        let user1 = CreateUserRequest {
+            username: "user1".to_string(),
+            password: "password1".to_string(),
+            role: "admin".to_string(),
+        };
+        let user2 = CreateUserRequest {
+            username: "user2".to_string(),
+            password: "password2".to_string(),
+            role: "superadmin".to_string(),
+        };
+
+        db.create_user(&user1, 1).unwrap();
+        db.create_user(&user2, 1).unwrap();
+
+        // Get all users
+        let users = db.get_all_users().unwrap();
+        assert_eq!(users.len(), 3); // superadmin_0 + 2 users
+
+        cleanup_test_db(&temp_path);
+    }
+
+    #[test]
+    fn test_update_user() {
+        let (db, temp_path) = create_test_db();
+
+        // Create superadmin
+        db.create_superadmin_0("admin_password").unwrap();
+
+        // Create user
+        let user_req = CreateUserRequest {
+            username: "testuser".to_string(),
+            password: "password".to_string(),
+            role: "admin".to_string(),
+        };
+        let user_id = db.create_user(&user_req, 1).unwrap();
+
+        // Update user
+        let update_req = UpdateUserRequest {
+            role: Some("superadmin".to_string()),
+            is_active: Some(false),
+        };
+        db.update_user(user_id, &update_req, 1).unwrap();
+
+        // Verify changes
+        let user = db.get_user_by_id(user_id).unwrap().unwrap();
+        assert_eq!(user.role, "superadmin");
+        assert!(!user.is_active);
+
+        cleanup_test_db(&temp_path);
+    }
+
+    #[test]
+    fn test_delete_user() {
+        let (db, temp_path) = create_test_db();
+
+        // Create superadmin
+        db.create_superadmin_0("admin_password").unwrap();
+
+        // Create user
+        let user_req = CreateUserRequest {
+            username: "testuser".to_string(),
+            password: "password".to_string(),
+            role: "admin".to_string(),
+        };
+        let user_id = db.create_user(&user_req, 1).unwrap();
+
+        // Delete user
+        let result = db.delete_user(user_id, 1).unwrap();
+        assert!(result.is_ok());
+
+        // Verify user is gone
+        assert!(db.get_user_by_id(user_id).unwrap().is_none());
+
+        cleanup_test_db(&temp_path);
+    }
+
+    #[test]
+    fn test_cannot_delete_superadmin_0() {
+        let (db, temp_path) = create_test_db();
+
+        // Create superadmin
+        let user = db.create_superadmin_0("password").unwrap();
+
+        // Try to delete superadmin_0
+        let result = db.delete_user(user.id, user.id).unwrap();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("tidak dapat dihapus"));
+
+        cleanup_test_db(&temp_path);
+    }
+
+    #[test]
+    fn test_cannot_delete_self() {
+        let (db, temp_path) = create_test_db();
+
+        // Create superadmin
+        let user = db.create_superadmin_0("password").unwrap();
+
+        // Create another user
+        let user_req = CreateUserRequest {
+            username: "testuser".to_string(),
+            password: "password".to_string(),
+            role: "admin".to_string(),
+        };
+        let user_id = db.create_user(&user_req, user.id).unwrap();
+
+        // Try to delete self
+        let result = db.delete_user(user_id, user_id).unwrap();
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .contains("tidak dapat menghapus akun sendiri"));
+
+        cleanup_test_db(&temp_path);
+    }
+
+    #[test]
+    fn test_reset_password() {
+        let (db, temp_path) = create_test_db();
+
+        // Create superadmin
+        db.create_superadmin_0("admin_password").unwrap();
+
+        // Create user
+        let user_req = CreateUserRequest {
+            username: "testuser".to_string(),
+            password: "old_password".to_string(),
+            role: "admin".to_string(),
+        };
+        let user_id = db.create_user(&user_req, 1).unwrap();
+
+        // Verify old password works
+        let old_login = db.login("testuser", "old_password").unwrap();
+        assert!(old_login.success);
+
+        // Reset password
+        db.reset_user_password(user_id, "new_password", 1).unwrap();
+
+        // Verify old password doesn't work
+        let old_login = db.login("testuser", "old_password").unwrap();
+        assert!(!old_login.success);
+
+        // Verify new password works
+        let new_login = db.login("testuser", "new_password").unwrap();
+        assert!(new_login.success);
+        assert!(!new_login.user.unwrap().is_password_changed); // Should be reset to false
+
+        cleanup_test_db(&temp_path);
+    }
+
+    // ==================== AUDIT LOG TESTS ====================
+
+    #[test]
+    fn test_audit_logging() {
+        let (db, temp_path) = create_test_db();
+
+        // Create superadmin
+        db.create_superadmin_0("password").unwrap();
+
+        // Log something
+        db.log_audit(
+            Some(1),
+            Some("superadmin"),
+            "CREATE",
+            "user",
+            Some(2),
+            None,
+            Some("{\"test\": \"data\"}"),
+            Some("Test audit log"),
+        )
+        .unwrap();
+
+        // Get audit logs
+        let logs = db.get_audit_logs(10, 0).unwrap();
+        assert_eq!(logs.len(), 1);
+
+        let log = &logs[0];
+        assert_eq!(log.user_id, Some(1));
+        assert_eq!(log.username, Some("superadmin".to_string()));
+        assert_eq!(log.action, "CREATE");
+        assert_eq!(log.entity_type, "user");
+        assert_eq!(log.entity_id, Some(2));
+        assert_eq!(log.details, Some("Test audit log".to_string()));
+
+        cleanup_test_db(&temp_path);
+    }
+
+    #[test]
+    fn test_audit_log_count() {
+        let (db, temp_path) = create_test_db();
+
+        // Create superadmin
+        db.create_superadmin_0("password").unwrap();
+
+        // Check initial count
+        let initial_count = db.count_audit_logs().unwrap();
+
+        // Create multiple logs
+        for i in 0..5 {
+            db.log_audit(
+                Some(1),
+                Some("superadmin"),
+                "TEST",
+                "test",
+                Some(i),
+                None,
+                None,
+                None,
+            )
+            .unwrap();
+        }
+
+        // Check count increased
+        let new_count = db.count_audit_logs().unwrap();
+        assert_eq!(new_count, initial_count + 5);
+
+        cleanup_test_db(&temp_path);
+    }
+
+    #[test]
+    fn test_get_audit_logs_pagination() {
+        let (db, temp_path) = create_test_db();
+
+        // Create superadmin
+        db.create_superadmin_0("password").unwrap();
+
+        // Create 5 logs
+        for i in 0..5 {
+            db.log_audit(
+                Some(1),
+                Some("superadmin"),
+                "TEST",
+                "test",
+                Some(i),
+                None,
+                None,
+                None,
+            )
+            .unwrap();
+        }
+
+        // Get first 2 logs
+        let logs_page1 = db.get_audit_logs(2, 0).unwrap();
+        assert_eq!(logs_page1.len(), 2);
+
+        // Get next 2 logs
+        let logs_page2 = db.get_audit_logs(2, 2).unwrap();
+        assert_eq!(logs_page2.len(), 2);
+
+        // Verify different pages
+        assert_ne!(logs_page1[0].id, logs_page2[0].id);
+
+        cleanup_test_db(&temp_path);
+    }
+
+    // ==================== GENERATE RANDOM PASSWORD TESTS ====================
+
+    #[test]
+    fn test_generate_random_password() {
+        let password1 = Database::generate_random_password();
+        let password2 = Database::generate_random_password();
+
+        // Should be 12 characters
+        assert_eq!(password1.len(), 12);
+        assert_eq!(password2.len(), 12);
+
+        // Should be alphanumeric
+        assert!(password1.chars().all(|c| c.is_ascii_alphanumeric()));
+
+        // Should generate different passwords
+        assert_ne!(password1, password2);
     }
 }

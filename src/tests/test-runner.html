@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UI Tests - Astana</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .test-pass { color: #10b981; }
+        .test-fail { color: #ef4444; }
+        .test-running { color: #f59e0b; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">🧪 UI Test Suite</h1>
+                    <p class="text-gray-600">Authentication & User Management Tests</p>
+                </div>
+                <button 
+                    onclick="runAllTests()" 
+                    id="runTestsBtn"
+                    class="bg-emerald-600 text-white px-6 py-2 rounded-lg hover:bg-emerald-700 transition-colors"
+                >
+                    Run All Tests
+                </button>
+            </div>
+        </div>
+        
+        <!-- Test Results -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Test List -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="p-4 border-b border-gray-200">
+                    <h2 class="font-semibold text-gray-800">Test Results</h2>
+                </div>
+                <div id="testResults" class="divide-y divide-gray-100 max-h-96 overflow-y-auto">
+                    <div class="p-8 text-center text-gray-400">
+                        <p>Click "Run All Tests" to start testing</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Summary -->
+            <div class="space-y-6">
+                <!-- Stats -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="font-semibold text-gray-800 mb-4">Summary</h2>
+                    <div class="grid grid-cols-3 gap-4 text-center">
+                        <div class="bg-emerald-50 rounded-lg p-4">
+                            <p class="text-3xl font-bold text-emerald-600" id="passedCount">0</p>
+                            <p class="text-sm text-emerald-700">Passed</p>
+                        </div>
+                        <div class="bg-red-50 rounded-lg p-4">
+                            <p class="text-3xl font-bold text-red-600" id="failedCount">0</p>
+                            <p class="text-sm text-red-700">Failed</p>
+                        </div>
+                        <div class="bg-blue-50 rounded-lg p-4">
+                            <p class="text-3xl font-bold text-blue-600" id="totalCount">0</p>
+                            <p class="text-sm text-blue-700">Total</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Console Log -->
+                <div class="bg-white rounded-lg shadow">
+                    <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                        <h2 class="font-semibold text-gray-800">Console Output</h2>
+                        <button onclick="clearConsole()" class="text-sm text-gray-500 hover:text-gray-700">Clear</button>
+                    </div>
+                    <div id="consoleOutput" class="p-4 h-64 overflow-y-auto font-mono text-sm bg-gray-900 text-gray-100 rounded-b-lg">
+                        <div class="text-gray-500">> Test console ready...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Back to Login -->
+        <div class="mt-8 text-center">
+            <a href="login.html" class="text-emerald-600 hover:underline">← Back to Login</a>
+        </div>
+    </div>
+    
+    <script src="../main.js"></script>
+    <script src="auth-ui-tests.js"></script>
+    <script>
+        // Override console methods to capture output
+        const originalConsole = {
+            log: console.log,
+            error: console.error,
+            warn: console.warn
+        };
+        
+        function appendToConsole(type, ...args) {
+            const consoleOutput = document.getElementById('consoleOutput');
+            const message = args.map(arg => {
+                if (typeof arg === 'object') {
+                    return JSON.stringify(arg, null, 2);
+                }
+                return String(arg);
+            }).join(' ');
+            
+            const line = document.createElement('div');
+            line.className = 'mb-1';
+            
+            if (type === 'error') {
+                line.className += ' text-red-400';
+            } else if (type === 'warn') {
+                line.className += ' text-yellow-400';
+            } else {
+                line.className += ' text-gray-300';
+            }
+            
+            line.textContent = `> ${message}`;
+            consoleOutput.appendChild(line);
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            
+            // Also log to original console
+            originalConsole[type](...args);
+        }
+        
+        console.log = (...args) => appendToConsole('log', ...args);
+        console.error = (...args) => appendToConsole('error', ...args);
+        console.warn = (...args) => appendToConsole('warn', ...args);
+        
+        function clearConsole() {
+            document.getElementById('consoleOutput').innerHTML = '<div class="text-gray-500">> Console cleared...</div>';
+        }
+        
+        async function runAllTests() {
+            const btn = document.getElementById('runTestsBtn');
+            btn.disabled = true;
+            btn.textContent = 'Running...';
+            btn.classList.add('opacity-50');
+            
+            const resultsDiv = document.getElementById('testResults');
+            resultsDiv.innerHTML = '';
+            
+            // Reset counts
+            document.getElementById('passedCount').textContent = '0';
+            document.getElementById('failedCount').textContent = '0';
+            document.getElementById('totalCount').textContent = '0';
+            
+            console.log('\n🧪 Starting UI Tests...\n');
+            
+            let passed = 0;
+            let failed = 0;
+            
+            // Run each test
+            for (const test of AuthTests.tests) {
+                const testDiv = document.createElement('div');
+                testDiv.className = 'p-4 flex items-center justify-between';
+                testDiv.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <span class="test-running">⏳</span>
+                        <span class="text-gray-700">${test.name}</span>
+                    </div>
+                    <span class="text-xs text-gray-400">Running...</span>
+                `;
+                resultsDiv.appendChild(testDiv);
+                
+                try {
+                    setupMock();
+                    await test.fn();
+                    
+                    testDiv.innerHTML = `
+                        <div class="flex items-center space-x-3">
+                            <span class="test-pass">✓</span>
+                            <span class="text-gray-700">${test.name}</span>
+                        </div>
+                        <span class="text-xs text-emerald-600">Passed</span>
+                    `;
+                    passed++;
+                } catch (error) {
+                    testDiv.innerHTML = `
+                        <div class="flex items-center space-x-3">
+                            <span class="test-fail">✗</span>
+                            <div>
+                                <div class="text-gray-700">${test.name}</div>
+                                <div class="text-xs text-red-500 mt-1">${error.message}</div>
+                            </div>
+                        </div>
+                        <span class="text-xs text-red-600">Failed</span>
+                    `;
+                    failed++;
+                }
+                
+                // Update counts
+                document.getElementById('passedCount').textContent = passed;
+                document.getElementById('failedCount').textContent = failed;
+                document.getElementById('totalCount').textContent = passed + failed;
+                
+                // Small delay for visual effect
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            console.log(`\n📊 Results: ${passed} passed, ${failed} failed`);
+            
+            btn.disabled = false;
+            btn.textContent = 'Run All Tests';
+            btn.classList.remove('opacity-50');
+            
+            // Show final message
+            if (failed === 0) {
+                console.log('✅ All tests passed!');
+            } else {
+                console.log('❌ Some tests failed');
+            }
+        }
+        
+        // Auto-run on load if requested
+        if (window.location.search.includes('autorun')) {
+            window.addEventListener('load', () => setTimeout(runAllTests, 500));
+        }
+    </script>
+</body>
+</html>

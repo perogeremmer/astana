@@ -4,6 +4,12 @@
 // Initialize Tauri API
 const { invoke } = window.__TAURI__?.core || {};
 
+// ==================== AUTHENTICATION SYSTEM ====================
+
+// Session management
+const SESSION_TOKEN_KEY = 'astana_session_token';
+const SESSION_USER_KEY = 'astana_session_user';
+
 // Fungsi utilitas yang bisa digunakan di seluruh aplikasi
 window.astanaApp = {
   // Fungsi untuk navigasi ke halaman lain
@@ -11,7 +17,7 @@ window.astanaApp = {
     window.location.href = page;
   },
   
-  // Fungsi untuk memanggil Rust backend (jika diperlukan nanti)
+  // Fungsi untuk memanggil Rust backend
   callBackend: async (command, args = {}) => {
     if (invoke) {
       return await invoke(command, args);
@@ -30,6 +36,105 @@ window.astanaApp = {
   // Format rupiah
   formatRupiah: (angka) => {
     return 'Rp ' + angka.toLocaleString('id-ID');
+  },
+  
+  // ==================== AUTH FUNCTIONS ====================
+  
+  // Save session to localStorage
+  saveSession: (token, user) => {
+    localStorage.setItem(SESSION_TOKEN_KEY, token);
+    localStorage.setItem(SESSION_USER_KEY, JSON.stringify(user));
+  },
+  
+  // Get session token
+  getSessionToken: () => {
+    return localStorage.getItem(SESSION_TOKEN_KEY);
+  },
+  
+  // Get current user
+  getCurrentUser: () => {
+    const userJson = localStorage.getItem(SESSION_USER_KEY);
+    return userJson ? JSON.parse(userJson) : null;
+  },
+  
+  // Clear session
+  clearSession: () => {
+    localStorage.removeItem(SESSION_TOKEN_KEY);
+    localStorage.removeItem(SESSION_USER_KEY);
+  },
+  
+  // Check if user is authenticated
+  isAuthenticated: () => {
+    return !!localStorage.getItem(SESSION_TOKEN_KEY);
+  },
+  
+  // Check if user has specific role
+  hasRole: (role) => {
+    const user = window.astanaApp.getCurrentUser();
+    if (!user) return false;
+    if (role === 'superadmin_or_superadmin_0') {
+      return user.role === 'superadmin' || user.role === 'superadmin_0';
+    }
+    return user.role === role;
+  },
+  
+  // Validate session with backend
+  validateSession: async () => {
+    const token = window.astanaApp.getSessionToken();
+    if (!token) return false;
+    
+    try {
+      const session = await invoke('validate_session', { token });
+      if (!session) {
+        window.astanaApp.clearSession();
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error('Session validation error:', error);
+      window.astanaApp.clearSession();
+      return false;
+    }
+  },
+  
+  // Logout user
+  logout: async () => {
+    const token = window.astanaApp.getSessionToken();
+    if (token) {
+      try {
+        await invoke('logout', { token });
+      } catch (error) {
+        console.error('Logout error:', error);
+      }
+    }
+    window.astanaApp.clearSession();
+    window.location.href = 'login.html';
+  },
+  
+  // Protect page - redirect to login if not authenticated
+  protectPage: async () => {
+    const isValid = await window.astanaApp.validateSession();
+    if (!isValid) {
+      window.location.href = 'login.html';
+      return false;
+    }
+    return true;
+  },
+  
+  // Require role - redirect to login if doesn't have role
+  requireRole: async (role) => {
+    const isValid = await window.astanaApp.validateSession();
+    if (!isValid) {
+      window.location.href = 'login.html';
+      return false;
+    }
+    
+    if (!window.astanaApp.hasRole(role)) {
+      alert('Anda tidak memiliki akses ke halaman ini');
+      window.location.href = 'index.html';
+      return false;
+    }
+    return true;
   }
 };
 
@@ -111,11 +216,43 @@ window.addEventListener('storage', (e) => {
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   loadSidebarInfo();
+  updateSidebarUser();
 });
+
+// Update sidebar user info
+function updateSidebarUser() {
+    const user = window.astanaApp.getCurrentUser();
+    if (!user) return;
+    
+    // Update user name in sidebar
+    const userNameElements = document.querySelectorAll('.sidebar-user-name');
+    userNameElements.forEach(el => {
+        el.textContent = user.username;
+    });
+    
+    // Update user role in sidebar
+    const userRoleElements = document.querySelectorAll('.sidebar-user-role');
+    const roleLabels = {
+        'superadmin_0': 'Superadmin Utama',
+        'superadmin': 'Superadmin',
+        'admin': 'Admin'
+    };
+    userRoleElements.forEach(el => {
+        el.textContent = roleLabels[user.role] || user.role;
+    });
+    
+    // Show/hide admin-only menu items
+    const adminOnlyElements = document.querySelectorAll('.admin-only');
+    const isAdmin = user.role === 'superadmin' || user.role === 'superadmin_0';
+    adminOnlyElements.forEach(el => {
+        el.style.display = isAdmin ? 'block' : 'none';
+    });
+}
 
 // Expose functions globally for cross-page communication
 window.loadSidebarInfo = loadSidebarInfo;
 window.updateSidebar = updateSidebar;
+window.updateSidebarUser = updateSidebarUser;
 
 // Log aplikasi sudah siap
 console.log('🕌 Astana - Sistem Wakaf Makam berhasil dimuat');

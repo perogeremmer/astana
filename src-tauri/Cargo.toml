@@ -29,8 +29,15 @@ serde_json = "1"
 rusqlite = { version = "0.32", features = ["bundled", "backup"] }
 log = "0.4"
 env_logger = "0.11"
-chrono = "0.4"
+chrono = { version = "0.4", features = ["serde"] }
 base64 = "0.22"
+
+# Authentication & Password Hashing
+argon2 = "0.5"
+rand = "0.8"
+
+# Session Management
+uuid = { version = "1", features = ["v4", "serde"] }
 
 [dev-dependencies]
 tempfile = "3"

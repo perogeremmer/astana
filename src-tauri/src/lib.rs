@@ -1,15 +1,93 @@
 // Astana - Manajemen Iuran Makam
 // Library utama untuk aplikasi Tauri
 
+use std::collections::HashMap;
+use std::sync::Mutex;
+
 use tauri::Manager;
+use tauri::State;
+use uuid::Uuid;
 
 // Modul database
 pub mod db;
 
-/// Command untuk greeting (contoh)
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
+// Global session storage
+pub struct SessionStore {
+    sessions: Mutex<HashMap<String, db::Session>>,
+}
+
+impl SessionStore {
+    pub fn new() -> Self {
+        Self {
+            sessions: Mutex::new(HashMap::new()),
+        }
+    }
+
+    pub fn create_session(&self, user_id: i64, username: String, role: String) -> String {
+        let token = Uuid::new_v4().to_string();
+        let expires_at = chrono::Utc::now().timestamp() + (8 * 60 * 60); // 8 hours
+        
+        let session = db::Session {
+            user_id,
+            username,
+            role,
+            token: token.clone(),
+            expires_at,
+        };
+        
+        let mut sessions = self.sessions.lock().unwrap();
+        sessions.insert(token.clone(), session);
+        
+        token
+    }
+
+    pub fn get_session(&self, token: &str) -> Option<db::Session> {
+        let sessions = self.sessions.lock().unwrap();
+        sessions.get(token).cloned()
+    }
+
+    pub fn remove_session(&self, token: &str) {
+        let mut sessions = self.sessions.lock().unwrap();
+        sessions.remove(token);
+    }
+
+    pub fn is_valid(&self, token: &str) -> bool {
+        if let Some(session) = self.get_session(token) {
+            let now = chrono::Utc::now().timestamp();
+            session.expires_at > now
+        } else {
+            false
+        }
+    }
+
+    pub fn cleanup_expired(&self) {
+        let mut sessions = self.sessions.lock().unwrap();
+        let now = chrono::Utc::now().timestamp();
+        sessions.retain(|_, session| session.expires_at > now);
+    }
+}
+
+// Global store untuk Superadmin_0 password yang di-generate
+pub struct FirstRunState {
+    pub superadmin_password: Mutex<Option<String>>,
+}
+
+impl FirstRunState {
+    pub fn new() -> Self {
+        Self {
+            superadmin_password: Mutex::new(None),
+        }
+    }
+
+    pub fn set_password(&self, password: String) {
+        let mut pwd = self.superadmin_password.lock().unwrap();
+        *pwd = Some(password);
+    }
+
+    pub fn get_and_clear_password(&self) -> Option<String> {
+        let mut pwd = self.superadmin_password.lock().unwrap();
+        pwd.take()
+    }
 }
 
 /// Command untuk mendapatkan path database
@@ -402,7 +480,7 @@ async fn create_payment(
 #[tauri::command]
 async fn update_payment(
     app_handle: tauri::AppHandle,
-    id: i64,
+    _id: i64,
     payment: db::CreatePaymentRequest,
 ) -> Result<(), String> {
     let db = db::Database::init(&app_handle)?;
@@ -615,7 +693,7 @@ async fn upload_logo(
         .extension()
         .and_then(|e: &std::ffi::OsStr| e.to_str())
         .unwrap_or("png");
-    let new_filename = format!("logo_{}.{}", timestamp, ext);
+    let new_filename = format!("logo_{}. {}", timestamp, ext);
     let file_path = images_dir.join(&new_filename);
     
     // Write file
@@ -624,6 +702,331 @@ async fn upload_logo(
     
     // Return relative path
     Ok(format!("images/{}", new_filename))
+}
+
+// ==================== AUTHENTICATION COMMANDS ====================
+
+/// Check if this is first run (no users in database)
+#[tauri::command]
+async fn check_first_run(app_handle: tauri::AppHandle) -> Result<bool, String> {
+    let db = db::Database::init(&app_handle)?;
+    db.is_users_empty()
+}
+
+/// Initialize first superadmin_0 user
+#[tauri::command]
+async fn init_superadmin_0(
+    app_handle: tauri::AppHandle,
+    first_run_state: State<'_, FirstRunState>,
+) -> Result<String, String> {
+    let db = db::Database::init(&app_handle)?;
+    
+    // Check if users table is empty
+    if !db.is_users_empty()? {
+        return Err("Users already exist".to_string());
+    }
+    
+    // Generate random password
+    let password = db::Database::generate_random_password();
+    
+    // Create superadmin_0
+    let user = db.create_superadmin_0(&password)?;
+    
+    // Store password in state
+    first_run_state.set_password(password.clone());
+    
+    log::info!("Superadmin_0 created with username: {}", user.username);
+    
+    Ok(user.username)
+}
+
+/// Get initial superadmin password (only works once)
+#[tauri::command]
+async fn get_initial_password(first_run_state: State<'_, FirstRunState>) -> Result<Option<String>, String> {
+    Ok(first_run_state.get_and_clear_password())
+}
+
+/// Login user
+#[tauri::command]
+async fn login(
+    app_handle: tauri::AppHandle,
+    sessions: State<'_, SessionStore>,
+    username: String,
+    password: String,
+) -> Result<LoginResponse, String> {
+    let db = db::Database::init(&app_handle)?;
+    
+    let result = db.login(&username, &password)?;
+    
+    if result.success {
+        let user = result.user.unwrap();
+        let token = sessions.create_session(user.id, user.username.clone(), user.role.clone());
+        
+        Ok(LoginResponse {
+            success: true,
+            token: Some(token),
+            user: Some(user),
+            message: result.message,
+            must_change_password: result.must_change_password,
+        })
+    } else {
+        Ok(LoginResponse {
+            success: false,
+            token: None,
+            user: None,
+            message: result.message,
+            must_change_password: false,
+        })
+    }
+}
+
+/// Login response
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct LoginResponse {
+    pub success: bool,
+    pub token: Option<String>,
+    pub user: Option<db::User>,
+    pub message: String,
+    pub must_change_password: bool,
+}
+
+/// Logout user
+#[tauri::command]
+async fn logout(
+    app_handle: tauri::AppHandle,
+    sessions: State<'_, SessionStore>,
+    token: String,
+) -> Result<(), String> {
+    if let Some(session) = sessions.get_session(&token) {
+        let db = db::Database::init(&app_handle)?;
+        db.logout(session.user_id)?;
+    }
+    
+    sessions.remove_session(&token);
+    Ok(())
+}
+
+/// Validate session
+#[tauri::command]
+async fn validate_session(
+    sessions: State<'_, SessionStore>,
+    token: String,
+) -> Result<Option<db::Session>, String> {
+    // Cleanup expired sessions periodically
+    sessions.cleanup_expired();
+    
+    if sessions.is_valid(&token) {
+        Ok(sessions.get_session(&token))
+    } else {
+        sessions.remove_session(&token);
+        Ok(None)
+    }
+}
+
+/// Get current user from token
+#[tauri::command]
+async fn get_current_user(
+    app_handle: tauri::AppHandle,
+    sessions: State<'_, SessionStore>,
+    token: String,
+) -> Result<Option<db::User>, String> {
+    if !sessions.is_valid(&token) {
+        return Ok(None);
+    }
+    
+    if let Some(session) = sessions.get_session(&token) {
+        let db = db::Database::init(&app_handle)?;
+        db.get_user_by_id(session.user_id)
+    } else {
+        Ok(None)
+    }
+}
+
+/// Change password
+#[tauri::command]
+async fn change_password(
+    app_handle: tauri::AppHandle,
+    sessions: State<'_, SessionStore>,
+    token: String,
+    old_password: Option<String>,
+    new_password: String,
+    is_first_change: bool,
+) -> Result<Result<(), String>, String> {
+    if !sessions.is_valid(&token) {
+        return Ok(Err("Sesi tidak valid. Silakan login ulang.".to_string()));
+    }
+    
+    let session = sessions.get_session(&token).unwrap();
+    let db = db::Database::init(&app_handle)?;
+    
+    let old_pwd_ref = old_password.as_deref();
+    db.change_password(session.user_id, old_pwd_ref, &new_password, is_first_change)
+}
+
+// ==================== USER MANAGEMENT COMMANDS ====================
+
+/// Get all users (Superadmin only)
+#[tauri::command]
+async fn get_users(
+    app_handle: tauri::AppHandle,
+    sessions: State<'_, SessionStore>,
+    token: String,
+) -> Result<Result<Vec<db::User>, String>, String> {
+    // Validate session and check role
+    if !sessions.is_valid(&token) {
+        return Ok(Err("Sesi tidak valid".to_string()));
+    }
+    
+    let session = sessions.get_session(&token).unwrap();
+    if session.role != "superadmin_0" && session.role != "superadmin" {
+        return Ok(Err("Anda tidak memiliki akses".to_string()));
+    }
+    
+    let db = db::Database::init(&app_handle)?;
+    Ok(Ok(db.get_all_users()?))
+}
+
+/// Create new user (Superadmin only)
+#[tauri::command]
+async fn create_user(
+    app_handle: tauri::AppHandle,
+    sessions: State<'_, SessionStore>,
+    token: String,
+    user: db::CreateUserRequest,
+) -> Result<Result<i64, String>, String> {
+    // Validate session and check role
+    if !sessions.is_valid(&token) {
+        return Ok(Err("Sesi tidak valid".to_string()));
+    }
+    
+    let session = sessions.get_session(&token).unwrap();
+    if session.role != "superadmin_0" && session.role != "superadmin" {
+        return Ok(Err("Anda tidak memiliki akses".to_string()));
+    }
+    
+    let db = db::Database::init(&app_handle)?;
+    Ok(Ok(db.create_user(&user, session.user_id)?))
+}
+
+/// Update user (Superadmin only)
+#[tauri::command]
+async fn update_user(
+    app_handle: tauri::AppHandle,
+    sessions: State<'_, SessionStore>,
+    token: String,
+    user_id: i64,
+    user: db::UpdateUserRequest,
+) -> Result<Result<(), String>, String> {
+    // Validate session and check role
+    if !sessions.is_valid(&token) {
+        return Ok(Err("Sesi tidak valid".to_string()));
+    }
+    
+    let session = sessions.get_session(&token).unwrap();
+    if session.role != "superadmin_0" && session.role != "superadmin" {
+        return Ok(Err("Anda tidak memiliki akses".to_string()));
+    }
+    
+    // Prevent updating superadmin_0 role
+    let db = db::Database::init(&app_handle)?;
+    if let Some(target_user) = db.get_user_by_id(user_id)? {
+        if target_user.role == "superadmin_0" && user.role.is_some() {
+            return Ok(Err("Role Superadmin_0 tidak dapat diubah".to_string()));
+        }
+    }
+    
+    Ok(Ok(db.update_user(user_id, &user, session.user_id)?))
+}
+
+/// Delete user (Superadmin only)
+#[tauri::command]
+async fn delete_user(
+    app_handle: tauri::AppHandle,
+    sessions: State<'_, SessionStore>,
+    token: String,
+    user_id: i64,
+) -> Result<Result<(), String>, String> {
+    // Validate session and check role
+    if !sessions.is_valid(&token) {
+        return Ok(Err("Sesi tidak valid".to_string()));
+    }
+    
+    let session = sessions.get_session(&token).unwrap();
+    if session.role != "superadmin_0" && session.role != "superadmin" {
+        return Ok(Err("Anda tidak memiliki akses".to_string()));
+    }
+    
+    let db = db::Database::init(&app_handle)?;
+    db.delete_user(user_id, session.user_id)
+}
+
+/// Reset user password (Superadmin only)
+#[tauri::command]
+async fn reset_user_password(
+    app_handle: tauri::AppHandle,
+    sessions: State<'_, SessionStore>,
+    token: String,
+    user_id: i64,
+    new_password: String,
+) -> Result<Result<(), String>, String> {
+    // Validate session and check role
+    if !sessions.is_valid(&token) {
+        return Ok(Err("Sesi tidak valid".to_string()));
+    }
+    
+    let session = sessions.get_session(&token).unwrap();
+    if session.role != "superadmin_0" && session.role != "superadmin" {
+        return Ok(Err("Anda tidak memiliki akses".to_string()));
+    }
+    
+    let db = db::Database::init(&app_handle)?;
+    Ok(Ok(db.reset_user_password(user_id, &new_password, session.user_id)?))
+}
+
+// ==================== AUDIT LOG COMMANDS ====================
+
+/// Get audit logs (Superadmin only)
+#[tauri::command]
+async fn get_audit_logs(
+    app_handle: tauri::AppHandle,
+    sessions: State<'_, SessionStore>,
+    token: String,
+    limit: i64,
+    offset: i64,
+) -> Result<Result<Vec<db::AuditLog>, String>, String> {
+    // Validate session and check role
+    if !sessions.is_valid(&token) {
+        return Ok(Err("Sesi tidak valid".to_string()));
+    }
+    
+    let session = sessions.get_session(&token).unwrap();
+    if session.role != "superadmin_0" && session.role != "superadmin" {
+        return Ok(Err("Anda tidak memiliki akses".to_string()));
+    }
+    
+    let db = db::Database::init(&app_handle)?;
+    Ok(Ok(db.get_audit_logs(limit, offset)?))
+}
+
+/// Count audit logs
+#[tauri::command]
+async fn count_audit_logs(
+    app_handle: tauri::AppHandle,
+    sessions: State<'_, SessionStore>,
+    token: String,
+) -> Result<Result<i64, String>, String> {
+    // Validate session and check role
+    if !sessions.is_valid(&token) {
+        return Ok(Err("Sesi tidak valid".to_string()));
+    }
+    
+    let session = sessions.get_session(&token).unwrap();
+    if session.role != "superadmin_0" && session.role != "superadmin" {
+        return Ok(Err("Anda tidak memiliki akses".to_string()));
+    }
+    
+    let db = db::Database::init(&app_handle)?;
+    Ok(Ok(db.count_audit_logs()?))
 }
 
 /// Get logo file as base64 data URL
@@ -678,6 +1081,40 @@ fn setup_handler(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>>
                 Ok(true) => {
                     log::info!("✅ Database berhasil diinisiasi dan terverifikasi");
                     
+                    // Check if users table is empty
+                    match database.is_users_empty() {
+                        Ok(true) => {
+                            log::info!("🆕 First run detected - Superadmin_0 will be created");
+                            
+                            // Get the first run state
+                            let first_run_state = app.state::<FirstRunState>();
+                            
+                                    // Generate password and create superadmin_0
+                                    let password = db::Database::generate_random_password();
+                                    let password_for_dialog = password.clone();
+                                    match database.create_superadmin_0(&password) {
+                                        Ok(user) => {
+                                            log::info!("✅ Superadmin_0 berhasil dibuat: {}", user.username);
+                                            
+                                            // Store password in state
+                                            first_run_state.set_password(password);
+                                            
+                                            // Show dialog dengan password
+                                            show_first_run_dialog(&app.handle(), &password_for_dialog)?;
+                                }
+                                Err(e) => {
+                                    log::error!("❌ Gagal membuat Superadmin_0: {}", e);
+                                }
+                            }
+                        }
+                        Ok(false) => {
+                            log::info!("👥 Users sudah ada dalam database");
+                        }
+                        Err(e) => {
+                            log::warn!("⚠️ Gagal cek users table: {}", e);
+                        }
+                    }
+                    
                     // Log statistik database
                     match database.get_stats() {
                         Ok(stats) => {
@@ -707,18 +1144,66 @@ fn setup_handler(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>>
     Ok(())
 }
 
+/// Show first run dialog with superadmin password
+#[cfg(not(test))]
+fn show_first_run_dialog(app_handle: &tauri::AppHandle, password: &str) -> Result<(), Box<dyn std::error::Error>> {
+    use tauri_plugin_dialog::DialogExt;
+    
+    let password_clone = password.to_string();
+    
+    // Use dialog API to show message
+    app_handle.dialog()
+        .message(format!(
+            "Selamat datang di Astana!\n\nSuperadmin telah dibuat otomatis.\n\nUsername: superadmin\nPassword: {}\n\nHarap simpan password ini dengan aman dan ganti setelah login pertama.",
+            password_clone
+        ))
+        .title("Setup Awal - Superadmin")
+        .show(|_| {});
+    
+    Ok(())
+}
+
+#[cfg(test)]
+fn show_first_run_dialog(_app_handle: &tauri::AppHandle, _password: &str) -> Result<(), Box<dyn std::error::Error>> {
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Initialize logger
     env_logger::init();
-    
+
+    // Create state for sessions and first run
+    let session_store = SessionStore::new();
+    let first_run_state = FirstRunState::new();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_os::init())
+        .manage(session_store)
+        .manage(first_run_state)
         .setup(setup_handler)
         .invoke_handler(tauri::generate_handler![
-            greet,
+            // Authentication
+            check_first_run,
+            init_superadmin_0,
+            get_initial_password,
+            login,
+            logout,
+            validate_session,
+            get_current_user,
+            change_password,
+            // User Management
+            get_users,
+            create_user,
+            update_user,
+            delete_user,
+            reset_user_password,
+            // Audit Log
+            get_audit_logs,
+            count_audit_logs,
+            // Database
             get_database_path,
             get_database_stats,
             backup_database,
