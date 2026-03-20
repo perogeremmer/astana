@@ -2,6 +2,7 @@
 // Library utama untuk aplikasi Tauri
 
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::Mutex;
 
 use tauri::Manager;
@@ -102,10 +103,67 @@ async fn get_database_stats(app_handle: tauri::AppHandle) -> Result<db::Database
     db::get_db_stats(app_handle)
 }
 
-/// Command untuk backup database
+/// Command untuk backup database with dialog
 #[tauri::command]
-async fn backup_database(app_handle: tauri::AppHandle, backup_path: String) -> Result<(), String> {
-    db::backup_database_command(app_handle, backup_path)
+async fn backup_database_with_dialog(app_handle: tauri::AppHandle) -> Result<String, String> {
+    use tauri_plugin_dialog::DialogExt;
+    
+    let default_name = format!("astana_backup_{}.db", chrono::Local::now().format("%Y-%m-%d"));
+    
+    // Open save dialog
+    let file_path = app_handle.dialog()
+        .file()
+        .set_file_name(&default_name)
+        .add_filter("SQLite Database", &["db", "sqlite", "sqlite3"])
+        .blocking_save_file();
+    
+    match file_path {
+        Some(path) => {
+            let backup_path = path.as_path().unwrap();
+            db::backup_database_command(app_handle, backup_path.to_string_lossy().to_string())?;
+            Ok("Database berhasil di-export".to_string())
+        }
+        None => Err("Dialog dibatalkan".to_string())
+    }
+}
+
+/// Command untuk restore database with dialog
+#[tauri::command]
+async fn restore_database_with_dialog(app_handle: tauri::AppHandle) -> Result<String, String> {
+    use tauri_plugin_dialog::DialogExt;
+    
+    // Open file dialog
+    let file_path = app_handle.dialog()
+        .file()
+        .add_filter("SQLite Database", &["db", "sqlite", "sqlite3"])
+        .blocking_pick_file();
+    
+    match file_path {
+        Some(path) => {
+            let backup_path = path.as_path().unwrap();
+            let mut db = db::Database::init(&app_handle)?;
+            db.restore_from(PathBuf::from(backup_path))?;
+            Ok("Database berhasil di-restore".to_string())
+        }
+        None => Err("Dialog dibatalkan".to_string())
+    }
+}
+
+/// Open database folder
+#[tauri::command]
+async fn open_database_folder(app_handle: tauri::AppHandle) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+
+    let db_path = db::Database::get_database_path(&app_handle)?;
+    let folder_path = std::path::Path::new(&db_path)
+        .parent()
+        .ok_or("Failed to get parent folder")?;
+
+    app_handle.opener()
+        .open_path(folder_path.to_string_lossy(), None::<&str>)
+        .map_err(|e| format!("Failed to open folder: {}", e))?;
+
+    Ok(())
 }
 
 // ==================== BLOCKS COMMANDS ====================
@@ -1291,7 +1349,9 @@ pub fn run() {
             // Database
             get_database_path,
             get_database_stats,
-            backup_database,
+            backup_database_with_dialog,
+            restore_database_with_dialog,
+            open_database_folder,
             // Blocks
             get_blocks,
             get_block_by_id,

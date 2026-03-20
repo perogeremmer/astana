@@ -191,6 +191,23 @@ impl Database {
         Ok(())
     }
 
+    /// Restore database from specific path
+    pub fn restore_from(&mut self, backup_path: PathBuf) -> Result<(), String> {
+        // Open the backup database
+        let src = Connection::open(&backup_path)
+            .map_err(|e| format!("Failed to open backup file: {}", e))?;
+
+        // Use SQLite backup API to restore (source -> destination)
+        let mut backup = rusqlite::backup::Backup::new(&src, &mut self.conn)
+            .map_err(|e| format!("Failed to initialize restore: {}", e))?;
+
+        backup
+            .step(-1)
+            .map_err(|e| format!("Failed to perform restore: {}", e))?;
+
+        Ok(())
+    }
+
     // ==================== BLOCKS CRUD ====================
 
     /// Get all blocks
@@ -1303,7 +1320,7 @@ pub struct RecentPayment {
 pub struct RecentGrave {
     pub id: i64,
     pub deceased_name: String,
-    pub date_of_death: String,
+    pub date_of_death: Option<String>,
     pub created_at: String,
     pub block_code: String,
     pub grave_number: String,
@@ -1399,7 +1416,7 @@ pub struct Grave {
     pub deceased_name: String,
     pub block_id: i64,
     pub number: String,
-    pub date_of_death: String,
+    pub date_of_death: Option<String>,
     pub burial_date: Option<String>,
     pub notes: Option<String>,
     pub created_at: String,
@@ -1412,7 +1429,7 @@ pub struct GraveWithBlock {
     pub deceased_name: String,
     pub block_id: i64,
     pub number: String,
-    pub date_of_death: String,
+    pub date_of_death: Option<String>,
     pub burial_date: Option<String>,
     pub notes: Option<String>,
     pub created_at: String,
@@ -1448,7 +1465,7 @@ pub struct GraveExportData {
     pub deceased_name: String,
     pub block_code: String,
     pub number: String,
-    pub date_of_death: String,
+    pub date_of_death: Option<String>,
     pub burial_date: Option<String>,
     pub notes: Option<String>,
     pub annual_fee: i64,

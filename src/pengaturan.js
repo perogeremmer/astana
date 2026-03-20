@@ -350,32 +350,20 @@ async function backupNow() {
             return;
         }
         
-        // Get database path for default filename
-        const dbPath = await invoke('get_database_path');
-        const defaultName = 'astana_backup_' + new Date().toISOString().split('T')[0] + '.db';
+        // Use backend command that handles dialog + backup
+        const result = await invoke('backup_database_with_dialog');
         
-        // Use dialog:save command
-        const savePath = await invoke('dialog:save', {
-            options: {
-                defaultPath: defaultName,
-                filters: [{
-                    name: 'Database',
-                    extensions: ['db']
-                }]
-            }
-        });
-        
-        if (savePath) {
-            await invoke('backup_database', { backupPath: savePath });
-            await invoke('update_last_backup');
-            const modal = document.getElementById('modalBackupSuccess');
-            if (modal) modal.classList.remove('hidden');
-            await loadDatabaseStats(); // Refresh stats
-        }
+        console.log('Backup result:', result);
+        await invoke('update_last_backup');
+        const modal = document.getElementById('modalBackupSuccess');
+        if (modal) modal.classList.remove('hidden');
+        await loadDatabaseStats(); // Refresh stats
         
     } catch (error) {
         console.error('Error backing up:', error);
-        showNotification('Gagal backup database: ' + error, 'error');
+        if (error !== 'Dialog dibatalkan') {
+            showNotification('Gagal backup database: ' + error, 'error');
+        }
     } finally {
         showLoading(false);
     }
@@ -391,27 +379,19 @@ async function exportDatabase() {
             return;
         }
         
-        const defaultName = 'astana_backup_' + new Date().toISOString().split('T')[0] + '.db';
+        console.log('Opening save dialog...');
         
-        // Use dialog:save command
-        const savePath = await invoke('dialog:save', {
-            options: {
-                defaultPath: defaultName,
-                filters: [{
-                    name: 'SQLite Database',
-                    extensions: ['db', 'sqlite', 'sqlite3']
-                }]
-            }
-        });
+        // Use backend command that handles dialog + backup
+        const result = await invoke('backup_database_with_dialog');
         
-        if (savePath) {
-            await invoke('backup_database', { backupPath: savePath });
-            showNotification('Database berhasil di-export!', 'success');
-        }
+        console.log('Export result:', result);
+        showNotification(result, 'success');
         
     } catch (error) {
         console.error('Error exporting:', error);
-        showNotification('Gagal export database: ' + error, 'error');
+        if (error !== 'Dialog dibatalkan') {
+            showNotification('Gagal export database: ' + error, 'error');
+        }
     } finally {
         showLoading(false);
     }
@@ -425,31 +405,28 @@ async function restoreDatabase() {
             return;
         }
         
-        const confirmed = confirm('PERINGATAN: Restore akan mengganti seluruh data saat ini. Pastikan Anda sudah melakukan backup terlebih dahulu.\\n\\nLanjutkan?');
+        const confirmed = confirm('PERINGATAN: Restore akan mengganti seluruh data saat ini dengan data dari file backup. Pastikan Anda sudah melakukan backup terlebih dahulu.\n\nLanjutkan?');
         if (!confirmed) return;
         
-        // Use dialog:open command
-        const filePath = await invoke('dialog:open', {
-            options: {
-                filters: [{
-                    name: 'SQLite Database',
-                    extensions: ['db', 'sqlite', 'sqlite3']
-                }]
-            }
-        });
+        showLoading(true);
         
-        if (filePath) {
-            showLoading(true);
-            // TODO: Implement restore logic using backup API
-            // For now, just show success notification
-            showNotification('File backup dipilih: ' + filePath, 'info');
-            showNotification('Restore berhasil!', 'success');
-            await loadDatabaseStats(); // Refresh stats
-        }
+        // Use backend command that handles dialog + restore
+        const result = await invoke('restore_database_with_dialog');
+        
+        console.log('Restore result:', result);
+        showNotification(result, 'success');
+        showNotification('Aplikasi akan di-refresh...', 'info');
+        
+        // Refresh page after 2 seconds to reload data
+        setTimeout(() => {
+            window.location.reload();
+        }, 2000);
         
     } catch (error) {
         console.error('Error restoring:', error);
-        showNotification('Gagal restore database: ' + error, 'error');
+        if (error !== 'Dialog dibatalkan') {
+            showNotification('Gagal restore database: ' + error, 'error');
+        }
     } finally {
         showLoading(false);
     }
@@ -517,13 +494,13 @@ async function openDatabaseFolder() {
             return;
         }
         
-        const dbPath = await invoke('get_database_path');
-        // Use opener plugin
-        await invoke('opener:open_path', { path: dbPath });
+        console.log('Opening database folder...');
+        await invoke('open_database_folder');
+        console.log('Folder opened successfully');
         
     } catch (error) {
         console.error('Error opening folder:', error);
-        showNotification('Gagal membuka folder', 'error');
+        showNotification('Gagal membuka folder: ' + error, 'error');
     }
 }
 

@@ -3,16 +3,9 @@
 // Get invoke function from Tauri
 const invoke = window.__TAURI__.core?.invoke;
 
-// Format currency to Rupiah
+// Format currency to Rupiah with full format (e.g., 75.000 instead of 75rb)
 function formatRupiah(amount) {
-    if (amount >= 1000000000) {
-        return 'Rp ' + (amount / 1000000000).toFixed(1) + 'M';
-    } else if (amount >= 1000000) {
-        return 'Rp ' + (amount / 1000000).toFixed(1) + 'jt';
-    } else if (amount >= 1000) {
-        return 'Rp ' + (amount / 1000).toFixed(0) + 'rb';
-    }
-    return 'Rp ' + amount.toLocaleString('id-ID');
+    return 'Rp ' + amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
 // Format number with thousand separator

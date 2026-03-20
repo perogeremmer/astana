@@ -211,12 +211,8 @@ function renderPaymentsTable() {
 }
 
 function formatRupiahShort(amount) {
-    if (amount >= 1000000) {
-        return (amount / 1000000).toFixed(1) + 'jt';
-    } else if (amount >= 1000) {
-        return (amount / 1000).toFixed(0) + 'rb';
-    }
-    return amount.toString();
+    // Format with dots as thousand separators
+    return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
 function formatRupiah(amount) {
