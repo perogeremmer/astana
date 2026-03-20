@@ -205,11 +205,16 @@ function renderPaymentsTable() {
             `;
         });
         
+        // Cari nominal pembayaran yang sudah dibayar untuk ditampilkan di kolom Nominal Iuran
+        // Jika annual_fee 0, gunakan amount dari pembayaran yang sudah ada
+        const paidPayment = item.recent_payments.find(p => p.is_paid && (parseInt(p.amount) > 0));
+        const displayFee = item.annual_fee > 0 ? item.annual_fee : (paidPayment ? parseInt(paidPayment.amount) : 0);
+        
         row.innerHTML = `
             <td class="px-3 py-3 text-sm text-gray-500 sticky left-0 bg-white border-r">${(currentPage - 1) * itemsPerPage + index + 1}</td>
             <td class="px-3 py-3 text-sm font-medium text-gray-800 sticky left-10 bg-white border-r">${escapeHtml(item.deceased_name)}</td>
             <td class="px-3 py-3 text-sm text-center text-gray-600 border-r">${item.block_code}-${item.number}</td>
-            <td class="px-3 py-3 text-sm text-right text-gray-600 border-r">${formatRupiah(item.annual_fee)}</td>
+            <td class="px-3 py-3 text-sm text-right text-gray-600 border-r">${displayFee > 0 ? formatRupiah(displayFee) : '-'}</td>
             ${yearCells}
         `;
         
