@@ -439,12 +439,16 @@ async function processPayment() {
         
         showLoading(true);
         
+        // Get expected_fee from block's annual_fee (snapshot at time of payment)
+        const expectedFee = currentPaymentData.grave?.annual_fee || jumlah;
+        
         await invoke('create_payment', {
             payment: {
                 grave_id: currentPaymentData.graveId,
                 year: currentPaymentData.year,
                 payment_date: tanggal,
                 amount: jumlah,
+                expected_fee: expectedFee,
                 payment_method: metode,
                 payment_proof: null,
                 paid_by: paidBy || null,

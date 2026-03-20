@@ -750,7 +750,7 @@ impl Database {
     /// Get payments by grave ID
     pub fn get_payments_by_grave(&self, grave_id: i64) -> Result<Vec<Payment>, String> {
         let mut stmt = self.conn
-            .prepare("SELECT id, grave_id, year, payment_date, amount, payment_method, payment_proof, paid_by, notes, created_at, updated_at FROM payments WHERE grave_id = ?1 ORDER BY year DESC")
+            .prepare("SELECT id, grave_id, year, payment_date, amount, expected_fee, payment_method, payment_proof, paid_by, notes, created_at, updated_at FROM payments WHERE grave_id = ?1 ORDER BY year DESC")
             .map_err(|e| format!("Failed to prepare query: {}", e))?;
 
         let payments = stmt
@@ -761,12 +761,13 @@ impl Database {
                     year: row.get(2)?,
                     payment_date: row.get(3)?,
                     amount: row.get(4)?,
-                    payment_method: row.get(5)?,
-                    payment_proof: row.get(6)?,
-                    paid_by: row.get(7)?,
-                    notes: row.get(8)?,
-                    created_at: row.get(9)?,
-                    updated_at: row.get(10)?,
+                    expected_fee: row.get(5)?,
+                    payment_method: row.get(6)?,
+                    payment_proof: row.get(7)?,
+                    paid_by: row.get(8)?,
+                    notes: row.get(9)?,
+                    created_at: row.get(10)?,
+                    updated_at: row.get(11)?,
                 })
             })
             .map_err(|e| format!("Failed to query payments: {}", e))?
@@ -784,7 +785,7 @@ impl Database {
     ) -> Result<Option<Payment>, String> {
         let payment = self.conn
             .query_row(
-                "SELECT id, grave_id, year, payment_date, amount, payment_method, payment_proof, paid_by, notes, created_at, updated_at FROM payments WHERE grave_id = ?1 AND year = ?2",
+                "SELECT id, grave_id, year, payment_date, amount, expected_fee, payment_method, payment_proof, paid_by, notes, created_at, updated_at FROM payments WHERE grave_id = ?1 AND year = ?2",
                 [grave_id.to_string(), year.to_string()],
                 |row| {
                     Ok(Payment {
@@ -793,12 +794,13 @@ impl Database {
                         year: row.get(2)?,
                         payment_date: row.get(3)?,
                         amount: row.get(4)?,
-                        payment_method: row.get(5)?,
-                        payment_proof: row.get(6)?,
-                        paid_by: row.get(7)?,
-                        notes: row.get(8)?,
-                        created_at: row.get(9)?,
-                        updated_at: row.get(10)?,
+                        expected_fee: row.get(5)?,
+                        payment_method: row.get(6)?,
+                        payment_proof: row.get(7)?,
+                        paid_by: row.get(8)?,
+                        notes: row.get(9)?,
+                        created_at: row.get(10)?,
+                        updated_at: row.get(11)?,
                     })
                 },
             )
@@ -810,14 +812,28 @@ impl Database {
 
     /// Create new payment
     pub fn create_payment(&self, payment: &CreatePaymentRequest) -> Result<i64, String> {
+        // If expected_fee is 0, get it from the block's annual_fee
+        let expected_fee = if payment.expected_fee > 0 {
+            payment.expected_fee
+        } else {
+            self.conn
+                .query_row(
+                    "SELECT b.annual_fee FROM graves g JOIN blocks b ON g.block_id = b.id WHERE g.id = ?1",
+                    [&payment.grave_id],
+                    |row| row.get::<_, i64>(0),
+                )
+                .unwrap_or(0)
+        };
+
         self.conn
             .execute(
-                "INSERT INTO payments (grave_id, year, payment_date, amount, payment_method, payment_proof, paid_by, notes) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                "INSERT INTO payments (grave_id, year, payment_date, amount, expected_fee, payment_method, payment_proof, paid_by, notes) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
                 [
                     &payment.grave_id as &dyn rusqlite::ToSql,
                     &payment.year as &dyn rusqlite::ToSql,
                     &payment.payment_date as &dyn rusqlite::ToSql,
                     &payment.amount as &dyn rusqlite::ToSql,
+                    &expected_fee as &dyn rusqlite::ToSql,
                     &payment.payment_method.as_deref().unwrap_or("cash") as &dyn rusqlite::ToSql,
                     &payment.payment_proof.as_deref().unwrap_or("") as &dyn rusqlite::ToSql,
                     &payment.paid_by.as_deref().unwrap_or("") as &dyn rusqlite::ToSql,
@@ -1516,6 +1532,7 @@ pub struct Payment {
     pub year: i32,
     pub payment_date: String,
     pub amount: i64,
+    pub expected_fee: i64,
     pub payment_method: Option<String>,
     pub payment_proof: Option<String>,
     pub paid_by: Option<String>,
@@ -1530,6 +1547,7 @@ pub struct CreatePaymentRequest {
     pub year: i32,
     pub payment_date: String,
     pub amount: i64,
+    pub expected_fee: i64,
     pub payment_method: Option<String>,
     pub payment_proof: Option<String>,
     pub paid_by: Option<String>,

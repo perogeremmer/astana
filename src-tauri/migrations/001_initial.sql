@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS payments (
     year INTEGER NOT NULL,                     -- Payment year (2022, 2023, etc.)
     payment_date DATE NOT NULL,                -- Payment date
     amount INTEGER NOT NULL,                   -- Payment amount
+    expected_fee INTEGER NOT NULL DEFAULT 0,   -- Annual fee at time of payment (snapshot)
     payment_method TEXT DEFAULT 'cash',        -- cash, transfer, qris, etc.
     payment_proof TEXT,                        -- Path to payment proof file
     paid_by TEXT,                              -- Name of payer (if different from heir)
