@@ -8,9 +8,9 @@ Dokumentasi lengkap skema database SQLite untuk Astana (Grave Management System)
 
 | Platform | Path |
 |----------|------|
-| Windows | `%LOCALAPPDATA%\com.perogeremmer.astana\astana.db` |
-| macOS | `~/Library/Application Support/com.perogeremmer.astana/astana.db` |
-| Linux | `~/.local/share/com.perogeremmer.astana/astana.db` |
+| Windows | `%LOCALAPPDATA%\astana\astana.db` |
+| macOS | `~/Library/Application Support/astana/astana.db` |
+| Linux | `~/.local/share/astana/astana.db` |
 
 ---
 
@@ -30,17 +30,18 @@ Dokumentasi lengkap skema database SQLite untuk Astana (Grave Management System)
 └─────────────────┘     │    timestamps   │     │    is_primary   │
          ▲              └───────┬─────────┘     │    timestamps   │
          │                      │               └─────────────────┘
-         │              ┌───────┴─────────┐
-         │              │    payments     │
-         │              ├─────────────────┤
-         └──────────────│ FK grave_id     │
-                        │ UK year         │
-                        │    payment_date │
-                        │    amount       │
-                        │    payment_proof│
-                        │    paid_by      │
-                        │    timestamps   │
-                        └─────────────────┘
+          │              ┌───────┴─────────┐
+          │              │    payments     │
+          │              ├─────────────────┤
+          └──────────────│ FK grave_id     │
+                         │ UK year         │
+                         │    payment_date │
+                         │    amount       │
+                         │    expected_fee │  ← Snapshot iuran
+                         │    payment_proof│
+                         │    paid_by      │
+                         │    timestamps   │
+                         └─────────────────┘
 
 ┌─────────────────┐
 │    settings     │ (Single Row)
@@ -189,7 +190,8 @@ Menyimpan historis pembayaran iuran tahunan.
 | `grave_id` | INTEGER | NOT NULL, FK → graves(id) | Referensi ke makam |
 | `year` | INTEGER | NOT NULL | Tahun pembayaran |
 | `payment_date` | DATE | NOT NULL | Tanggal pembayaran |
-| `amount` | INTEGER | NOT NULL | Jumlah pembayaran |
+| `amount` | INTEGER | NOT NULL | Jumlah pembayaran (yang dibayar) |
+| `expected_fee` | INTEGER | NOT NULL, DEFAULT 0 | Iuran tahunan saat pembayaran (snapshot) |
 | `payment_method` | TEXT | DEFAULT 'cash' | cash, transfer, qris, etc. |
 | `payment_proof` | TEXT | - | Path file bukti pembayaran |
 | `paid_by` | TEXT | - | Nama pembayar (jika beda dari ahli waris) |
@@ -200,6 +202,7 @@ Menyimpan historis pembayaran iuran tahunan.
 ### Constraints
 
 - **UNIQUE(grave_id, year)**: Satu pembayaran per tahun per makam
+- **expected_fee**: Snapshot iuran tahunan saat pembayaran dilakukan. Berguna saat tarif blok berubah, histori pembayaran tetap merekam tarif lama.
 
 ### Contoh Query
 
@@ -220,7 +223,8 @@ LEFT JOIN payments p ON g.id = p.grave_id AND p.year = 2026;
 SELECT 
     year,
     COUNT(*) as payer_count,
-    SUM(amount) as total_revenue
+    SUM(amount) as total_revenue,
+    SUM(expected_fee) as total_expected
 FROM payments
 GROUP BY year
 ORDER BY year DESC;
@@ -335,6 +339,7 @@ db.backup_to(PathBuf::from("backup/astana_2024.db"))?;
 |---------|------|---------|
 | 1.0.0 | 2026-02-20 | Initial schema with 5 tables (English naming) |
 | 1.0.1 | 2026-02-20 | Added indexes for dates and grave numbers |
+| 1.1.0 | 2026-03-20 | Added `expected_fee` column to payments table for fee snapshot pattern |
 
 ---
 
