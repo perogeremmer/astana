@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Selamat Datang - Astana</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-emerald-50 to-teal-100 min-h-screen flex items-center justify-center p-4">
+    
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 text-center">
+        <!-- Logo/Icon -->
+        <div class="w-20 h-20 bg-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+            </svg>
+        </div>
+        
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">Selamat Datang di Astana</h1>
+        <p class="text-gray-600 mb-8">Sistem Manajemen Makam dan Iuran</p>
+        
+        <div id="firstRunContent">
+            <p class="text-gray-600 mb-8">
+                Terdeteksi tidak ada database yang tersedia. Silakan pilih salah satu opsi di bawah ini:
+            </p>
+            
+            <div class="space-y-4">
+                <!-- Mulai Pertama Kali -->
+                <button onclick="startFirstTime()" class="w-full group">
+                    <div class="border-2 border-emerald-200 rounded-xl p-6 hover:border-emerald-500 hover:bg-emerald-50 transition-all duration-200">
+                        <div class="flex items-center gap-4">
+                            <div class="w-14 h-14 bg-emerald-100 rounded-xl flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
+                                <svg class="w-7 h-7 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                </svg>
+                            </div>
+                            <div class="text-left">
+                                <h3 class="font-semibold text-gray-800 text-lg">Mulai Pertama Kali</h3>
+                                <p class="text-sm text-gray-600">Buat database baru dengan superadmin otomatis</p>
+                            </div>
+                        </div>
+                    </div>
+                </button>
+                
+                <!-- Import Database -->
+                <button onclick="importDatabase()" class="w-full group">
+                    <div class="border-2 border-blue-200 rounded-xl p-6 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200">
+                        <div class="flex items-center gap-4">
+                            <div class="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                                <svg class="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                                </svg>
+                            </div>
+                            <div class="text-left">
+                                <h3 class="font-semibold text-gray-800 text-lg">Import Database</h3>
+                                <p class="text-sm text-gray-600">Pilih file database yang sudah ada (.db)</p>
+                            </div>
+                        </div>
+                    </div>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Loading State -->
+        <div id="loadingState" class="hidden">
+            <div class="flex flex-col items-center gap-4 py-8">
+                <div class="w-12 h-12 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div>
+                <p id="loadingText" class="text-gray-600">Memproses...</p>
+            </div>
+        </div>
+        
+        <!-- Success State -->
+        <div id="successState" class="hidden">
+            <div class="bg-green-50 border border-green-200 rounded-xl p-6 mb-6">
+                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                </div>
+                <h3 class="font-semibold text-green-800 text-lg mb-2">Setup Berhasil!</h3>
+                <div id="credentialsBox" class="bg-white rounded-lg p-4 border border-green-200 text-left hidden">
+                    <p class="text-sm text-gray-600 mb-2">Credentials Superadmin:</p>
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center bg-gray-50 px-3 py-2 rounded">
+                            <span class="text-sm text-gray-600">Username:</span>
+                            <span class="font-mono font-semibold text-gray-800">superadmin</span>
+                        </div>
+                        <div class="flex justify-between items-center bg-gray-50 px-3 py-2 rounded">
+                            <span class="text-sm text-gray-600">Password:</span>
+                            <span id="generatedPassword" class="font-mono font-semibold text-gray-800"></span>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-3">⚠️ Simpan password ini dengan aman!</p>
+                </div>
+            </div>
+            <button onclick="goToLogin()" class="w-full bg-emerald-600 text-white py-3 rounded-xl hover:bg-emerald-700 transition-colors font-medium">
+                Lanjutkan ke Login
+            </button>
+        </div>
+    </div>
+    
+    <script>
+        const { invoke } = window.__TAURI__?.core || {};
+        
+        function showLoading(text) {
+            document.getElementById('firstRunContent').classList.add('hidden');
+            document.getElementById('loadingState').classList.remove('hidden');
+            document.getElementById('loadingText').textContent = text;
+        }
+        
+        function showSuccess() {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('successState').classList.remove('hidden');
+        }
+        
+        async function startFirstTime() {
+            showLoading('Membuat database baru...');
+            
+            try {
+                const result = await invoke('init_superadmin_0');
+                console.log('init_superadmin_0 result:', result);
+                
+                if (result && result.password) {
+                    document.getElementById('generatedPassword').textContent = result.password;
+                    document.getElementById('credentialsBox').classList.remove('hidden');
+                }
+                
+                showSuccess();
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Terjadi kesalahan: ' + error);
+                location.reload();
+            }
+        }
+        
+        async function importDatabase() {
+            showLoading('Memilih file database...');
+            
+            try {
+                const result = await invoke('import_database');
+                console.log('import_database result:', result);
+                
+                if (result && result.success) {
+                    showSuccess();
+                } else if (result && result.error) {
+                    alert('Error: ' + result.error);
+                    location.reload();
+                } else {
+                    // User cancelled
+                    location.reload();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                // User probably cancelled
+                location.reload();
+            }
+        }
+        
+        function goToLogin() {
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>

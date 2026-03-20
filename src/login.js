@@ -4,6 +4,32 @@
 // Debug: Check if Tauri is available
 console.log('Login.js loaded');
 
+// Check database status on page load
+async function checkDatabaseStatus() {
+    console.log('Checking database status...');
+    try {
+        const { invoke } = window.__TAURI__?.core || {};
+        if (!invoke) {
+            console.log('Tauri not available, skipping database check');
+            return;
+        }
+        
+        const status = await invoke('check_database_status');
+        console.log('Database status:', status);
+        
+        // If no database or empty database, redirect to first-run page
+        if (!status.exists || status.is_empty) {
+            console.log('No database found or empty, redirecting to first-run page...');
+            window.location.href = 'first-run.html';
+        }
+    } catch (error) {
+        console.error('Error checking database status:', error);
+    }
+}
+
+// Run database check immediately
+checkDatabaseStatus();
+
 // Helper function to call invoke (avoid duplicate declaration)
 async function callInvoke(command, args) {
     try {
@@ -235,14 +261,46 @@ function initChangePasswordForm() {
             
             const result = await callInvoke('change_password', {
                 token: window.currentToken,
-                old_password: null,
-                new_password: newPassword,
-                is_first_change: window.isFirstChange
+                oldPassword: null,
+                newPassword: newPassword,
+                isFirstChange: window.isFirstChange
             });
             
             console.log('Change password result:', result);
             
-            if (result && result.success) {
+            // Handle Result<Result<(), String>, String> structure
+            let success = false;
+            let errorMsg = null;
+            
+            if (result && typeof result === 'object') {
+                if (result.Ok !== undefined) {
+                    // Outer Result is Ok
+                    if (result.Ok === null || result.Ok === undefined) {
+                        // Inner Result is Ok (unit type)
+                        success = true;
+                    } else if (typeof result.Ok === 'string') {
+                        // Inner Result is Err with message
+                        errorMsg = result.Ok;
+                    } else if (result.Ok.Err !== undefined) {
+                        // Inner Result is Err
+                        errorMsg = result.Ok.Err;
+                    } else if (result.Ok.Ok !== undefined) {
+                        // Double nested - success
+                        success = true;
+                    }
+                } else if (result.Err !== undefined) {
+                    // Outer Result is Err
+                    errorMsg = result.Err;
+                } else if (result.success !== undefined) {
+                    // Legacy format
+                    success = result.success;
+                    if (!success) {
+                        errorMsg = result.message || 'Gagal mengganti password';
+                    }
+                }
+            }
+            
+            if (success) {
                 // Update user in session
                 const user = window.astanaApp?.getCurrentUser();
                 if (user) {
@@ -253,9 +311,9 @@ function initChangePasswordForm() {
                 // Redirect to dashboard
                 window.location.href = 'index.html';
             } else {
-                const errorMsg = result?.message || result?.Err || 'Gagal mengganti password';
+                const msg = errorMsg || result?.message || result?.Err || 'Gagal mengganti password';
                 console.error('Change password failed:', result);
-                showError(errorMsg, true);
+                showError(msg, true);
             }
         } catch (error) {
             console.error('Change password error:', error);

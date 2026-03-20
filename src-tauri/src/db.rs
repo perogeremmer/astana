@@ -1785,6 +1785,32 @@ impl Database {
         Ok(user)
     }
 
+    /// Get user by username (without hash)
+    pub fn get_user_by_username(&self, username: &str) -> Result<Option<User>, String> {
+        let user = self.conn
+            .query_row(
+                "SELECT id, username, role, is_active, is_password_changed, created_by, created_at, updated_at 
+                 FROM users WHERE LOWER(username) = LOWER(?1)",
+                [username],
+                |row| {
+                    Ok(User {
+                        id: row.get(0)?,
+                        username: row.get(1)?,
+                        role: row.get(2)?,
+                        is_active: row.get(3)?,
+                        is_password_changed: row.get(4)?,
+                        created_by: row.get(5)?,
+                        created_at: row.get(6)?,
+                        updated_at: row.get(7)?,
+                    })
+                },
+            )
+            .optional()
+            .map_err(|e| format!("Failed to get user by username: {}", e))?;
+
+        Ok(user)
+    }
+
     /// Get user by username (with hash)
     fn get_user_by_username_with_hash(
         &self,
@@ -2014,6 +2040,34 @@ impl Database {
 
     /// Create new user
     pub fn create_user(&self, request: &CreateUserRequest, created_by: i64) -> Result<i64, String> {
+        // Validate username
+        let username = request.username.trim().to_lowercase();
+        if username.is_empty() {
+            return Err("Username tidak boleh kosong".to_string());
+        }
+        if username.len() < 3 {
+            return Err("Username minimal 3 karakter".to_string());
+        }
+
+        // Check if username already exists
+        if let Ok(Some(_)) = self.get_user_by_username(&username) {
+            return Err(format!("Username '{}' sudah ada", username));
+        }
+
+        // Validate role
+        let valid_roles = ["superadmin", "admin"];
+        if !valid_roles.contains(&request.role.as_str()) {
+            return Err(format!(
+                "Role '{}' tidak valid. Gunakan: superadmin atau admin",
+                request.role
+            ));
+        }
+
+        // Validate password
+        if request.password.len() < 6 {
+            return Err("Password minimal 6 karakter".to_string());
+        }
+
         let password_hash = Self::hash_password(&request.password)?;
 
         self.conn
@@ -2021,13 +2075,22 @@ impl Database {
                 "INSERT INTO users (username, password_hash, role, is_active, is_password_changed, created_by) 
                  VALUES (?1, ?2, ?3, 1, 0, ?4)",
                 [
-                    &request.username as &dyn rusqlite::ToSql,
+                    &username as &dyn rusqlite::ToSql,
                     &password_hash as &dyn rusqlite::ToSql,
                     &request.role as &dyn rusqlite::ToSql,
                     &created_by as &dyn rusqlite::ToSql,
                 ],
             )
-            .map_err(|e| format!("Failed to create user: {}", e))?;
+            .map_err(|e| {
+                log::error!("Database error saat create user: {}", e);
+                if e.to_string().contains("UNIQUE constraint failed") {
+                    format!("Username '{}' sudah ada", username)
+                } else if e.to_string().contains("CHECK constraint failed") {
+                    "Role tidak valid".to_string()
+                } else {
+                    format!("Gagal membuat user: {}", e)
+                }
+            })?;
 
         let user_id = self.conn.last_insert_rowid();
 
@@ -2523,6 +2586,79 @@ mod tests {
         // Verify can login
         let login_result = db.login("testuser", "test_password").unwrap();
         assert!(login_result.success);
+
+        cleanup_test_db(&temp_path);
+    }
+
+    #[test]
+    fn test_create_user_validation() {
+        let (db, temp_path) = create_test_db();
+
+        // Create superadmin first
+        db.create_superadmin_0("admin_password").unwrap();
+
+        // Test empty username
+        let user_req = CreateUserRequest {
+            username: "".to_string(),
+            password: "password123".to_string(),
+            role: "admin".to_string(),
+        };
+        let result = db.create_user(&user_req, 1);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("kosong"));
+
+        // Test short username
+        let user_req = CreateUserRequest {
+            username: "ab".to_string(),
+            password: "password123".to_string(),
+            role: "admin".to_string(),
+        };
+        let result = db.create_user(&user_req, 1);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("minimal"));
+
+        // Test invalid role
+        let user_req = CreateUserRequest {
+            username: "testuser".to_string(),
+            password: "password123".to_string(),
+            role: "invalid_role".to_string(),
+        };
+        let result = db.create_user(&user_req, 1);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("tidak valid"));
+
+        // Test short password
+        let user_req = CreateUserRequest {
+            username: "testuser".to_string(),
+            password: "123".to_string(),
+            role: "admin".to_string(),
+        };
+        let result = db.create_user(&user_req, 1);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Password"));
+
+        // Test duplicate username
+        let user_req = CreateUserRequest {
+            username: "testuser".to_string(),
+            password: "password123".to_string(),
+            role: "admin".to_string(),
+        };
+        db.create_user(&user_req, 1).unwrap();
+
+        // Try create with same username
+        let result = db.create_user(&user_req, 1);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("sudah ada"));
+
+        // Test case insensitive duplicate
+        let user_req = CreateUserRequest {
+            username: "TESTUSER".to_string(),
+            password: "password123".to_string(),
+            role: "admin".to_string(),
+        };
+        let result = db.create_user(&user_req, 1);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("sudah ada"));
 
         cleanup_test_db(&temp_path);
     }

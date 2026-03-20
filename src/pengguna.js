@@ -23,15 +23,43 @@ async function loadUsers() {
     try {
         const result = await invoke('get_users', { token });
         
-        if (result.success) {
-            users = result.data;
+        console.log('get_users result:', result);
+        console.log('Result type:', typeof result);
+        console.log('Is array:', Array.isArray(result));
+        
+        // Handle different response formats
+        if (Array.isArray(result)) {
+            // Direct array response
+            users = result;
             renderUsersTable();
+        } else if (result && typeof result === 'object') {
+            // Result<Result<T, String>, String> structure
+            if (result.Ok !== undefined) {
+                // Inner Result
+                if (Array.isArray(result.Ok)) {
+                    users = result.Ok;
+                    renderUsersTable();
+                } else if (typeof result.Ok === 'string') {
+                    alert(result.Ok);
+                } else {
+                    console.error('Unexpected Ok value:', result.Ok);
+                    alert('Format data tidak valid');
+                }
+            } else if (result.Err !== undefined) {
+                alert(result.Err || 'Gagal memuat data pengguna');
+            } else {
+                console.error('Unknown object structure:', result);
+                alert('Format data tidak valid');
+            }
+        } else if (typeof result === 'string') {
+            alert(result);
         } else {
-            alert(result.message || 'Gagal memuat data pengguna');
+            console.error('Unexpected result format:', result);
+            alert('Format data tidak valid');
         }
     } catch (error) {
         console.error('Error loading users:', error);
-        alert('Terjadi kesalahan saat memuat data pengguna');
+        alert('Terjadi kesalahan saat memuat data pengguna: ' + error);
     }
 }
 
@@ -99,7 +127,7 @@ function renderUsersTable() {
                         </button>
                     ` : '<span class="w-7"></span>'}
                     ${canDelete ? `
-                        <button onclick="deleteUser(${user.id})" class="text-red-600 hover:text-red-900 p-1" title="Hapus">
+                        <button class="delete-user-btn text-red-600 hover:text-red-900 p-1" data-user-id="${user.id}" title="Hapus">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                             </svg>
@@ -110,6 +138,17 @@ function renderUsersTable() {
         `;
         
         tbody.appendChild(row);
+    });
+    
+    // Attach event listeners to delete buttons
+    document.querySelectorAll('.delete-user-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const userId = parseInt(this.getAttribute('data-user-id'));
+            console.log('Delete button clicked for userId:', userId);
+            deleteUser(userId);
+        });
     });
 }
 
@@ -154,6 +193,7 @@ function openEditUserModal(userId) {
     if (!user) return;
     
     document.getElementById('editUserId').value = user.id;
+    document.getElementById('editUsername').value = user.username;
     document.getElementById('editRole').value = user.role === 'superadmin_0' ? 'superadmin' : user.role;
     document.getElementById('editIsActive').checked = user.is_active;
     
@@ -197,18 +237,41 @@ document.getElementById('addUserForm').addEventListener('submit', async (e) => {
     };
     
     try {
-        const result = await invoke('create_user', { token, user });
+        const result = await invoke('create_user', { token, user: userData });
         
-        if (result.success) {
+        console.log('create_user result:', result);
+        
+        // Handle Result<Result<i64, String>, String>
+        if (result && typeof result === 'object') {
+            if (result.Ok !== undefined) {
+                // Inner Result - could be number (success) or string (error)
+                if (typeof result.Ok === 'number' && result.Ok > 0) {
+                    alert('Pengguna berhasil ditambahkan!');
+                    closeAddUserModal();
+                    await loadUsers();
+                } else if (typeof result.Ok === 'string') {
+                    alert(result.Ok);
+                } else {
+                    alert('Gagal menambahkan pengguna');
+                }
+            } else if (result.Err !== undefined) {
+                alert(result.Err);
+            } else {
+                alert('Gagal menambahkan pengguna');
+            }
+        } else if (typeof result === 'number' && result > 0) {
+            // Direct number response
             alert('Pengguna berhasil ditambahkan!');
             closeAddUserModal();
             await loadUsers();
+        } else if (typeof result === 'string') {
+            alert(result);
         } else {
-            alert(result.message || 'Gagal menambahkan pengguna');
+            alert('Gagal menambahkan pengguna');
         }
     } catch (error) {
         console.error('Error creating user:', error);
-        alert('Terjadi kesalahan saat menambahkan pengguna');
+        alert('Terjadi kesalahan saat menambahkan pengguna: ' + error);
     }
 });
 
@@ -224,18 +287,41 @@ document.getElementById('editUserForm').addEventListener('submit', async (e) => 
     };
     
     try {
-        const result = await invoke('update_user', { token, user_id: userId, user: userData });
+        const result = await invoke('update_user', { token, userId, user: userData });
         
-        if (result.success) {
+        console.log('update_user result:', result);
+        
+        // Handle Result<Result<(), String>, String>
+        if (result && typeof result === 'object') {
+            if (result.Ok !== undefined) {
+                // Inner Result - could be null (success) or string (error)
+                if (result.Ok === null || result.Ok === undefined) {
+                    alert('Pengguna berhasil diperbarui!');
+                    closeEditUserModal();
+                    await loadUsers();
+                } else if (typeof result.Ok === 'string') {
+                    alert(result.Ok);
+                } else {
+                    alert('Gagal memperbarui pengguna');
+                }
+            } else if (result.Err !== undefined) {
+                alert(result.Err);
+            } else {
+                alert('Gagal memperbarui pengguna');
+            }
+        } else if (result === null || result === undefined) {
+            // Direct null response
             alert('Pengguna berhasil diperbarui!');
             closeEditUserModal();
             await loadUsers();
+        } else if (typeof result === 'string') {
+            alert(result);
         } else {
-            alert(result.message || 'Gagal memperbarui pengguna');
+            alert('Gagal memperbarui pengguna');
         }
     } catch (error) {
         console.error('Error updating user:', error);
-        alert('Terjadi kesalahan saat memperbarui pengguna');
+        alert('Terjadi kesalahan saat memperbarui pengguna: ' + error);
     }
 });
 
@@ -248,38 +334,129 @@ document.getElementById('resetPasswordForm').addEventListener('submit', async (e
     const newPassword = generatePassword();
     
     try {
-        const result = await invoke('reset_user_password', { token, user_id: userId, new_password: newPassword });
+        const result = await invoke('reset_user_password', { token, userId, newPassword });
         
-        if (result.success) {
+        console.log('reset_user_password result:', result);
+        
+        // Handle Result<Result<(), String>, String>
+        if (result && typeof result === 'object') {
+            if (result.Ok !== undefined) {
+                // Inner Result - could be null (success) or string (error)
+                if (result.Ok === null || result.Ok === undefined) {
+                    document.getElementById('generatedPassword').value = newPassword;
+                    document.getElementById('newPasswordDisplay').classList.remove('hidden');
+                    document.getElementById('resetPasswordBtn').classList.add('hidden');
+                } else if (typeof result.Ok === 'string') {
+                    alert(result.Ok);
+                } else {
+                    alert('Gagal mereset password');
+                }
+            } else if (result.Err !== undefined) {
+                alert(result.Err);
+            } else {
+                alert('Gagal mereset password');
+            }
+        } else if (result === null || result === undefined) {
+            // Direct null response
             document.getElementById('generatedPassword').value = newPassword;
             document.getElementById('newPasswordDisplay').classList.remove('hidden');
             document.getElementById('resetPasswordBtn').classList.add('hidden');
+        } else if (typeof result === 'string') {
+            alert(result);
         } else {
-            alert(result.message || 'Gagal mereset password');
+            alert('Gagal mereset password');
         }
     } catch (error) {
         console.error('Error resetting password:', error);
-        alert('Terjadi kesalahan saat mereset password');
+        alert('Terjadi kesalahan saat mereset password: ' + error);
     }
 });
 
-// Delete user
-async function deleteUser(userId) {
-    if (!confirm('Apakah Anda yakin ingin menghapus pengguna ini?')) return;
+// Store user ID to delete
+let userIdToDelete = null;
+
+// Open delete confirmation modal
+function openDeleteConfirmModal(userId) {
+    console.log('Opening delete confirmation modal for userId:', userId);
+    userIdToDelete = userId;
+    document.getElementById('deleteUserId').value = userId;
+    document.getElementById('deleteConfirmModal').classList.remove('hidden');
+}
+
+// Close delete confirmation modal
+function closeDeleteConfirmModal() {
+    console.log('Closing delete confirmation modal');
+    userIdToDelete = null;
+    document.getElementById('deleteConfirmModal').classList.add('hidden');
+}
+
+// Confirm and execute delete
+async function confirmDeleteUser() {
+    console.log('Confirm delete clicked');
+    
+    const userId = userIdToDelete;
+    if (!userId) {
+        console.error('No userId to delete');
+        return;
+    }
+    
+    closeDeleteConfirmModal();
     
     const token = window.astanaApp.getSessionToken();
+    console.log('Token retrieved:', token ? 'Yes' : 'No');
+    
+    // Disable delete buttons during operation
+    const deleteButtons = document.querySelectorAll('.delete-user-btn');
+    deleteButtons.forEach(btn => {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+    });
     
     try {
-        const result = await invoke('delete_user', { token, user_id: userId });
+        console.log('Deleting user:', userId);
+        const result = await invoke('delete_user', { token, userId });
         
-        if (result.success) {
+        console.log('delete_user result:', result);
+        
+        // Handle Result<Result<(), String>, String>
+        if (result && typeof result === 'object') {
+            if (result.Ok !== undefined) {
+                // Inner Result - could be null (success) or string (error)
+                if (result.Ok === null || result.Ok === undefined) {
+                    alert('Pengguna berhasil dihapus!');
+                    await loadUsers();
+                } else if (typeof result.Ok === 'string') {
+                    alert(result.Ok);
+                } else {
+                    alert('Gagal menghapus pengguna');
+                }
+            } else if (result.Err !== undefined) {
+                alert(result.Err);
+            } else {
+                alert('Gagal menghapus pengguna');
+            }
+        } else if (result === null || result === undefined) {
+            // Direct null response
             alert('Pengguna berhasil dihapus!');
             await loadUsers();
+        } else if (typeof result === 'string') {
+            alert(result);
         } else {
-            alert(result.message || 'Gagal menghapus pengguna');
+            alert('Gagal menghapus pengguna');
         }
     } catch (error) {
         console.error('Error deleting user:', error);
-        alert('Terjadi kesalahan saat menghapus pengguna');
+        alert('Terjadi kesalahan saat menghapus pengguna: ' + error);
+    } finally {
+        // Re-enable delete buttons
+        deleteButtons.forEach(btn => {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+        });
     }
+}
+
+// Legacy delete function (kept for backward compatibility)
+async function deleteUser(userId) {
+    openDeleteConfirmModal(userId);
 }
