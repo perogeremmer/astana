@@ -20,9 +20,12 @@ jobs:
         node-version: '20'
     
     - name: Setup Rust
-      uses: dtolnay/rust-action@stable
+      uses: actions-rust-lang/setup-rust-toolchain@v1
       with:
-        targets: x86_64-pc-windows-msvc
+        target: x86_64-pc-windows-msvc
+    
+    - name: Install Tauri CLI
+      run: cargo install tauri-cli
     
     - name: Install dependencies
       run: |
@@ -53,7 +56,10 @@ jobs:
         node-version: '20'
     
     - name: Setup Rust
-      uses: dtolnay/rust-action@stable
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+    
+    - name: Install Tauri CLI
+      run: cargo install tauri-cli
     
     - name: Install Linux dependencies
       run: |
