@@ -382,7 +382,7 @@ function renderPaymentModal(isPaid) {
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
-                    <span class="font-medium">Pembayaran Lunas - ${formatRupiah(payment?.amount || annualFee)}</span>
+                    <span class="font-medium">${payment?.amount > 0 ? 'Pembayaran Lunas - ' + formatRupiah(payment.amount) : 'Pembayaran Lunas'}</span>
                 </div>
                 <div class="bg-gray-50 rounded-lg p-3 text-sm text-gray-600 space-y-2">
                     <p><strong>Tanggal Bayar:</strong> ${payment ? formatDate(payment.payment_date) : '-'}</p>
