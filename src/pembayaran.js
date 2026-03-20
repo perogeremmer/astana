@@ -182,10 +182,13 @@ function renderPaymentsTable() {
         let yearCells = '';
         item.recent_payments.forEach(payment => {
             const isPaid = payment.is_paid;
-            const amount = payment.amount;
+            // Convert amount to number and handle null/undefined
+            const amount = parseInt(payment.amount) || 0;
             const btnClass = isPaid 
                 ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-800' 
                 : 'bg-red-100 hover:bg-red-200 text-red-700';
+            // Debug: log untuk melihat nilai sebenarnya
+            console.log('Payment debug:', { isPaid, amount, rawAmount: payment.amount, year: payment.year });
             // Jika lunas tapi amount 0/null, tampilkan "Lunas"
             // Jika lunas dan ada amount, tampilkan angka
             const btnText = isPaid 
