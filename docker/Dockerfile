@@ -38,6 +38,7 @@ RUN apt-get update && apt-get install -y \
     dpkg \
     rpm \
     gosu \
+    binutils-mingw-w64-x86-64 \
     # Cleanup
     && rm -rf /var/lib/apt/lists/*
 
@@ -52,6 +53,9 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --de
 
 # Install Tauri CLI (using --locked for compatibility)
 RUN cargo install tauri-cli --version "^2.0" --locked
+
+# Install Windows target (required by some Tauri dependencies like tauri-winres)
+RUN rustup target add x86_64-pc-windows-gnu
 
 # Create app directory
 WORKDIR /app

@@ -984,6 +984,7 @@ async fn get_current_user(
 
 /// Change password
 #[tauri::command]
+#[allow(non_snake_case)]
 async fn change_password(
     app_handle: tauri::AppHandle,
     sessions: State<'_, SessionStore>,
@@ -1050,6 +1051,7 @@ async fn create_user(
 
 /// Update user (Superadmin only)
 #[tauri::command]
+#[allow(non_snake_case)]
 async fn update_user(
     app_handle: tauri::AppHandle,
     sessions: State<'_, SessionStore>,
@@ -1081,6 +1083,7 @@ async fn update_user(
 
 /// Delete user (Superadmin only)
 #[tauri::command]
+#[allow(non_snake_case)]
 async fn delete_user(
     app_handle: tauri::AppHandle,
     sessions: State<'_, SessionStore>,
@@ -1104,6 +1107,7 @@ async fn delete_user(
 
 /// Reset user password (Superadmin only)
 #[tauri::command]
+#[allow(non_snake_case)]
 async fn reset_user_password(
     app_handle: tauri::AppHandle,
     sessions: State<'_, SessionStore>,
@@ -1287,6 +1291,7 @@ fn setup_handler(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>>
 
 /// Show first run dialog with superadmin password
 #[cfg(not(test))]
+#[allow(dead_code)]
 fn show_first_run_dialog(app_handle: &tauri::AppHandle, password: &str) -> Result<(), Box<dyn std::error::Error>> {
     use tauri_plugin_dialog::DialogExt;
     
@@ -1305,6 +1310,7 @@ fn show_first_run_dialog(app_handle: &tauri::AppHandle, password: &str) -> Resul
 }
 
 #[cfg(test)]
+#[allow(dead_code)]
 fn show_first_run_dialog(_app_handle: &tauri::AppHandle, _password: &str) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }

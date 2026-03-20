@@ -198,7 +198,7 @@ impl Database {
             .map_err(|e| format!("Failed to open backup file: {}", e))?;
 
         // Use SQLite backup API to restore (source -> destination)
-        let mut backup = rusqlite::backup::Backup::new(&src, &mut self.conn)
+        let backup = rusqlite::backup::Backup::new(&src, &mut self.conn)
             .map_err(|e| format!("Failed to initialize restore: {}", e))?;
 
         backup
