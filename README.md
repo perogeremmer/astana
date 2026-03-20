@@ -1,6 +1,6 @@
 # 🕌 Astana - Manajemen Iuran Makam
 
-Aplikasi desktop untuk manajemen data makam dan iuran makam berbasis [Tauri](https://tauri.app/) (Rust + HTML/CSS/JS). Dirancang khusus untuk memudahkan petugas makam dalam mengelola data almarhum, ahli waris, pembayaran iuran, dan pelaporan.
+Aplikasi desktop untuk manajemen data makam dan iuran makam. Dirancang khusus untuk memudahkan petugas makam dalam mengelola data almarhum, ahli waris, pembayaran iuran, dan pelaporan secara efisien.
 
 ![Tauri](https://img.shields.io/badge/Tauri-2.0-blue?logo=tauri)
 ![Rust](https://img.shields.io/badge/Rust-1.88.0-000000?logo=rust)
@@ -10,36 +10,60 @@ Aplikasi desktop untuk manajemen data makam dan iuran makam berbasis [Tauri](htt
 
 ---
 
-## 📋 Fitur Utama
+## ✨ Fitur Unggulan
 
-| Fitur | Status | Keterangan |
-|-------|--------|------------|
-| Manajemen Data Blok | ✅ | CRUD blok makam dengan kapasitas & tarif iuran |
-| Data Makam | ✅ | Pencatatan data almarhum dan ahli waris (1-3 orang) |
-| Pembayaran Iuran | ✅ | Pencatatan pembayaran dengan historis multi-tahun |
-| Laporan Keuangan | ✅ | Laporan tahunan lengkap dengan statistik per blok |
-| Pengaturan Yayasan | ✅ | Konfigurasi nama yayasan, logo, dan kontak |
-| Backup/Restore | ✅ | Backup manual/export database SQLite |
-| Tahun Aktif Otomatis | ✅ | Mengikuti tahun dari sistem komputer |
-| UI Modern | ✅ | Tampilan bersih dengan Tailwind CSS |
-| Docker Support | ✅ | Development dengan Docker tanpa install Rust |
+### 📊 Dashboard Ringkasan
+Pantau kondisi makam dalam satu tampilan:
+- **Statistik real-time**: Total makam, blok tersedia, dan status pembayaran
+- **Peringatan penting**: Makam yang belum bayar iuran tahun ini
+- **Aktivitas terbaru**: Pembayaran yang baru masuk
 
-> **Developer?** Lihat **[DEVELOPMENT.md](./DEVELOPMENT.md)** untuk panduan setup dan development.
+### 🗂️ Manajemen Blok Makam
+Atur blok makam dengan fleksibel:
+- Tambah, edit, dan hapus blok sesuai kebutuhan (A, B, C, dst)
+- Atur kapasitas tiap blok
+- Tentukan tarif iuran per blok (bisa berbeda-beda)
+- Pantau ketersediaan slot makam
 
-> **Keterangan:** ✅ = Ready | 🚧 = In Progress | ❌ = Not Started
+### 📋 Data Makam Lengkap
+Kelola informasi makam secara terstruktur:
+- **Data Almarhum**: Nama, tanggal lahir, tanggal meninggal, dan lokasi makam
+- **Data Ahli Waris**: Sampai 3 orang ahli waris dengan kontak lengkap
+- **Pencarian & Filter**: Cari makam berdasarkan nama, blok, atau status pembayaran
+
+### 💳 Pembayaran Iuran Terintegrasi
+Catat pembayaran dengan mudah:
+- **Historis multi-tahun**: Lihat riwayat pembayaran per makam
+- **Status otomatis**: Tahu langsung makam yang sudah/belum bayar tahun ini
+- **Tahun aktif otomatis**: Mengikuti tahun dari sistem komputer
+- **Detail pembayaran**: Nominal, tanggal, dan metode pembayaran
+
+### 📈 Laporan Keuangan Komprehensif
+Dapatkan insight keuangan makam:
+- **Laporan tahunan**: Statistik lengkap per tahun
+- **Detail per blok**: Total makam, sudah bayar, belum bayar, dan pendapatan
+- **Tunggakan**: Daftar makam yang menunggak iuran
+- **Export-friendly**: Data siap untuk dipresentasikan
+
+### ⚙️ Pengaturan Yayasan
+Personalisasi aplikasi sesuai identitas yayasan:
+- **Profil yayasan**: Nama, alamat, dan kontak
+- **Logo yayasan**: Upload logo untuk tampilan profesional
+- **Backup database**: Simpan data ke file untuk keamanan
+- **Restore data**: Kembalikan data dari backup
 
 ---
 
-## 🖥️ Halaman Aplikasi
+## 🖥️ Tampilan Aplikasi
 
-| Halaman | Deskripsi | Status |
-|---------|-----------|--------|
-| **Dashboard** | Ringkasan statistik, peringatan penting, pembayaran terbaru | ✅ |
-| **Data Blok** | Manajemen blok makam (CRUD), kapasitas, dan tarif iuran | ✅ |
-| **Data Makam** | Daftar almarhum, data ahli waris, filter dan pencarian | ✅ |
-| **Pembayaran** | Input pembayaran iuran, status lunas/belum per tahun | ✅ |
-| **Laporan** | Statistik pembayaran, tunggakan, dan makam baru per tahun | ✅ |
-| **Pengaturan** | Profil yayasan dengan logo, backup/restore database | ✅ |
+| Halaman | Deskripsi |
+|---------|-----------|
+| **Dashboard** | Ringkasan statistik, peringatan penting, pembayaran terbaru |
+| **Data Blok** | Manajemen blok makam, kapasitas, dan tarif iuran |
+| **Data Makam** | Daftar almarhum, data ahli waris, filter dan pencarian |
+| **Pembayaran** | Input pembayaran iuran, status lunas/belum per tahun |
+| **Laporan** | Statistik pembayaran, tunggakan, dan makam baru per tahun |
+| **Pengaturan** | Profil yayasan dengan logo, backup/restore database |
 
 ---
 
@@ -122,50 +146,34 @@ astana/
 ├── src/                          # Frontend (HTML, CSS, JS)
 │   ├── index.html               # Dashboard
 │   ├── blok.html                # Data Blok
-│   ├── blok.js                  # JS untuk Data Blok
 │   ├── data-makam.html          # Data Makam
-│   ├── data-makam.js            # JS untuk Data Makam
 │   ├── pembayaran.html          # Pembayaran
-│   ├── pembayaran.js            # JS untuk Pembayaran
 │   ├── laporan.html             # Laporan
-│   ├── laporan.js               # JS untuk Laporan
 │   ├── pengaturan.html          # Pengaturan
-│   ├── pengaturan.js            # JS untuk Pengaturan
-│   ├── main.js                  # Main JavaScript utilities
+│   ├── *.js                     # JavaScript untuk tiap halaman
 │   └── styles.css               # Styles global
 │
 ├── src-tauri/                   # Backend (Rust)
 │   ├── src/
-│   │   ├── main.rs              # Entry point Rust
-│   │   ├── lib.rs               # Library & Tauri commands
-│   │   └── db.rs                # Database module (SQLite)
-│   ├── migrations/
-│   │   └── 001_initial.sql      # Database schema
+│   │   ├── main.rs              # Entry point
+│   │   ├── lib.rs               # Library & commands
+│   │   └── db.rs                # Database module
+│   ├── migrations/              # Database migrations
 │   ├── Cargo.toml               # Dependencies Rust
 │   └── tauri.conf.json          # Konfigurasi Tauri
 │
 ├── docker/                      # Docker configuration
-│   ├── Dockerfile               # Docker image definition
-│   ├── docker-compose.yml       # Docker compose services
-│   └── entrypoint.sh            # Container entrypoint
-│
 ├── scripts/                     # Helper scripts
-│   ├── docker-dev.sh            # Script untuk dev dengan Docker
-│   ├── docker-build.sh          # Script untuk build dengan Docker
-│   └── docker-shell.sh          # Script untuk shell access
-│
 ├── DATABASE_SCHEMA.md           # Dokumentasi skema database
 ├── DEVELOPMENT.md               # Panduan development lengkap
 └── README.md                    # File ini
 ```
 
-> **Catatan:** Project ini tidak memiliki `package.json` karena menggunakan **Tauri v2** dengan frontend vanilla HTML/CSS/JS. Tailwind CSS di-load via CDN, jadi tidak perlu build step untuk frontend.
-
 ---
 
 ## 💾 Database
 
-Aplikasi menggunakan **SQLite** sebagai database lokal.
+Aplikasi menggunakan **SQLite** sebagai database lokal yang tersimpan di komputer Anda.
 
 ### Lokasi Database
 
@@ -174,106 +182,54 @@ Aplikasi menggunakan **SQLite** sebagai database lokal.
 | Windows | `%LOCALAPPDATA%\com.perogeremmer.astana\astana.db` |
 | macOS | `~/Library/Application Support/com.perogeremmer.astana/astana.db` |
 | Linux | `~/.local/share/com.perogeremmer.astana/astana.db` |
-| Docker | `/home/appuser/.local/share/com.perogeremmer.astana/astana.db` |
-
-### Skema Database
 
 Lihat detail lengkap di **[DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md)**
 
-### Tabel Utama
-
-- **blocks** - Data blok makam & tarif iuran
-- **graves** - Data almarhum
-- **heirs** - Data ahli waris (1-3 per makam)
-- **payments** - Historis pembayaran iuran
-- **settings** - Konfigurasi aplikasi (nama yayasan, logo, tahun aktif)
-
 ---
 
-## 📝 Penggunaan Dasar
+## 📖 Cara Penggunaan
 
 ### 1. Setup Awal
+Pertama kali menggunakan aplikasi:
 - Buka menu **Pengaturan**
-- Isi nama yayasan/makam
+- Isi nama yayasan/makam dan informasi kontak
 - Upload logo yayasan (opsional)
-- Klik "Simpan Perubahan"
+- Simpan perubahan
 
-### 2. Manajemen Blok
-- Buka menu **Data Blok**
-- Tambahkan blok makam sesuai kebutuhan (A, B, C, dst)
-- Atur kapasitas dan tarif iuran per blok
+### 2. Buat Blok Makam
+- Masuk ke menu **Data Blok**
+- Klik "Tambah Blok"
+- Isi nama blok, kapasitas, dan tarif iuran
+- Blok siap digunakan
 
 ### 3. Input Data Makam
 - Buka menu **Data Makam**
 - Klik "Tambah Data"
-- Isi data almarhum, pilih blok & nomor makam
-- Tambahkan data ahli waris (minimal 1, maksimal 3)
+- Isi data almarhum (nama, tanggal, blok, nomor makam)
+- Tambahkan data ahli waris (minimal 1 orang)
+- Simpan data
 
-### 4. Pembayaran Iuran
+### 4. Catat Pembayaran Iuran
 - Buka menu **Pembayaran**
-- Pilih makam & tahun pembayaran (tahun aktif otomatis dari komputer)
-- Input jumlah dan metode pembayaran
+- Pilih makam dari daftar
+- Input jumlah pembayaran dan metode
+- Simpan pembayaran
+- Status makam otomatis terupdate
 
-### 5. Laporan
+### 5. Lihat Laporan
 - Buka menu **Laporan**
-- Pilih tahun untuk melihat statistik
-- Lihat detail per blok: total makam, sudah/belum bayar, pendapatan
+- Pilih tahun yang ingin dilihat
+- Lihat statistik pembayaran per blok
+- Cek daftar tunggakan jika ada
 
-### 6. Backup Database
-- Buka menu **Pengaturan**
-- Klik "Backup Sekarang" untuk menyimpan ke file
-- Atau klik "Export ke File" untuk menyimpan di lokasi pilihan
-
----
-
-## 🔧 Commands Tauri (Backend)
-
-Aplikasi ini menyediakan berbagai command Tauri untuk komunikasi antara frontend dan backend:
-
-### Database Commands
-- `get_database_path` - Mendapatkan path file database
-- `get_database_stats` - Statistik database (ukuran, jumlah record)
-- `backup_database` - Backup database ke file
-
-### Block Commands
-- `get_blocks` - Mendapatkan semua blok
-- `get_block_by_id` - Mendapatkan blok berdasarkan ID
-- `create_block` - Membuat blok baru
-- `update_block` - Update data blok
-- `delete_block` - Hapus blok
-- `get_block_stats` - Statistik blok (kapasitas, terisi, tersedia)
-
-### Grave Commands
-- `get_graves` - Mendapatkan daftar makam
-- `get_grave_by_id` - Detail makam berdasarkan ID
-- `create_grave_with_heirs` - Buat makam baru dengan ahli waris
-- `update_grave` - Update data makam
-- `delete_grave` - Hapus makam
-- `get_grave_detail` - Detail lengkap makam
-
-### Payment Commands
-- `get_payments_by_grave` - Historis pembayaran per makam
-- `create_payment` - Catat pembayaran baru
-- `update_payment` - Update data pembayaran
-- `delete_payment` - Hapus pembayaran
-
-### Report Commands
-- `get_yearly_report` - Laporan tahunan lengkap
-- `get_available_years` - Daftar tahun yang tersedia
-
-### Settings Commands
-- `get_settings` - Ambil pengaturan aplikasi
-- `update_settings` - Update pengaturan
-- `upload_logo` - Upload logo yayasan
-- `get_logo_data` - Ambil data logo sebagai base64
+### 6. Backup Data Berkala
+- Masuk ke menu **Pengaturan**
+- Klik "Backup Sekarang" atau "Export ke File"
+- Simpan file backup di lokasi aman
 
 ---
 
 ## 🔧 Troubleshooting
-
-Lihat **[DEVELOPMENT.md](./DEVELOPMENT.md)** untuk panduan troubleshooting lengkap.
-
-### Masalah Umum
 
 | Masalah | Solusi |
 |---------|--------|
@@ -283,28 +239,7 @@ Lihat **[DEVELOPMENT.md](./DEVELOPMENT.md)** untuk panduan troubleshooting lengk
 | `cargo tauri` command not found | Install Tauri CLI: `cargo install tauri-cli` |
 | Docker build gagal | Pastikan Docker daemon running dan permission user |
 
-### Update Rust
-
-```bash
-rustup update
-```
-
-### Bersihkan Cache Build
-
-```bash
-cd src-tauri
-cargo clean
-cargo tauri build
-```
-
-### Docker Permission Issue
-
-```bash
-# Tambahkan user ke group docker (Linux)
-sudo usermod -aG docker $USER
-
-# Logout dan login ulang
-```
+Lihat **[DEVELOPMENT.md](./DEVELOPMENT.md)** untuk panduan troubleshooting lengkap.
 
 ---
 
