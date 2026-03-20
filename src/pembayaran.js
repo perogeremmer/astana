@@ -182,11 +182,15 @@ function renderPaymentsTable() {
         let yearCells = '';
         item.recent_payments.forEach(payment => {
             const isPaid = payment.is_paid;
-            const amount = payment.amount || item.annual_fee;
+            const amount = payment.amount;
             const btnClass = isPaid 
                 ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-800' 
                 : 'bg-red-100 hover:bg-red-200 text-red-700';
-            const btnText = isPaid ? formatRupiahShort(amount) : 'Bayar';
+            // Jika lunas tapi amount 0/null, tampilkan "Lunas"
+            // Jika lunas dan ada amount, tampilkan angka
+            const btnText = isPaid 
+                ? (amount > 0 ? formatRupiahShort(amount) : 'Lunas')
+                : 'Bayar';
             
             yearCells += `
                 <td class="px-2 py-2 text-center border-r">
@@ -446,16 +450,34 @@ async function processPayment() {
     }
 }
 
-async function deleteCurrentPayment() {
+// Store payment ID to delete
+let paymentIdToDelete = null;
+
+// Open delete confirmation modal
+function openDeletePaymentModal() {
     if (!currentPaymentData || !currentPaymentData.existingPayment) return;
     
-    if (!confirm('Yakin ingin menghapus pembayaran ini?')) return;
+    paymentIdToDelete = currentPaymentData.existingPayment.id;
+    document.getElementById('deletePaymentConfirmModal').classList.remove('hidden');
+}
+
+// Close delete confirmation modal
+function closeDeletePaymentConfirmModal() {
+    paymentIdToDelete = null;
+    document.getElementById('deletePaymentConfirmModal').classList.add('hidden');
+}
+
+// Confirm and execute delete
+async function confirmDeletePayment() {
+    if (!paymentIdToDelete) return;
+    
+    closeDeletePaymentConfirmModal();
     
     try {
         showLoading(true);
         
         await invoke('delete_payment', {
-            id: currentPaymentData.existingPayment.id
+            id: paymentIdToDelete
         });
         
         closeDetailModal();
@@ -467,6 +489,10 @@ async function deleteCurrentPayment() {
     } finally {
         showLoading(false);
     }
+}
+
+async function deleteCurrentPayment() {
+    openDeletePaymentModal();
 }
 
 // ==================== EXPORT EXCEL ====================
