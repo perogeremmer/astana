@@ -100,11 +100,6 @@ docker compose -f docker/docker-compose.yml build dev
 docker compose -f docker/docker-compose.yml run --rm dev
 ```
 
-**Keuntungan Docker:**
-- Tidak perlu install Rust di komputer
-- Environment konsisten antar developer
-- Auto hot-reload saat development
-
 ### Option 2: Development Native (Dengan Rust)
 
 Untuk panduan setup lengkap di mesin baru, lihat **[DEVELOPMENT.md](./DEVELOPMENT.md)**
@@ -280,19 +275,6 @@ Jika mengalami masalah atau butuh bantuan:
 2. Lihat DATABASE_SCHEMA.md untuk detail database
 3. Lihat DEVELOPMENT.md untuk setup development
 4. Buat issue di repository
-
----
-
-## 🔄 Changelog
-
-### v0.1.0
-- ✅ Initial release
-- ✅ Manajemen blok, makam, dan pembayaran
-- ✅ Laporan tahunan dengan statistik per blok
-- ✅ Pengaturan yayasan dengan logo upload
-- ✅ Backup dan restore database
-- ✅ Docker support untuk development
-- ✅ Tahun aktif otomatis dari sistem komputer
 
 ---
 
