@@ -339,7 +339,12 @@ function renderPaymentModal(isPaid) {
     
     document.getElementById('detailNama').textContent = grave.deceased_name;
     document.getElementById('detailTahun').textContent = year;
-    document.getElementById('detailNominal').textContent = formatRupiah(annualFee);
+    // Jika sudah bayar dan ada amount pembayaran, tampilkan amount tersebut
+    // Jika belum bayar, tampilkan annual_fee dari blok
+    const displayNominal = (isPaid && data.existingPayment && data.existingPayment.amount > 0) 
+        ? data.existingPayment.amount 
+        : annualFee;
+    document.getElementById('detailNominal').textContent = formatRupiah(displayNominal);
     
     const dynamicContent = document.getElementById('dynamicContent');
     const modalFooter = document.getElementById('modalFooter');
