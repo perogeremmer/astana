@@ -12,6 +12,10 @@
         .scrollbar-thin::-webkit-scrollbar-track { background: #f1f5f9; }
         .scrollbar-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        nav.overflow-y-auto::-webkit-scrollbar { width: 6px; }
+        nav.overflow-y-auto::-webkit-scrollbar-track { background: transparent; }
+        nav.overflow-y-auto::-webkit-scrollbar-thumb { background: #065f46; border-radius: 3px; }
+        nav.overflow-y-auto::-webkit-scrollbar-thumb:hover { background: #047857; }
         
         /* Force white background for all form elements */
         input, select, textarea {
@@ -91,7 +95,7 @@
                 </div>
             </div>
 
-            <nav class="flex-1 py-4">
+            <nav class="flex-1 py-4 overflow-y-auto scrollbar-thin">
                 <ul class="space-y-1">
                     <li>
                         <a href="index.html" class="flex items-center gap-3 px-6 py-3 hover:bg-emerald-700 transition-colors">
@@ -156,6 +160,14 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                             </svg>
                             <span>Pengaturan</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="tentang.html" class="flex items-center gap-3 px-6 py-3 hover:bg-emerald-700 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span>Tentang</span>
                         </a>
                     </li>
                 </ul>
@@ -318,7 +330,7 @@
         <div class="absolute inset-0 flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto">
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all my-4 sm:my-0 max-h-[95vh] sm:max-h-[90vh] flex flex-col" id="exportExcelPanel">
                 <div class="p-4 sm:p-6 flex-shrink-0 border-b border-gray-200">
-                    <div class="flex items-center justify-between">
+                    <div class="flex items-center">
                         <div class="flex items-center gap-2 sm:gap-3">
                             <div class="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
                                 <svg class="w-5 h-5 sm:w-6 sm:h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -377,7 +389,7 @@
                         
                         <!-- Preview tahun yang akan diexport -->
                         <div class="bg-blue-50 rounded-lg p-3 sm:p-4">
-                            <div class="flex items-center justify-between">
+                            <div class="flex items-center">
                                 <span class="text-sm text-blue-700">Tahun yang akan diexport:</span>
                                 <span class="text-sm font-semibold text-blue-800" id="previewYears">-</span>
                             </div>

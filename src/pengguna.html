@@ -12,6 +12,10 @@
         .scrollbar-thin::-webkit-scrollbar-track { background: #f1f5f9; }
         .scrollbar-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        nav.overflow-y-auto::-webkit-scrollbar { width: 6px; }
+        nav.overflow-y-auto::-webkit-scrollbar-track { background: transparent; }
+        nav.overflow-y-auto::-webkit-scrollbar-thumb { background: #065f46; border-radius: 3px; }
+        nav.overflow-y-auto::-webkit-scrollbar-thumb:hover { background: #047857; }
     </style>
     <script type="module" src="main.js"></script>
 </head>
@@ -34,7 +38,7 @@
                 </div>
             </div>
 
-            <nav class="flex-1 py-4">
+            <nav class="flex-1 py-4 overflow-y-auto scrollbar-thin">
                 <ul class="space-y-1">
                     <li>
                         <a href="index.html" class="flex items-center gap-3 px-6 py-3 hover:bg-emerald-700 transition-colors">
@@ -99,6 +103,14 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                             </svg>
                             <span>Pengaturan</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="tentang.html" class="flex items-center gap-3 px-6 py-3 hover:bg-emerald-700 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span>Tentang</span>
                         </a>
                     </li>
                 </ul>

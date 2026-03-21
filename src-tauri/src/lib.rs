@@ -1235,6 +1235,12 @@ async fn count_audit_logs(
     Ok(Ok(db.count_audit_logs()?))
 }
 
+/// Get app version from Cargo.toml
+#[tauri::command]
+async fn get_app_version() -> Result<String, String> {
+    Ok(env!("CARGO_PKG_VERSION").to_string())
+}
+
 /// Get logo file as base64 data URL
 #[tauri::command]
 async fn get_logo_data(
@@ -1390,6 +1396,8 @@ pub fn run() {
         .manage(first_run_state)
         .setup(setup_handler)
         .invoke_handler(tauri::generate_handler![
+            // App Info
+            get_app_version,
             // Authentication
             check_first_run,
             check_database_status,

@@ -10,22 +10,22 @@
         body { font-family: 'Inter', sans-serif; }
     </style>
 </head>
-<body class="bg-gradient-to-br from-emerald-50 to-teal-100 min-h-screen flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+<body class="bg-gradient-to-br from-emerald-50 to-teal-100 min-h-screen flex flex-col items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow w-full max-w-sm overflow-hidden">
         <!-- Header -->
-        <div class="bg-emerald-600 p-8 text-center">
-            <div class="w-16 h-16 bg-emerald-500 rounded-xl mx-auto mb-4 flex items-center justify-center">
-                <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="bg-emerald-600 p-6 text-center">
+            <div class="w-12 h-12 bg-emerald-500 rounded-xl mx-auto mb-3 flex items-center justify-center">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                 </svg>
             </div>
-            <h1 class="text-2xl font-bold text-white">Astana</h1>
-            <p class="text-emerald-100 text-sm mt-1">Sistem Manajemen Iuran Makam</p>
+            <h1 class="text-xl font-bold text-white">Astana</h1>
+            <p class="text-emerald-100 text-xs mt-1">Sistem Manajemen Iuran Makam</p>
         </div>
         
         <!-- Login Form -->
-        <div id="loginForm" class="p-8">
-            <h2 class="text-xl font-semibold text-gray-800 mb-6 text-center">Masuk ke Aplikasi</h2>
+        <div id="loginForm" class="p-5">
+            <h2 class="text-base font-semibold text-gray-800 mb-4 text-center">Masuk ke Aplikasi</h2>
             
             <div id="errorMessage" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
                 <p id="errorText"></p>
@@ -38,7 +38,7 @@
                         type="text" 
                         id="username" 
                         name="username"
-                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                        class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                         placeholder="Masukkan username"
                         required
                     >
@@ -51,7 +51,7 @@
                             type="password" 
                             id="password" 
                             name="password"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                             placeholder="Masukkan password"
                             required
                         >
@@ -74,7 +74,7 @@
                 <button 
                     type="submit" 
                     id="loginButton"
-                    class="w-full bg-emerald-600 text-white font-semibold py-3 rounded-lg hover:bg-emerald-700 focus:ring-4 focus:ring-emerald-200 transition-all duration-200 flex items-center justify-center"
+                    class="w-full bg-emerald-600 text-white font-semibold py-2.5 rounded-lg hover:bg-emerald-700 focus:ring-4 focus:ring-emerald-200 transition-all duration-200 flex items-center justify-center text-sm"
                 >
                     <span id="loginText">Masuk</span>
                     <svg id="loadingSpinner" class="hidden animate-spin ml-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -86,20 +86,20 @@
         </div>
         
         <!-- Change Password Form (First Login) -->
-        <div id="changePasswordForm" class="hidden p-8">
-            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+        <div id="changePasswordForm" class="hidden p-5">
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
                 <div class="flex items-start">
-                    <svg class="w-5 h-5 text-yellow-600 mt-0.5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-4 h-4 text-yellow-600 mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                     </svg>
                     <div>
-                        <h3 class="text-sm font-medium text-yellow-800">Keamanan Akun</h3>
-                        <p class="text-sm text-yellow-700 mt-1">Anda harus mengganti password sebelum melanjutkan.</p>
+                        <h3 class="text-xs font-medium text-yellow-800">Keamanan Akun</h3>
+                        <p class="text-xs text-yellow-700 mt-0.5">Anda harus mengganti password sebelum melanjutkan.</p>
                     </div>
                 </div>
             </div>
             
-            <h2 class="text-xl font-semibold text-gray-800 mb-6 text-center">Ganti Password</h2>
+            <h2 class="text-base font-semibold text-gray-800 mb-4 text-center">Ganti Password</h2>
             
             <div id="cpErrorMessage" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
                 <p id="cpErrorText"></p>
@@ -107,24 +107,24 @@
             
             <form id="changePasswordFormElement" class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Password Baru</label>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Password Baru</label>
                     <input 
                         type="password" 
                         id="newPassword" 
                         name="newPassword"
-                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                        class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                         placeholder="Masukkan password baru"
                         required
                     >
                 </div>
                 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Konfirmasi Password Baru</label>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Konfirmasi Password</label>
                     <input 
                         type="password" 
                         id="confirmPassword" 
                         name="confirmPassword"
-                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                        class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                         placeholder="Konfirmasi password baru"
                         required
                     >
@@ -133,7 +133,7 @@
                 <button 
                     type="submit" 
                     id="changePasswordButton"
-                    class="w-full bg-emerald-600 text-white font-semibold py-3 rounded-lg hover:bg-emerald-700 focus:ring-4 focus:ring-emerald-200 transition-all duration-200 flex items-center justify-center"
+                    class="w-full bg-emerald-600 text-white font-semibold py-2.5 rounded-lg hover:bg-emerald-700 focus:ring-4 focus:ring-emerald-200 transition-all duration-200 flex items-center justify-center text-sm"
                 >
                     <span id="cpButtonText">Simpan Password</span>
                     <svg id="cpLoadingSpinner" class="hidden animate-spin ml-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -155,7 +155,31 @@
         </a>
     </div>
     
+    
+    <!-- Footer -->
+    <div class="mt-4 text-center">
+        <p class="text-xs text-gray-400">
+            Astana v<span id="appVersion">1.0.0</span>
+        </p>
+    </div>
+    
     <script src="main.js"></script>
     <script src="login.js"></script>
+    <script>
+        // Load app version from Rust
+        async function loadAppVersion() {
+            try {
+                if (window.__TAURI__) {
+                    const version = await window.__TAURI__.core.invoke('get_app_version');
+                    document.getElementById('appVersion').textContent = version;
+                }
+            } catch (error) {
+                console.error('Failed to load app version:', error);
+            }
+        }
+        
+        // Load version when page loads
+        document.addEventListener('DOMContentLoaded', loadAppVersion);
+    </script>
 </body>
 </html>
