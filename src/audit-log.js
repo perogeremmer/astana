@@ -32,12 +32,16 @@ async function loadAuditLogs() {
             offset: currentOffset 
         });
         
-        if (result.success) {
-            logs = result.data;
+        // Result can be either an array (success) or a string (error message)
+        if (Array.isArray(result)) {
+            logs = result;
             renderAuditTable();
             updatePagination();
+        } else if (typeof result === 'string') {
+            // This is an error message from the backend
+            alert(result);
         } else {
-            alert(result.message || 'Gagal memuat audit log');
+            alert('Gagal memuat audit log');
         }
     } catch (error) {
         console.error('Error loading audit logs:', error);
@@ -52,8 +56,9 @@ async function loadStats() {
     try {
         // Get total count
         const countResult = await window.__TAURI__?.core?.invoke('count_audit_logs', { token });
-        if (countResult.success) {
-            totalLogs = countResult.data;
+        // Result can be either a number (success) or a string (error message)
+        if (typeof countResult === 'number') {
+            totalLogs = countResult;
             document.getElementById('totalLogs').textContent = totalLogs.toLocaleString('id-ID');
         }
         
