@@ -49,21 +49,37 @@ async function loadAuditLogs() {
         console.log('Audit log result:', result);
         console.log('Result type:', typeof result);
         console.log('Is array:', Array.isArray(result));
+        console.log('Result keys:', result ? Object.keys(result) : 'null');
         
-        // Result can be either an array (success) or a string (error message)
-        if (Array.isArray(result)) {
+        // In Tauri, Rust Result<T, E> is serialized as { Ok: T } or { Err: E }
+        if (result && typeof result === 'object') {
+            if ('Ok' in result) {
+                // Success case
+                const data = result.Ok;
+                if (Array.isArray(data)) {
+                    logs = data;
+                    console.log('Loaded', logs.length, 'audit logs');
+                    renderAuditTable();
+                    updatePagination();
+                } else {
+                    console.error('Unexpected data format in Ok:', data);
+                    alert('Format data audit log tidak valid');
+                }
+            } else if ('Err' in result) {
+                // Error case
+                const errorMsg = result.Err;
+                console.error('Error from backend:', errorMsg);
+                alert('Error: ' + errorMsg);
+            } else {
+                console.error('Unexpected result object:', result);
+                alert('Gagal memuat audit log: format tidak dikenali');
+            }
+        } else if (Array.isArray(result)) {
+            // Direct array (fallback)
             logs = result;
-            console.log('Loaded', logs.length, 'audit logs');
+            console.log('Loaded', logs.length, 'audit logs (direct array)');
             renderAuditTable();
             updatePagination();
-        } else if (typeof result === 'string') {
-            // This is an error message from the backend
-            console.error('Error from backend:', result);
-            alert(result);
-        } else if (result && typeof result === 'object' && result.Err) {
-            // Handle nested Result type
-            console.error('Error from nested result:', result.Err);
-            alert(result.Err);
         } else {
             console.error('Unexpected result format:', result);
             alert('Gagal memuat audit log');
@@ -81,8 +97,22 @@ async function loadStats() {
     try {
         // Get total count
         const countResult = await window.__TAURI__?.core?.invoke('count_audit_logs', { token });
-        // Result can be either a number (success) or a string (error message)
-        if (typeof countResult === 'number') {
+        console.log('Count result:', countResult);
+        
+        // In Tauri, Rust Result<T, E> is serialized as { Ok: T } or { Err: E }
+        if (countResult && typeof countResult === 'object') {
+            if ('Ok' in countResult) {
+                const count = countResult.Ok;
+                if (typeof count === 'number') {
+                    totalLogs = count;
+                    document.getElementById('totalLogs').textContent = totalLogs.toLocaleString('id-ID');
+                    console.log('Total logs:', totalLogs);
+                }
+            } else if ('Err' in countResult) {
+                console.error('Error counting logs:', countResult.Err);
+            }
+        } else if (typeof countResult === 'number') {
+            // Direct number (fallback)
             totalLogs = countResult;
             document.getElementById('totalLogs').textContent = totalLogs.toLocaleString('id-ID');
         }
