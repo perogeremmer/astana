@@ -32,6 +32,9 @@ services:
     command: >
       sh -c "
         echo '🔧 Starting Astana in development mode...' &&
+        echo '⏳ Building Tailwind CSS...' &&
+        tailwindcss -i /app/src/input.css -o /app/src/assets/css/tailwind.min.css --minify &&
+        echo '✅ Tailwind CSS build complete!' &&
         echo '⏳ Initial build (first time)...' &&
         cd /app/src-tauri &&
         cargo build &&
@@ -61,6 +64,9 @@ services:
     command: >
       sh -c "
         echo '🔨 Building Astana production binary...' &&
+        echo '⏳ Building Tailwind CSS...' &&
+        tailwindcss -i /app/src/input.css -o /app/src/assets/css/tailwind.min.css --minify &&
+        echo '✅ Tailwind CSS build complete!' &&
         mkdir -p /app/dist &&
         cd /app/src-tauri &&
         rm -f Cargo.lock &&
@@ -91,6 +97,9 @@ services:
     command: >
       sh -c "
         echo '🔨 Building AppImage...' &&
+        echo '⏳ Building Tailwind CSS...' &&
+        tailwindcss -i /app/src/input.css -o /app/src/assets/css/tailwind.min.css --minify &&
+        echo '✅ Tailwind CSS build complete!' &&
         mkdir -p /app/dist &&
         cd /app/src-tauri &&
         cargo tauri build --bundles appimage &&
@@ -116,6 +125,9 @@ services:
     command: >
       sh -c "
         echo '🔨 Building DEB package...' &&
+        echo '⏳ Building Tailwind CSS...' &&
+        tailwindcss -i /app/src/input.css -o /app/src/assets/css/tailwind.min.css --minify &&
+        echo '✅ Tailwind CSS build complete!' &&
         mkdir -p /app/dist &&
         cd /app/src-tauri &&
         cargo tauri build --bundles deb &&

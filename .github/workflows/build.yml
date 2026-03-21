@@ -33,6 +33,14 @@ jobs:
     - name: Install Tauri CLI
       run: cargo install tauri-cli
     
+    - name: Download and Install Tailwind CSS
+      run: |
+        Invoke-WebRequest -Uri "https://github.com/tailwindlabs/tailwindcss/releases/download/v3.4.1/tailwindcss-windows-x64.exe" -OutFile "$env:TEMP\tailwindcss.exe"
+        
+    - name: Build Tailwind CSS
+      run: |
+        & "$env:TEMP\tailwindcss.exe" -i src/input.css -o src/assets/css/tailwind.min.css --minify
+        
     - name: Install dependencies
       run: |
         cd src-tauri
@@ -92,12 +100,21 @@ jobs:
     
     - name: Install Tauri CLI
       run: cargo install tauri-cli --force
-    
+
+    - name: Download and Install Tailwind CSS
+      run: |
+        curl -L -o /tmp/tailwindcss "https://github.com/tailwindlabs/tailwindcss/releases/download/v3.4.1/tailwindcss-linux-x64"
+        chmod +x /tmp/tailwindcss
+
+    - name: Build Tailwind CSS
+      run: |
+        /tmp/tailwindcss -i src/input.css -o src/assets/css/tailwind.min.css --minify
+
     - name: Install Linux dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
-    
+
     - name: Build Linux App
       run: |
         cd src-tauri

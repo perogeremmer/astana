@@ -57,6 +57,11 @@ RUN cargo install tauri-cli --version "^2.0" --locked
 # Install Windows target (required by some Tauri dependencies like tauri-winres)
 RUN rustup target add x86_64-pc-windows-gnu
 
+# Install Tailwind CSS Standalone CLI
+RUN curl -L -o /usr/local/bin/tailwindcss \
+    "https://github.com/tailwindlabs/tailwindcss/releases/download/v3.4.1/tailwindcss-linux-x64" && \
+    chmod +x /usr/local/bin/tailwindcss
+
 # Create app directory
 WORKDIR /app
 

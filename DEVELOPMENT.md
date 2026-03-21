@@ -92,7 +92,54 @@ git clone <repository-url>
 cd astana
 ```
 
-### 2. Build Project (Pertama Kali)
+### 2. Build Tailwind CSS (WAJIB - Setiap kali ada perubahan class)
+
+Sebelum menjalankan aplikasi, build Tailwind CSS terlebih dahulu:
+
+**Cara Cepat (gunakan script):**
+
+```bash
+# Linux/macOS
+./scripts/build-css.sh
+
+# Windows (PowerShell)
+.\scripts\build-css.ps1
+```
+
+**Cara Manual:**
+
+**Linux:**
+```bash
+# Download Tailwind Standalone CLI (satu kali)
+curl -L -o /tmp/tailwindcss "https://github.com/tailwindlabs/tailwindcss/releases/download/v3.4.1/tailwindcss-linux-x64"
+chmod +x /tmp/tailwindcss
+
+# Build CSS
+/tmp/tailwindcss -i src/input.css -o src/assets/css/tailwind.min.css --minify
+```
+
+**macOS:**
+```bash
+# Download Tailwind Standalone CLI
+curl -L -o /tmp/tailwindcss "https://github.com/tailwindlabs/tailwindcss/releases/download/v3.4.1/tailwindcss-macos-x64"
+chmod +x /tmp/tailwindcss
+
+# Build CSS
+/tmp/tailwindcss -i src/input.css -o src/assets/css/tailwind.min.css --minify
+```
+
+**Windows (PowerShell):**
+```powershell
+# Download Tailwind Standalone CLI
+Invoke-WebRequest -Uri "https://github.com/tailwindlabs/tailwindcss/releases/download/v3.4.1/tailwindcss-windows-x64.exe" -OutFile "$env:TEMP\tailwindcss.exe"
+
+# Build CSS
+& "$env:TEMP\tailwindcss.exe" -i src/input.css -o src/assets/css/tailwind.min.css --minify
+```
+
+> **Catatan:** File `tailwind.min.css` harus di-build setiap kali ada perubahan class Tailwind di file HTML.
+
+### 3. Build Project (Pertama Kali)
 
 ```bash
 # Build untuk development
@@ -149,6 +196,7 @@ Hasil build akan ada di:
 - ✅ Isolated environment - no "works on my machine" issues
 - ✅ Hot reload tetap berfungsi
 - ✅ GUI ditampilkan di desktop host
+- ✅ Tailwind CSS auto-build saat development/build
 
 ### Prerequisites Docker
 
@@ -476,6 +524,10 @@ set RUST_LOG=debug && cargo tauri dev
 
 - Perubahan pada file **Rust** memerlukan rebuild (otomatis)
 - Perubahan pada file **HTML/CSS/JS** langsung terlihat di browser window
+- Perubahan pada **class Tailwind** memerlukan rebuild CSS:
+  ```bash
+  /tmp/tailwindcss -i src/input.css -o src/assets/css/tailwind.min.css --minify
+  ```
 
 ---
 
@@ -489,8 +541,12 @@ set RUST_LOG=debug && cargo tauri dev
 - `tauri-plugin-*` - Plugins untuk dialog, OS info, dll
 
 ### Frontend
-- **Tailwind CSS** - via CDN (tidak perlu build)
+- **Tailwind CSS** - Menggunakan Tailwind CLI (perlu di-build sebelum running)
+  - Config: `tailwind.config.js`
+  - Input: `src/input.css`
+  - Output: `src/assets/css/tailwind.min.css`
 - **Vanilla JavaScript** - No framework
+- **Font Inter** - Local font files (tidak perlu koneksi internet)
 
 ---
 

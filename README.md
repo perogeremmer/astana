@@ -77,7 +77,51 @@ Pastikan telah terinstall **salah satu** dari:
 - System dependencies (sesuai OS - lihat detail di bawah)
 - Sistem operasi: Windows, macOS, atau Linux
 
-> ⚠️ **Catatan:** Project ini **tidak menggunakan Node.js/npm**. Aplikasi ini pure Tauri (Rust) dengan frontend vanilla HTML/CSS/JS.
+> ⚠️ **Catatan:** Project ini menggunakan **Tailwind CSS** yang perlu dicompile terlebih dahulu. Ikuti langkah build CSS di bawah sebelum menjalankan aplikasi.
+
+### Pre-build: Compile Tailwind CSS (WAJIB)
+
+Sebelum menjalankan aplikasi, build Tailwind CSS terlebih dahulu:
+
+**Cara Mudah (gunakan script):**
+
+```bash
+# Linux/macOS
+./scripts/build-css.sh
+
+# Windows (PowerShell)
+.\scripts\build-css.ps1
+```
+
+**Cara Manual:**
+
+```bash
+# Download Tailwind Standalone CLI (satu kali)
+curl -L -o /tmp/tailwindcss "https://github.com/tailwindlabs/tailwindcss/releases/download/v3.4.1/tailwindcss-linux-x64"
+chmod +x /tmp/tailwindcss
+
+# Build CSS
+/tmp/tailwindcss -i src/input.css -o src/assets/css/tailwind.min.css --minify
+```
+
+**Untuk Windows:**
+```powershell
+# Download Tailwind Standalone CLI
+Invoke-WebRequest -Uri "https://github.com/tailwindlabs/tailwindcss/releases/download/v3.4.1/tailwindcss-windows-x64.exe" -OutFile "$env:TEMP\tailwindcss.exe"
+
+# Build CSS
+& "$env:TEMP\tailwindcss.exe" -i src/input.css -o src/assets/css/tailwind.min.css --minify
+```
+
+**Untuk macOS:**
+```bash
+# Download Tailwind Standalone CLI
+curl -L -o /tmp/tailwindcss "https://github.com/tailwindlabs/tailwindcss/releases/download/v3.4.1/tailwindcss-macos-x64"
+chmod +x /tmp/tailwindcss
+
+# Build CSS
+/tmp/tailwindcss -i src/input.css -o src/assets/css/tailwind.min.css --minify
+```
 
 ### Option 1: Development dengan Docker (Recommended)
 
@@ -114,7 +158,13 @@ cd astana
 # 2. Install Tauri CLI (satu kali saja)
 cargo install tauri-cli
 
-# 3. Jalankan aplikasi (development mode)
+# 3. Build Tailwind CSS (WAJIB sebelum running)
+./scripts/build-css.sh
+
+# Windows (PowerShell):
+# .\scripts\build-css.ps1
+
+# 4. Jalankan aplikasi (development mode)
 cd src-tauri
 cargo tauri dev
 ```
@@ -159,6 +209,10 @@ astana/
 │
 ├── docker/                      # Docker configuration
 ├── scripts/                     # Helper scripts
+├── sample-data/                 # Database sample (500 data)
+│   ├── astana.db               # File database sample
+│   ├── generate-sample.py      # Script generate data
+│   └── README.md               # Dokumentasi sample
 ├── DATABASE_SCHEMA.md           # Dokumentasi skema database
 ├── DEVELOPMENT.md               # Panduan development lengkap
 └── README.md                    # File ini
@@ -180,16 +234,63 @@ Aplikasi menggunakan **SQLite** sebagai database lokal yang tersimpan di kompute
 
 Lihat detail lengkap di **[DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md)**
 
+### 📦 Database Sample
+
+Tersedia database sample dengan **500 data makam** lengkap untuk testing dan demo:
+
+| File | Deskripsi | Ukuran |
+|------|-----------|--------|
+| [`sample-data/astana.db`](./sample-data/astana.db) | Database SQLite dengan 500 data | ~500 KB |
+| [`sample-data/README.md`](./sample-data/README.md) | Dokumentasi sample data | - |
+
+**Isi Sample Data:**
+- 5 Blok Makam (A: Premium, B-C: Standar, D-E: Ekonomis)
+- 500 Data Makam dengan periode 1980-2024
+- 967 Ahli Waris (1-3 orang per makam)
+- 2,421 Historis Pembayaran (2020-2026)
+
+Lihat [`sample-data/README.md`](./sample-data/README.md) untuk instruksi import.
+
 ---
 
 ## 📖 Cara Penggunaan
 
-### 1. Setup Awal
-Pertama kali menggunakan aplikasi:
-- Buka menu **Pengaturan**
-- Isi nama yayasan/makam dan informasi kontak
-- Upload logo yayasan (opsional)
-- Simpan perubahan
+### 🚀 Setup Awal (Pilih Salah Satu)
+
+Saat pertama kali menjalankan aplikasi, Anda memiliki **2 opsi** untuk setup database:
+
+#### Opsi 1: Import Database Sample (⭐ Rekomendasi untuk Testing)
+Gunakan database sample dengan **500 data makam** lengkap untuk langsung mencoba fitur aplikasi.
+
+**Cara Import:**
+1. Download file sample: [`sample-data/astana.db`](./sample-data/astana.db)
+2. Copy ke lokasi aplikasi sesuai OS Anda:
+   - **Windows:** `%LOCALAPPDATA%\com.perogeremmer.astana\astana.db`
+   - **macOS:** `~/Library/Application Support/com.perogeremmer.astana/astana.db`
+   - **Linux:** `~/.local/share/com.perogeremmer.astana/astana.db`
+3. Jalankan aplikasi
+4. Data sample siap digunakan! 🎉
+
+**Isi Database Sample:**
+- 5 Blok Makam (A, B, C, D, E)
+- 500 Data Makam lengkap
+- 967 Ahli Waris
+- 2,421 Historis Pembayaran (2020-2026)
+
+> 💡 **Tips:** Opsi ini cocok untuk testing, demo, atau melihat fitur aplikasi sebelum input data asli.
+
+#### Opsi 2: Mulai dari Awal (Untuk Data Produksi)
+Mulai dengan database kosong dan input data Anda sendiri dari nol.
+
+**Langkah-langkah:**
+1. Jalankan aplikasi (database kosong otomatis dibuat)
+2. Buka menu **Pengaturan**
+3. Isi nama yayasan/makam dan informasi kontak
+4. Upload logo yayasan (opsional)
+5. Simpan perubahan
+6. Lanjut ke langkah selanjutnya ⬇️
+
+---
 
 ### 2. Buat Blok Makam
 - Masuk ke menu **Data Blok**
