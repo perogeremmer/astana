@@ -244,11 +244,39 @@
                                 <option value="belum">Belum Bayar</option>
                             </select>
                         </div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2 relative">
                             <label class="text-sm font-medium text-gray-600">Tahun:</label>
-                            <select id="yearSelect" class="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer" style="background-image: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 fill=%22none%22 viewBox=%220 0 24 24%22 stroke=%22%236b7280%22><path stroke-linecap=%22round%22 stroke-linejoin=%22round%22 stroke-width=%222%22 d=%22M19 9l-7 7-7-7%22/></svg>'); background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1em 1em; padding-right: 2rem; min-width: 90px;">
-                                <!-- Options will be populated dynamically by JS -->
-                            </select>
+                            <div class="relative" id="yearPickerContainer">
+                                <input type="text" id="yearPickerInput" readonly 
+                                    class="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer w-24 text-center"
+                                    placeholder="Pilih Tahun">
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    </svg>
+                                </div>
+                                <!-- Year Picker Dropdown -->
+                                <div id="yearPickerDropdown" class="hidden absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 w-48">
+                                    <div class="p-3">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <button type="button" id="yearPickerPrev" class="p-1 hover:bg-gray-100 rounded">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                                                </svg>
+                                            </button>
+                                            <span id="yearPickerRange" class="text-sm font-medium"></span>
+                                            <button type="button" id="yearPickerNext" class="p-1 hover:bg-gray-100 rounded">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                        <div id="yearPickerGrid" class="grid grid-cols-3 gap-2">
+                                            <!-- Years will be populated by JS -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="flex-1"></div>
                         <button id="exportExcelBtn" class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2 transition-colors">

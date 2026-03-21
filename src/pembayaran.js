@@ -22,8 +22,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentYearEl.textContent = currentYear;
     }
     
-    // Populate year dropdown
-    populateYearDropdown();
+    // Initialize year picker
+    initYearPicker();
     
     await loadBlocks();
     await loadPayments();
@@ -31,22 +31,109 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateActiveYearDisplay();
 });
 
-function populateYearDropdown() {
-    const yearSelect = document.getElementById('yearSelect');
-    if (!yearSelect) return;
+// ==================== YEAR PICKER ====================
+
+let yearPickerBaseYear = new Date().getFullYear();
+
+function initYearPicker() {
+    const yearPickerInput = document.getElementById('yearPickerInput');
+    const yearPickerDropdown = document.getElementById('yearPickerDropdown');
+    const yearPickerPrev = document.getElementById('yearPickerPrev');
+    const yearPickerNext = document.getElementById('yearPickerNext');
     
-    yearSelect.innerHTML = '';
+    if (!yearPickerInput || !yearPickerDropdown) return;
     
-    // Add last 5 years (descending order - current year first)
-    for (let i = 0; i < 5; i++) {
-        const year = currentYear - i;
-        const option = document.createElement('option');
-        option.value = year;
-        option.textContent = year;
-        if (year === currentYear) {
-            option.selected = true;
+    // Set initial value
+    yearPickerInput.value = currentYear;
+    yearPickerBaseYear = currentYear;
+    renderYearPickerGrid();
+    
+    // Toggle dropdown on input click
+    yearPickerInput.addEventListener('click', (e) => {
+        e.stopPropagation();
+        yearPickerDropdown.classList.toggle('hidden');
+    });
+    
+    // Previous button
+    if (yearPickerPrev) {
+        yearPickerPrev.addEventListener('click', (e) => {
+            e.stopPropagation();
+            yearPickerBaseYear -= 9;
+            renderYearPickerGrid();
+        });
+    }
+    
+    // Next button
+    if (yearPickerNext) {
+        yearPickerNext.addEventListener('click', (e) => {
+            e.stopPropagation();
+            yearPickerBaseYear += 9;
+            renderYearPickerGrid();
+        });
+    }
+    
+    // Close when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!yearPickerDropdown.contains(e.target) && e.target !== yearPickerInput) {
+            yearPickerDropdown.classList.add('hidden');
         }
-        yearSelect.appendChild(option);
+    });
+    
+    // Prevent dropdown from closing when clicking inside
+    yearPickerDropdown.addEventListener('click', (e) => {
+        e.stopPropagation();
+    });
+}
+
+function renderYearPickerGrid() {
+    const yearPickerGrid = document.getElementById('yearPickerGrid');
+    const yearPickerRange = document.getElementById('yearPickerRange');
+    
+    if (!yearPickerGrid) return;
+    
+    // Calculate range (show 9 years in 3x3 grid)
+    const startYear = yearPickerBaseYear - 4;
+    const endYear = yearPickerBaseYear + 4;
+    
+    if (yearPickerRange) {
+        yearPickerRange.textContent = `${startYear} - ${endYear}`;
+    }
+    
+    yearPickerGrid.innerHTML = '';
+    
+    for (let year = startYear; year <= endYear; year++) {
+        const yearBtn = document.createElement('button');
+        yearBtn.type = 'button';
+        yearBtn.textContent = year;
+        yearBtn.className = `px-2 py-1.5 text-sm rounded-lg transition-colors ${
+            year === currentYear 
+                ? 'bg-emerald-600 text-white' 
+                : 'hover:bg-gray-100 text-gray-700'
+        }`;
+        
+        yearBtn.addEventListener('click', async () => {
+            currentYear = year;
+            
+            // Update input value
+            const yearPickerInput = document.getElementById('yearPickerInput');
+            if (yearPickerInput) {
+                yearPickerInput.value = year;
+            }
+            
+            // Close dropdown
+            const yearPickerDropdown = document.getElementById('yearPickerDropdown');
+            if (yearPickerDropdown) {
+                yearPickerDropdown.classList.add('hidden');
+            }
+            
+            // Reload data
+            currentPage = 1;
+            await loadPayments();
+            renderYearPickerGrid();
+            renderTableHeader();
+        });
+        
+        yearPickerGrid.appendChild(yearBtn);
     }
 }
 
@@ -69,17 +156,7 @@ function setupEventListeners() {
         });
     }
     
-    // Year filter
-    const yearSelect = document.getElementById('yearSelect');
-    if (yearSelect) {
-        yearSelect.addEventListener('change', async (e) => {
-            currentYear = parseInt(e.target.value);
-            currentPage = 1;
-            await loadPayments();
-            // Update table header when year changes
-            renderTableHeader();
-        });
-    }
+    // Year picker is initialized in initYearPicker() and handles its own events
     
     // Export modal year selectors
     const startYearSelect = document.getElementById('exportStartYear');
