@@ -8,7 +8,7 @@ let currentGraves = [];
 let currentBlocks = [];
 let currentPage = 1;
 let totalPages = 1;
-const itemsPerPage = 10;
+const itemsPerPage = 30;
 let currentEditingId = null;
 let currentDeletingId = null;
 let currentDeletingName = '';
@@ -58,6 +58,148 @@ function setupEventListeners() {
     if (endYearSelect) {
         endYearSelect.addEventListener('change', updateYearPreview);
     }
+    
+    // Logout button
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            if (window.astanaApp && window.astanaApp.logout) {
+                window.astanaApp.logout();
+            }
+        });
+    }
+
+    // Add data button
+    const btnTambahData = document.getElementById('btnTambahData');
+    if (btnTambahData) {
+        btnTambahData.addEventListener('click', openModal);
+    }
+
+    // Export Excel button
+    const btnExportExcel = document.getElementById('btnExportExcel');
+    if (btnExportExcel) {
+        btnExportExcel.addEventListener('click', openExportExcelModal);
+    }
+
+    // Modal backdrops - close when clicking outside
+    document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+        backdrop.addEventListener('click', (e) => {
+            const modalId = e.target.dataset.modal;
+            if (modalId) {
+                switch(modalId) {
+                    case 'inputModal':
+                        closeModal();
+                        break;
+                    case 'editModal':
+                        closeEditModal();
+                        break;
+                    case 'deleteModal':
+                        closeDeleteModal();
+                        break;
+                    case 'exportExcelModal':
+                        closeExportExcelModal();
+                        break;
+                    case 'modalSukses':
+                        closeSuksesModal();
+                        break;
+                }
+            }
+        });
+    });
+
+    // Close modal buttons
+    document.querySelectorAll('.btn-close-modal').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const modalId = e.target.closest('.btn-close-modal').dataset.modal;
+            if (modalId) {
+                switch(modalId) {
+                    case 'inputModal':
+                        closeModal();
+                        break;
+                    case 'editModal':
+                        closeEditModal();
+                        break;
+                    case 'deleteModal':
+                        closeDeleteModal();
+                        break;
+                    case 'exportExcelModal':
+                        closeExportExcelModal();
+                        break;
+                }
+            }
+        });
+    });
+
+    // Ahli Waris buttons - Add Modal
+    const btnTambahWaris = document.getElementById('btnTambahWaris');
+    if (btnTambahWaris) {
+        btnTambahWaris.addEventListener('click', tambahAhliWaris);
+    }
+
+    const btnHapusWaris = document.getElementById('btnHapusWaris');
+    if (btnHapusWaris) {
+        btnHapusWaris.addEventListener('click', hapusAhliWarisTerakhir);
+    }
+
+    // Save data button - Add Modal
+    const btnSimpanData = document.getElementById('btnSimpanData');
+    if (btnSimpanData) {
+        btnSimpanData.addEventListener('click', simpanData);
+    }
+
+    // Ahli Waris buttons - Edit Modal
+    const btnTambahWarisEdit = document.getElementById('btnTambahWarisEdit');
+    if (btnTambahWarisEdit) {
+        btnTambahWarisEdit.addEventListener('click', tambahAhliWarisEdit);
+    }
+
+    const btnHapusWarisEdit = document.getElementById('btnHapusWarisEdit');
+    if (btnHapusWarisEdit) {
+        btnHapusWarisEdit.addEventListener('click', hapusAhliWarisTerakhirEdit);
+    }
+
+    // Save data button - Edit Modal
+    const btnSimpanEdit = document.getElementById('btnSimpanEdit');
+    if (btnSimpanEdit) {
+        btnSimpanEdit.addEventListener('click', simpanEdit);
+    }
+
+    // Confirm delete button
+    const btnConfirmDelete = document.getElementById('btnConfirmDelete');
+    if (btnConfirmDelete) {
+        btnConfirmDelete.addEventListener('click', confirmDelete);
+    }
+
+    // Quick select buttons for export range
+    const quickSelectButtons = document.getElementById('quickSelectButtons');
+    if (quickSelectButtons) {
+        quickSelectButtons.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-range]');
+            if (btn) {
+                const range = btn.dataset.range;
+                if (range === 'all') {
+                    setExportRange('all');
+                } else {
+                    setExportRange(parseInt(range));
+                }
+            }
+        });
+    }
+
+    // Confirm export button
+    const btnConfirmExportExcel = document.getElementById('btnConfirmExportExcel');
+    if (btnConfirmExportExcel) {
+        btnConfirmExportExcel.addEventListener('click', confirmExportExcel);
+    }
+
+    // Close success modal button
+    const btnCloseSuksesModal = document.getElementById('btnCloseSuksesModal');
+    if (btnCloseSuksesModal) {
+        btnCloseSuksesModal.addEventListener('click', closeSuksesModal);
+    }
+
+    // Setup table action buttons (edit/delete) via event delegation
+    setupTableActionListeners();
 }
 
 function debounce(func, wait) {
@@ -559,7 +701,7 @@ async function openEditModal(graveId) {
         setTimeout(() => panel.classList.remove('translate-x-full'), 10);
     } catch (error) {
         console.error('Failed to load grave detail:', error);
-        showToast('Gagal memuat detail makam', 'error');
+        showToast('Gagal memuat detail makam: ' + error, 'error');
     } finally {
         showLoading(false);
     }
@@ -1182,177 +1324,24 @@ window.confirmExportExcel = confirmExportExcel;
 window.updateYearPreview = updateYearPreview;
 window.closeSuksesModal = closeSuksesModal;
 
-// ==================== EVENT LISTENERS ====================
-
-document.addEventListener('DOMContentLoaded', () => {
-    setupEventListeners();
-});
-
-function setupEventListeners() {
-    // Logout button
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
-            if (window.astanaApp && window.astanaApp.logout) {
-                window.astanaApp.logout();
-            }
-        });
-    }
-
-    // Add data button
-    const btnTambahData = document.getElementById('btnTambahData');
-    if (btnTambahData) {
-        btnTambahData.addEventListener('click', openModal);
-    }
-
-    // Export Excel button
-    const btnExportExcel = document.getElementById('btnExportExcel');
-    if (btnExportExcel) {
-        btnExportExcel.addEventListener('click', openExportExcelModal);
-    }
-
-    // Modal backdrops - close when clicking outside
-    document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
-        backdrop.addEventListener('click', (e) => {
-            const modalId = e.target.dataset.modal;
-            if (modalId) {
-                switch(modalId) {
-                    case 'inputModal':
-                        closeModal();
-                        break;
-                    case 'editModal':
-                        closeEditModal();
-                        break;
-                    case 'deleteModal':
-                        closeDeleteModal();
-                        break;
-                    case 'exportExcelModal':
-                        closeExportExcelModal();
-                        break;
-                    case 'modalSukses':
-                        closeSuksesModal();
-                        break;
-                }
-            }
-        });
-    });
-
-    // Close modal buttons
-    document.querySelectorAll('.btn-close-modal').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const modalId = e.target.closest('.btn-close-modal').dataset.modal;
-            if (modalId) {
-                switch(modalId) {
-                    case 'inputModal':
-                        closeModal();
-                        break;
-                    case 'editModal':
-                        closeEditModal();
-                        break;
-                    case 'deleteModal':
-                        closeDeleteModal();
-                        break;
-                    case 'exportExcelModal':
-                        closeExportExcelModal();
-                        break;
-                }
-            }
-        });
-    });
-
-    // Ahli Waris buttons - Add Modal
-    const btnTambahWaris = document.getElementById('btnTambahWaris');
-    if (btnTambahWaris) {
-        btnTambahWaris.addEventListener('click', tambahAhliWaris);
-    }
-
-    const btnHapusWaris = document.getElementById('btnHapusWaris');
-    if (btnHapusWaris) {
-        btnHapusWaris.addEventListener('click', hapusAhliWarisTerakhir);
-    }
-
-    // Save data button - Add Modal
-    const btnSimpanData = document.getElementById('btnSimpanData');
-    if (btnSimpanData) {
-        btnSimpanData.addEventListener('click', simpanData);
-    }
-
-    // Ahli Waris buttons - Edit Modal
-    const btnTambahWarisEdit = document.getElementById('btnTambahWarisEdit');
-    if (btnTambahWarisEdit) {
-        btnTambahWarisEdit.addEventListener('click', tambahAhliWarisEdit);
-    }
-
-    const btnHapusWarisEdit = document.getElementById('btnHapusWarisEdit');
-    if (btnHapusWarisEdit) {
-        btnHapusWarisEdit.addEventListener('click', hapusAhliWarisTerakhirEdit);
-    }
-
-    // Save data button - Edit Modal
-    const btnSimpanEdit = document.getElementById('btnSimpanEdit');
-    if (btnSimpanEdit) {
-        btnSimpanEdit.addEventListener('click', simpanEdit);
-    }
-
-    // Confirm delete button
-    const btnConfirmDelete = document.getElementById('btnConfirmDelete');
-    if (btnConfirmDelete) {
-        btnConfirmDelete.addEventListener('click', confirmDelete);
-    }
-
-    // Quick select buttons for export range
-    const quickSelectButtons = document.getElementById('quickSelectButtons');
-    if (quickSelectButtons) {
-        quickSelectButtons.addEventListener('click', (e) => {
-            const btn = e.target.closest('button[data-range]');
-            if (btn) {
-                const range = btn.dataset.range;
-                if (range === 'all') {
-                    setExportRange('all');
-                } else {
-                    setExportRange(parseInt(range));
-                }
-            }
-        });
-    }
-
-    // Confirm export button
-    const btnConfirmExportExcel = document.getElementById('btnConfirmExportExcel');
-    if (btnConfirmExportExcel) {
-        btnConfirmExportExcel.addEventListener('click', confirmExportExcel);
-    }
-
-    // Close success modal button
-    const btnCloseSuksesModal = document.getElementById('btnCloseSuksesModal');
-    if (btnCloseSuksesModal) {
-        btnCloseSuksesModal.addEventListener('click', closeSuksesModal);
-    }
-
-    // Setup table action buttons (edit/delete) via event delegation
-    setupTableActionListeners();
-}
+// Note: setupEventListeners() is defined at the top of the file
 
 function setupTableActionListeners() {
     // Use event delegation for dynamically generated table rows
     const tableContainer = document.querySelector('tbody') || document.querySelector('.overflow-x-auto');
     if (tableContainer) {
         tableContainer.addEventListener('click', (e) => {
-            // Handle demo edit buttons
+            // Handle demo edit buttons (static HTML table)
             const editBtn = e.target.closest('.btn-edit');
             if (editBtn) {
-                const nama = editBtn.dataset.nama;
-                const blok = editBtn.dataset.blok;
-                const tanggal = editBtn.dataset.tanggal;
-                const heirs = JSON.parse(editBtn.dataset.heirs || '[]');
-                openEditModal(nama, blok, tanggal, heirs);
+                showToast('Ini data demo - tidak dapat diedit', 'warning');
                 return;
             }
 
-            // Handle demo delete buttons
+            // Handle demo delete buttons (static HTML table)
             const deleteBtn = e.target.closest('.btn-delete');
             if (deleteBtn) {
-                const nama = deleteBtn.dataset.nama;
-                openDeleteModal(nama);
+                showToast('Ini data demo - tidak dapat dihapus', 'warning');
                 return;
             }
 

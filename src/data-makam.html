@@ -178,7 +178,7 @@
                                 class="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-emerald-500">
                         </div>
                     </div>
-                    <button id="btnTambahData" class="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg flex items-center gap-2 transition-colors">
+                    <button id="btnTambahData" type="button" class="relative z-10 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg flex items-center gap-2 transition-colors cursor-pointer">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                         </svg>
@@ -689,13 +689,13 @@
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-xs text-gray-500 mb-1.5">Dari Tahun</label>
-                                    <select id="exportStartYear" class="w-full h-10 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" style="background-color: white !important; color: #1f2937 !important;">
+                                    <select id="exportStartYear" class="w-full h-10 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
                                         <!-- Options will be populated by JS -->
                                     </select>
                                 </div>
                                 <div>
                                     <label class="block text-xs text-gray-500 mb-1.5">Sampai Tahun</label>
-                                    <select id="exportEndYear" class="w-full h-10 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" style="background-color: white !important; color: #1f2937 !important;">
+                                    <select id="exportEndYear" class="w-full h-10 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
                                         <!-- Options will be populated by JS -->
                                     </select>
                                 </div>
