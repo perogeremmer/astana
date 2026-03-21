@@ -118,8 +118,16 @@ impl Database {
 
     /// Check if database is properly initialized
     pub fn verify(&self) -> Result<bool, String> {
-        // Check main tables
-        let tables = vec!["blocks", "graves", "heirs", "payments", "settings"];
+        // Check main tables including audit_logs
+        let tables = vec![
+            "blocks",
+            "graves",
+            "heirs",
+            "payments",
+            "settings",
+            "users",
+            "audit_logs",
+        ];
 
         for table in tables {
             let count: i64 = self
