@@ -217,7 +217,20 @@ window.addEventListener('storage', (e) => {
 document.addEventListener('DOMContentLoaded', () => {
   loadSidebarInfo();
   updateSidebarUser();
+  setupLogoutButton();
 });
+
+// Setup logout button event listener
+function setupLogoutButton() {
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      if (window.astanaApp && window.astanaApp.logout) {
+        window.astanaApp.logout();
+      }
+    });
+  }
+}
 
 // Update sidebar user info
 function updateSidebarUser() {

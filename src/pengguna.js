@@ -113,14 +113,14 @@ function renderUsersTable() {
             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <div class="flex items-center justify-end space-x-2">
                     ${canResetPassword ? `
-                        <button onclick="openResetPasswordModal(${user.id})" class="text-yellow-600 hover:text-yellow-900 p-1" title="Reset Password">
+                        <button data-reset-password-id="${user.id}" class="btn-reset-password text-yellow-600 hover:text-yellow-900 p-1" title="Reset Password">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
                             </svg>
                         </button>
                     ` : '<span class="w-7"></span>'}
                     ${canEdit ? `
-                        <button onclick="openEditUserModal(${user.id})" class="text-indigo-600 hover:text-indigo-900 p-1" title="Edit">
+                        <button data-edit-user-id="${user.id}" class="btn-edit-user text-indigo-600 hover:text-indigo-900 p-1" title="Edit">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                             </svg>
@@ -459,4 +459,90 @@ async function confirmDeleteUser() {
 // Legacy delete function (kept for backward compatibility)
 async function deleteUser(userId) {
     openDeleteConfirmModal(userId);
+}
+
+// ==================== EVENT LISTENERS ====================
+
+function setupEventListeners() {
+    // Logout button
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            if (window.astanaApp && window.astanaApp.logout) {
+                window.astanaApp.logout();
+            }
+        });
+    }
+
+    // Open add user modal
+    const btnOpenAddUserModal = document.getElementById('btnOpenAddUserModal');
+    if (btnOpenAddUserModal) {
+        btnOpenAddUserModal.addEventListener('click', openAddUserModal);
+    }
+
+    // Close modal buttons
+    document.querySelectorAll('.btn-close-modal').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const modalId = e.target.closest('.btn-close-modal').dataset.modal;
+            if (modalId === 'addUserModal') closeAddUserModal();
+            if (modalId === 'editUserModal') closeEditUserModal();
+            if (modalId === 'deleteConfirmModal') closeDeleteConfirmModal();
+            if (modalId === 'resetPasswordModal') closeResetPasswordModal();
+        });
+    });
+
+    // Confirm delete user
+    const btnConfirmDeleteUser = document.getElementById('btnConfirmDeleteUser');
+    if (btnConfirmDeleteUser) {
+        btnConfirmDeleteUser.addEventListener('click', confirmDeleteUser);
+    }
+
+    // Copy password
+    const btnCopyPassword = document.getElementById('btnCopyPassword');
+    if (btnCopyPassword) {
+        btnCopyPassword.addEventListener('click', copyPassword);
+    }
+
+    // Close modals on backdrop click
+    document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+        backdrop.addEventListener('click', (e) => {
+            const modalId = e.target.dataset.modal;
+            if (modalId === 'addUserModal') closeAddUserModal();
+            if (modalId === 'editUserModal') closeEditUserModal();
+            if (modalId === 'deleteConfirmModal') closeDeleteConfirmModal();
+            if (modalId === 'resetPasswordModal') closeResetPasswordModal();
+        });
+    });
+
+    // Setup event delegation for dynamically created buttons
+    setupDynamicButtonListeners();
+}
+
+function setupDynamicButtonListeners() {
+    const container = document.body;
+
+    container.addEventListener('click', (e) => {
+        // Handle reset password buttons
+        const resetBtn = e.target.closest('.btn-reset-password');
+        if (resetBtn) {
+            const userId = parseInt(resetBtn.dataset.resetPasswordId);
+            openResetPasswordModal(userId);
+            return;
+        }
+
+        // Handle edit user buttons
+        const editBtn = e.target.closest('.btn-edit-user');
+        if (editBtn) {
+            const userId = parseInt(editBtn.dataset.editUserId);
+            openEditUserModal(userId);
+            return;
+        }
+    });
+}
+
+// Setup event listeners when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupEventListeners);
+} else {
+    setupEventListeners();
 }

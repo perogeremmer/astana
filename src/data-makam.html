@@ -153,7 +153,7 @@
                             <p class="text-xs text-emerald-200 sidebar-user-role">Petugas Makam</p>
                         </div>
                     </div>
-                    <button onclick="window.astanaApp.logout()" class="p-2 hover:bg-emerald-700 rounded-lg transition-colors" title="Logout">
+                    <button id="logoutBtn" class="p-2 hover:bg-emerald-700 rounded-lg transition-colors" title="Logout">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
                         </svg>
@@ -178,7 +178,7 @@
                                 class="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-emerald-500">
                         </div>
                     </div>
-                    <button onclick="openModal()" class="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg flex items-center gap-2 transition-colors" id="btnTambahData">
+                    <button id="btnTambahData" class="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg flex items-center gap-2 transition-colors">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                         </svg>
@@ -211,7 +211,7 @@
                                 <option value="terbaru">Data Terbaru</option>
                             </select>
                         </div>
-                        <button onclick="openExportExcelModal()" class="ml-auto px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2">
+                        <button id="btnExportExcel" class="ml-auto px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
                             </svg>
@@ -257,12 +257,12 @@
                                     </td>
                                     <td class="px-4 py-3 text-center">
                                         <div class="flex items-center justify-center gap-2">
-                                            <button onclick="openEditModal('Ahmad Sudirman', 'A-12', '2020-01-15', [{nama: 'Budi Sudirman', telp: '081234567890', hub: 'anak'}])" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Edit">
+                                            <button data-action="edit" data-nama="Ahmad Sudirman" data-blok="A-12" data-tanggal="2020-01-15" data-heirs='[{"nama": "Budi Sudirman", "telp": "081234567890", "hub": "anak"}]' class="p-1.5 text-blue-600 hover:bg-blue-50 rounded btn-edit" title="Edit">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                                 </svg>
                                             </button>
-                                            <button onclick="openDeleteModal('Ahmad Sudirman')" class="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Hapus">
+                                            <button data-action="delete" data-nama="Ahmad Sudirman" class="p-1.5 text-red-600 hover:bg-red-50 rounded btn-delete" title="Hapus">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                                 </svg>
@@ -293,12 +293,12 @@
                                     </td>
                                     <td class="px-4 py-3 text-center">
                                         <div class="flex items-center justify-center gap-2">
-                                            <button onclick="openEditModal('Siti Aminah', 'A-13', '2019-03-22', [{nama: 'Dewi Aminah', telp: '082345678901', hub: 'anak'}, {nama: 'Ahmad Fauzi', telp: '082345678902', hub: 'saudara'}])" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Edit">
+                                            <button data-action="edit" data-nama="Siti Aminah" data-blok="A-13" data-tanggal="2019-03-22" data-heirs='[{"nama": "Dewi Aminah", "telp": "082345678901", "hub": "anak"}, {"nama": "Ahmad Fauzi", "telp": "082345678902", "hub": "saudara"}]' class="p-1.5 text-blue-600 hover:bg-blue-50 rounded btn-edit" title="Edit">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                                                 </svg>
                                             </button>
-                                            <button onclick="openDeleteModal('Siti Aminah')" class="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Hapus">
+                                            <button data-action="delete" data-nama="Siti Aminah" class="p-1.5 text-red-600 hover:bg-red-50 rounded btn-delete" title="Hapus">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                                 </svg>
@@ -332,12 +332,12 @@
                                     </td>
                                     <td class="px-4 py-3 text-center">
                                         <div class="flex items-center justify-center gap-2">
-                                            <button onclick="openEditModal('H. Muhammad Ridwan', 'B-05', '2018-08-10', [{nama: 'Rina Ridwan', telp: '083456789012', hub: 'anak'}, {nama: 'Budi Ridwan', telp: '083456789013', hub: 'anak'}, {nama: 'Siti Ridwan', telp: '083456789014', hub: 'anak'}])" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Edit">
+                                            <button data-action="edit" data-nama="H. Muhammad Ridwan" data-blok="B-05" data-tanggal="2018-08-10" data-heirs='[{"nama": "Rina Ridwan", "telp": "083456789012", "hub": "anak"}, {"nama": "Budi Ridwan", "telp": "083456789013", "hub": "anak"}, {"nama": "Siti Ridwan", "telp": "083456789014", "hub": "anak"}]' class="p-1.5 text-blue-600 hover:bg-blue-50 rounded btn-edit" title="Edit">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                                                 </svg>
                                             </button>
-                                            <button onclick="openDeleteModal('H. Muhammad Ridwan')" class="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Hapus">
+                                            <button data-action="delete" data-nama="H. Muhammad Ridwan" class="p-1.5 text-red-600 hover:bg-red-50 rounded btn-delete" title="Hapus">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                                 </svg>
@@ -365,12 +365,12 @@
                                     </td>
                                     <td class="px-4 py-3 text-center">
                                         <div class="flex items-center justify-center gap-2">
-                                            <button onclick="openEditModal('Dewi Kusuma', 'B-06', '2021-05-05', [{nama: 'Agus Kusuma', telp: '084567890123', hub: 'suami'}])" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Edit">
+                                            <button data-action="edit" data-nama="Dewi Kusuma" data-blok="B-06" data-tanggal="2021-05-05" data-heirs='[{"nama": "Agus Kusuma", "telp": "084567890123", "hub": "suami"}]' class="p-1.5 text-blue-600 hover:bg-blue-50 rounded btn-edit" title="Edit">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                                                 </svg>
                                             </button>
-                                            <button onclick="openDeleteModal('Dewi Kusuma')" class="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Hapus">
+                                            <button data-action="delete" data-nama="Dewi Kusuma" class="p-1.5 text-red-600 hover:bg-red-50 rounded btn-delete" title="Hapus">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                                 </svg>
@@ -401,12 +401,12 @@
                                     </td>
                                     <td class="px-4 py-3 text-center">
                                         <div class="flex items-center justify-center gap-2">
-                                            <button onclick="openEditModal('Abdul Rahman', 'C-01', '2017-12-18', [{nama: 'Fatimah Rahman', telp: '085678901234', hub: 'istri'}, {nama: 'Hasan Rahman', telp: '085678901235', hub: 'anak'}])" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Edit">
+                                            <button data-action="edit" data-nama="Abdul Rahman" data-blok="C-01" data-tanggal="2017-12-18" data-heirs='[{"nama": "Fatimah Rahman", "telp": "085678901234", "hub": "istri"}, {"nama": "Hasan Rahman", "telp": "085678901235", "hub": "anak"}]' class="p-1.5 text-blue-600 hover:bg-blue-50 rounded btn-edit" title="Edit">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                                                 </svg>
                                             </button>
-                                            <button onclick="openDeleteModal('Abdul Rahman')" class="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Hapus">
+                                            <button data-action="delete" data-nama="Abdul Rahman" class="p-1.5 text-red-600 hover:bg-red-50 rounded btn-delete" title="Hapus">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                                 </svg>
@@ -436,12 +436,12 @@
 
     <!-- MODAL TAMBAH DATA -->
     <div id="inputModal" class="fixed inset-0 z-50 hidden">
-        <div class="absolute inset-0 bg-black/50" onclick="closeModal()"></div>
+        <div class="absolute inset-0 bg-black/50 modal-backdrop" data-modal="inputModal"></div>
         <div class="absolute right-0 top-0 h-full w-full max-w-lg bg-white shadow-2xl transform transition-transform duration-300 translate-x-full" id="modalPanel">
             <div class="flex flex-col h-full">
                 <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-emerald-50">
                     <h2 class="text-lg font-semibold text-gray-800">Tambah Data Makam</h2>
-                    <button onclick="closeModal()" class="p-2 hover:bg-gray-200 rounded-lg transition-colors">
+                    <button class="p-2 hover:bg-gray-200 rounded-lg transition-colors btn-close-modal" data-modal="inputModal">
                         <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
@@ -523,13 +523,13 @@
 
                         <!-- Tombol Tambah/Hapus Ahli Waris -->
                         <div class="flex gap-3 mt-4">
-                            <button type="button" onclick="tambahAhliWaris()" id="btnTambahWaris" class="flex-1 px-4 py-2 border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50 transition-colors text-sm font-medium flex items-center justify-center gap-2">
+                            <button type="button" id="btnTambahWaris" class="flex-1 px-4 py-2 border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50 transition-colors text-sm font-medium flex items-center justify-center gap-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                                 </svg>
                                 Tambah Ahli Waris
                             </button>
-                            <button type="button" onclick="hapusAhliWarisTerakhir()" id="btnHapusWaris" class="hidden px-4 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors text-sm font-medium flex items-center justify-center gap-2">
+                            <button type="button" id="btnHapusWaris" class="hidden px-4 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors text-sm font-medium flex items-center justify-center gap-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                 </svg>
@@ -540,8 +540,8 @@
                 </div>
 
                 <div class="px-6 py-4 border-t border-gray-200 flex gap-3">
-                    <button onclick="closeModal()" class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors">Batal</button>
-                    <button onclick="simpanData()" class="flex-1 px-4 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors">Simpan Data</button>
+                    <button class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors btn-close-modal" data-modal="inputModal">Batal</button>
+                    <button id="btnSimpanData" class="flex-1 px-4 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors">Simpan Data</button>
                 </div>
             </div>
         </div>
@@ -549,12 +549,12 @@
 
     <!-- MODAL EDIT DATA -->
     <div id="editModal" class="fixed inset-0 z-50 hidden">
-        <div class="absolute inset-0 bg-black/50" onclick="closeEditModal()"></div>
+        <div class="absolute inset-0 bg-black/50 modal-backdrop" data-modal="editModal"></div>
         <div class="absolute right-0 top-0 h-full w-full max-w-lg bg-white shadow-2xl transform transition-transform duration-300 translate-x-full" id="editModalPanel">
             <div class="flex flex-col h-full">
                 <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-blue-50">
                     <h2 class="text-lg font-semibold text-gray-800">Edit Data Makam</h2>
-                    <button onclick="closeEditModal()" class="p-2 hover:bg-gray-200 rounded-lg transition-colors">
+                    <button class="p-2 hover:bg-gray-200 rounded-lg transition-colors btn-close-modal" data-modal="editModal">
                         <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
@@ -602,13 +602,13 @@
 
                         <!-- Tombol Tambah/Hapus Ahli Waris -->
                         <div class="flex gap-3 mt-4">
-                            <button type="button" onclick="tambahAhliWarisEdit()" id="btnTambahWarisEdit" class="flex-1 px-4 py-2 border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50 transition-colors text-sm font-medium flex items-center justify-center gap-2">
+                            <button type="button" id="btnTambahWarisEdit" class="flex-1 px-4 py-2 border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50 transition-colors text-sm font-medium flex items-center justify-center gap-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                                 </svg>
                                 Tambah Ahli Waris
                             </button>
-                            <button type="button" onclick="hapusAhliWarisTerakhirEdit()" id="btnHapusWarisEdit" class="hidden px-4 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors text-sm font-medium flex items-center justify-center gap-2">
+                            <button type="button" id="btnHapusWarisEdit" class="hidden px-4 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors text-sm font-medium flex items-center justify-center gap-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                 </svg>
@@ -619,8 +619,8 @@
                 </div>
 
                 <div class="px-6 py-4 border-t border-gray-200 flex gap-3">
-                    <button onclick="closeEditModal()" class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors">Batal</button>
-                    <button onclick="simpanEdit()" class="flex-1 px-4 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors">Simpan Perubahan</button>
+                    <button class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors btn-close-modal" data-modal="editModal">Batal</button>
+                    <button id="btnSimpanEdit" class="flex-1 px-4 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors">Simpan Perubahan</button>
                 </div>
             </div>
         </div>
@@ -628,7 +628,7 @@
 
     <!-- MODAL HAPUS DATA -->
     <div id="deleteModal" class="fixed inset-0 z-50 hidden">
-        <div class="absolute inset-0 bg-black/50" onclick="closeDeleteModal()"></div>
+        <div class="absolute inset-0 bg-black/50 modal-backdrop" data-modal="deleteModal"></div>
         <div class="absolute inset-0 flex items-center justify-center p-4">
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm transform transition-all" id="deleteModalPanel">
                 <div class="p-6 text-center">
@@ -641,8 +641,8 @@
                     <p class="text-sm text-gray-500 mb-6">Apakah Anda yakin ingin menghapus data <strong id="deleteNama" class="text-gray-800">-</strong>? Data yang dihapus tidak dapat dikembalikan.</p>
                     
                     <div class="flex gap-3">
-                        <button onclick="closeDeleteModal()" class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors">Batal</button>
-                        <button onclick="confirmDelete()" class="flex-1 px-4 py-2.5 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors">Hapus Data</button>
+                        <button class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors btn-close-modal" data-modal="deleteModal">Batal</button>
+                        <button id="btnConfirmDelete" class="flex-1 px-4 py-2.5 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors">Hapus Data</button>
                     </div>
                 </div>
             </div>
@@ -651,7 +651,7 @@
 
     <!-- MODAL EXPORT EXCEL - PILIH TAHUN -->
     <div id="exportExcelModal" class="fixed inset-0 z-50 hidden">
-        <div class="absolute inset-0 bg-black/50" onclick="closeExportExcelModal()"></div>
+        <div class="absolute inset-0 bg-black/50 modal-backdrop" data-modal="exportExcelModal"></div>
         <div class="absolute inset-0 flex items-center justify-center p-4">
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all" id="exportExcelPanel">
                 <div class="p-6">
@@ -667,7 +667,7 @@
                                 <p class="text-sm text-gray-500">Pilih range tahun pembayaran</p>
                             </div>
                         </div>
-                        <button onclick="closeExportExcelModal()" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                        <button class="p-2 hover:bg-gray-100 rounded-lg transition-colors btn-close-modal" data-modal="exportExcelModal">
                             <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                             </svg>
@@ -703,10 +703,10 @@
                             
                             <!-- Quick select buttons -->
                             <div class="flex flex-wrap gap-2" id="quickSelectButtons">
-                                <button onclick="setExportRange(3)" data-range="3" class="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors quick-select-btn">3 Tahun Terakhir</button>
-                                <button onclick="setExportRange(5)" data-range="5" class="px-3 py-1.5 text-xs bg-emerald-100 text-emerald-700 hover:bg-emerald-200 rounded-lg transition-colors font-medium quick-select-btn active">5 Tahun Terakhir</button>
-                                <button onclick="setExportRange(10)" data-range="10" class="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors quick-select-btn">10 Tahun Terakhir</button>
-                                <button onclick="setExportRange('all')" data-range="all" class="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors quick-select-btn">Semua</button>
+                                <button data-range="3" class="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors quick-select-btn">3 Tahun Terakhir</button>
+                                <button data-range="5" class="px-3 py-1.5 text-xs bg-emerald-100 text-emerald-700 hover:bg-emerald-200 rounded-lg transition-colors font-medium quick-select-btn active">5 Tahun Terakhir</button>
+                                <button data-range="10" class="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors quick-select-btn">10 Tahun Terakhir</button>
+                                <button data-range="all" class="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors quick-select-btn">Semua</button>
                             </div>
                         </div>
                         
@@ -720,8 +720,8 @@
                     </div>
                     
                     <div class="flex gap-3 mt-6">
-                        <button onclick="closeExportExcelModal()" class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors">Batal</button>
-                        <button onclick="confirmExportExcel()" class="flex-1 px-4 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2">
+                        <button class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors btn-close-modal" data-modal="exportExcelModal">Batal</button>
+                        <button id="btnConfirmExportExcel" class="flex-1 px-4 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
                             </svg>
@@ -735,9 +735,9 @@
 
     <!-- MODAL SUKSES -->
     <div id="modalSukses" class="fixed inset-0 z-50 hidden">
-        <div class="absolute inset-0 bg-black/50"></div>
+        <div class="absolute inset-0 bg-black/50 modal-backdrop" data-modal="modalSukses"></div>
         <div class="absolute inset-0 flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center" id="suksesModalPanel">
                 <div class="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <svg class="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
@@ -745,19 +745,10 @@
                 </div>
                 <h3 class="text-lg font-semibold text-gray-800 mb-2">Berhasil!</h3>
                 <p class="text-sm text-gray-500 mb-6" id="suksesMessage">Operasi berhasil dilakukan.</p>
-                <button onclick="closeSuksesModal()" class="w-full px-4 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors">Tutup</button>
+                <button id="btnCloseSuksesModal" class="w-full px-4 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors">Tutup</button>
             </div>
         </div>
     </div>
 
-    <script>
-        // Fungsi untuk modal sukses
-        function closeSuksesModal() {
-            document.getElementById('modalSukses').classList.add('hidden');
-        }
-        
-        // Expose function to global scope
-        window.closeSuksesModal = closeSuksesModal;
-    </script>
 </body>
 </html>

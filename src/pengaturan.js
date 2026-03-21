@@ -512,4 +512,86 @@ window.exportDatabase = exportDatabase;
 window.restoreDatabase = restoreDatabase;
 window.closeBackupModal = closeBackupModal;
 window.openDatabaseFolder = openDatabaseFolder;
+
+// ==================== EVENT LISTENERS ====================
+
+function setupEventListeners() {
+    // Logout button
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            if (window.astanaApp && window.astanaApp.logout) {
+                window.astanaApp.logout();
+            }
+        });
+    }
+
+    // Trigger logo input click
+    const btnTriggerLogoInput = document.getElementById('btnTriggerLogoInput');
+    if (btnTriggerLogoInput) {
+        btnTriggerLogoInput.addEventListener('click', () => {
+            const logoInput = document.getElementById('logoInput');
+            if (logoInput) logoInput.click();
+        });
+    }
+
+    // Save settings
+    const btnSaveSettings = document.getElementById('btnSaveSettings');
+    if (btnSaveSettings) {
+        btnSaveSettings.addEventListener('click', saveSettings);
+    }
+
+    // Copy path
+    const btnCopyPath = document.getElementById('btnCopyPath');
+    if (btnCopyPath) {
+        btnCopyPath.addEventListener('click', copyPath);
+    }
+
+    // Open database folder
+    const btnOpenDatabaseFolder = document.getElementById('btnOpenDatabaseFolder');
+    if (btnOpenDatabaseFolder) {
+        btnOpenDatabaseFolder.addEventListener('click', openDatabaseFolder);
+    }
+
+    // Backup now
+    const btnBackupNow = document.getElementById('btnBackupNow');
+    if (btnBackupNow) {
+        btnBackupNow.addEventListener('click', backupNow);
+    }
+
+    // Export database
+    const btnExportDatabase = document.getElementById('btnExportDatabase');
+    if (btnExportDatabase) {
+        btnExportDatabase.addEventListener('click', exportDatabase);
+    }
+
+    // Restore database
+    const btnRestoreDatabase = document.getElementById('btnRestoreDatabase');
+    if (btnRestoreDatabase) {
+        btnRestoreDatabase.addEventListener('click', restoreDatabase);
+    }
+
+    // Close backup modal
+    const btnCloseBackupModal = document.getElementById('btnCloseBackupModal');
+    if (btnCloseBackupModal) {
+        btnCloseBackupModal.addEventListener('click', closeBackupModal);
+    }
+
+    // Close modal on backdrop click
+    document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+        backdrop.addEventListener('click', (e) => {
+            const modalId = e.target.dataset.modal;
+            if (modalId === 'modalBackupSuccess') {
+                closeBackupModal();
+            }
+        });
+    });
+}
+
+// Setup event listeners when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupEventListeners);
+} else {
+    setupEventListeners();
+}
 window.handleLogoSelect = handleLogoSelect;

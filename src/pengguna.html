@@ -117,7 +117,7 @@
                             <p class="text-xs text-emerald-200 sidebar-user-role">Petugas Makam</p>
                         </div>
                     </div>
-                    <button onclick="window.astanaApp.logout()" class="p-2 hover:bg-emerald-700 rounded-lg transition-colors" title="Logout">
+                    <button id="logoutBtn" class="p-2 hover:bg-emerald-700 rounded-lg transition-colors" title="Logout">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
                         </svg>
@@ -138,7 +138,7 @@
             <div class="px-8 pb-8">
                 <!-- Action Buttons -->
                 <div class="mb-6">
-                    <button onclick="openAddUserModal()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors flex items-center space-x-2">
+                    <button id="btnOpenAddUserModal" class="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors flex items-center space-x-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                         </svg>
@@ -193,7 +193,7 @@
                 </div>
                 
                 <div class="flex justify-end space-x-3 pt-4">
-                    <button type="button" onclick="closeAddUserModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">Batal</button>
+                    <button type="button" class="btn-close-modal" data-modal="addUserModal" class="px-4 py-2 text-gray-600 hover:text-gray-800">Batal</button>
                     <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">Simpan</button>
                 </div>
             </form>
@@ -229,7 +229,7 @@
                 </div>
                 
                 <div class="flex justify-end space-x-3 pt-4">
-                    <button type="button" onclick="closeEditUserModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">Batal</button>
+                    <button type="button" class="btn-close-modal" data-modal="editUserModal" class="px-4 py-2 text-gray-600 hover:text-gray-800">Batal</button>
                     <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">Simpan</button>
                 </div>
             </form>
@@ -254,10 +254,10 @@
             <input type="hidden" id="deleteUserId">
             
             <div class="flex justify-end space-x-3">
-                <button type="button" onclick="closeDeleteConfirmModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50">
+                <button type="button" class="btn-close-modal" data-modal="deleteConfirmModal" class="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50">
                     Batal
                 </button>
-                <button type="button" onclick="confirmDeleteUser()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                <button type="button" id="btnConfirmDeleteUser" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
                     Ya, Hapus
                 </button>
             </div>
@@ -278,7 +278,7 @@
                     <label class="block text-sm font-medium text-yellow-800 mb-1">Password Baru</label>
                     <div class="flex items-center space-x-2">
                         <input type="text" id="generatedPassword" readonly class="flex-1 bg-white px-3 py-2 border border-yellow-300 rounded-lg font-mono text-lg">
-                        <button type="button" onclick="copyPassword()" class="p-2 bg-yellow-100 hover:bg-yellow-200 rounded-lg" title="Copy">
+                        <button type="button" id="btnCopyPassword" class="p-2 bg-yellow-100 hover:bg-yellow-200 rounded-lg" title="Copy">
                             <svg class="w-5 h-5 text-yellow-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                             </svg>
@@ -287,7 +287,7 @@
                 </div>
                 
                 <div class="flex justify-end space-x-3 pt-4">
-                    <button type="button" onclick="closeResetPasswordModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">Tutup</button>
+                    <button type="button" class="btn-close-modal" data-modal="resetPasswordModal" class="px-4 py-2 text-gray-600 hover:text-gray-800">Tutup</button>
                     <button type="submit" id="resetPasswordBtn" class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700">Reset Password</button>
                 </div>
             </form>

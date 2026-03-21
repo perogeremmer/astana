@@ -343,4 +343,31 @@ function exportToExcel() {
 // Make functions available globally for onclick handlers
 window.updateLaporan = updateLaporan;
 window.exportToPDF = exportToPDF;
+
+// ==================== EVENT LISTENERS ====================
+
+function setupEventListeners() {
+    // Logout button
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            if (window.astanaApp && window.astanaApp.logout) {
+                window.astanaApp.logout();
+            }
+        });
+    }
+
+    // Export PDF button
+    const btnExportPDF = document.getElementById('btnExportPDF');
+    if (btnExportPDF) {
+        btnExportPDF.addEventListener('click', exportToPDF);
+    }
+}
+
+// Setup event listeners when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupEventListeners);
+} else {
+    setupEventListeners();
+}
 window.exportToExcel = exportToExcel;

@@ -81,12 +81,12 @@ function renderBlockCards() {
                             ${isActive ? 'Aktif' : 'Nonaktif'}
                         </span>
                         <div class="flex gap-2">
-                            <button onclick="openEditModal(${block.id})" class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg" title="Edit">
+                            <button data-edit-id="${block.id}" class="btn-edit-block p-2 text-blue-600 hover:bg-blue-50 rounded-lg" title="Edit">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                                 </svg>
                             </button>
-                            <button onclick="openDeleteModal(${block.id}, '${escapeHtml(block.code)}')" class="p-2 text-red-600 hover:bg-red-50 rounded-lg" title="Hapus">
+                            <button data-delete-id="${block.id}" data-delete-code="${escapeHtml(block.code)}" class="btn-delete-block p-2 text-red-600 hover:bg-red-50 rounded-lg" title="Hapus">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                 </svg>
@@ -182,12 +182,12 @@ async function renderBlockTable() {
             </td>
             <td class="px-4 py-3 text-center">
                 <div class="flex items-center justify-center gap-2">
-                    <button onclick="openEditModal(${block.id})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Edit">
+                    <button data-edit-id="${block.id}" class="btn-edit-block p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Edit">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                         </svg>
                     </button>
-                    <button onclick="openDeleteModal(${block.id}, '${escapeHtml(block.code)}')" class="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Hapus">
+                    <button data-delete-id="${block.id}" data-delete-code="${escapeHtml(block.code)}" class="btn-delete-block p-1.5 text-red-600 hover:bg-red-50 rounded" title="Hapus">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                         </svg>
@@ -307,7 +307,6 @@ async function openEditModal(blockId) {
         }
         
         // Populate form
-        document.getElementById('editKodeBlok').textContent = block.code;
         document.getElementById('editKodeInput').value = block.code;
         document.getElementById('editKeterangan').value = block.description || '';
         document.getElementById('editKapasitas').value = block.total_capacity;
@@ -390,7 +389,7 @@ function openDeleteModal(blockId, code) {
         deleteModal.id = 'modalHapus';
         deleteModal.className = 'fixed inset-0 z-50 hidden';
         deleteModal.innerHTML = `
-            <div class="absolute inset-0 bg-black/50" onclick="closeDeleteModal()"></div>
+            <div class="absolute inset-0 bg-black/50 modal-backdrop" data-modal="modalHapus"></div>
             <div class="absolute inset-0 flex items-center justify-center p-4">
                 <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm transform transition-all" id="panelHapus">
                     <div class="p-6 text-center">
@@ -403,8 +402,8 @@ function openDeleteModal(blockId, code) {
                         <p class="text-sm text-gray-500 mb-6">Apakah Anda yakin ingin menghapus blok <strong id="hapusNama" class="text-gray-800">-</strong>? Data yang dihapus tidak dapat dikembalikan.</p>
                         
                         <div class="flex gap-3">
-                            <button onclick="closeDeleteModal()" class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors">Batal</button>
-                            <button onclick="confirmDelete()" class="flex-1 px-4 py-2.5 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors">Hapus</button>
+                            <button id="btnBatalHapus" class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors">Batal</button>
+                            <button id="btnConfirmHapus" class="flex-1 px-4 py-2.5 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors">Hapus</button>
                         </div>
                     </div>
                 </div>
@@ -492,3 +491,124 @@ window.updateBlockData = updateBlockData;
 window.openDeleteModal = openDeleteModal;
 window.closeDeleteModal = closeDeleteModal;
 window.confirmDelete = confirmDelete;
+
+// ==================== EVENT LISTENERS ====================
+
+document.addEventListener('DOMContentLoaded', () => {
+    setupEventListeners();
+});
+
+function setupEventListeners() {
+    // Logout button
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            if (window.astanaApp && window.astanaApp.logout) {
+                window.astanaApp.logout();
+            }
+        });
+    }
+
+    // Add block buttons
+    const btnTambahBlok = document.getElementById('btnTambahBlok');
+    if (btnTambahBlok) {
+        btnTambahBlok.addEventListener('click', openModal);
+    }
+
+    const btnTambahBlokGrid = document.getElementById('btnTambahBlokGrid');
+    if (btnTambahBlokGrid) {
+        btnTambahBlokGrid.addEventListener('click', openModal);
+    }
+
+    // Modal backdrops
+    document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+        backdrop.addEventListener('click', (e) => {
+            const modalId = e.target.dataset.modal;
+            if (modalId === 'modalTambah') closeModal();
+            if (modalId === 'modalEdit') closeEditModal();
+        });
+    });
+
+    // Close modal buttons
+    document.querySelectorAll('.btn-close-modal').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const modalId = e.target.closest('.btn-close-modal').dataset.modal;
+            if (modalId === 'modalTambah') closeModal();
+            if (modalId === 'modalEdit') closeEditModal();
+        });
+    });
+
+    // Save buttons
+    const btnSimpanBlock = document.getElementById('btnSimpanBlock');
+    if (btnSimpanBlock) {
+        btnSimpanBlock.addEventListener('click', simpanBlock);
+    }
+
+    const btnUpdateBlockData = document.getElementById('btnUpdateBlockData');
+    if (btnUpdateBlockData) {
+        btnUpdateBlockData.addEventListener('click', updateBlockData);
+    }
+
+    // Setup edit buttons via event delegation
+    setupEditButtons();
+    
+    // Setup delete buttons via event delegation
+    setupDeleteButtons();
+}
+
+function setupEditButtons() {
+    const container = document.body;
+    
+    container.addEventListener('click', (e) => {
+        // Handle static edit buttons (lookup by kode)
+        const editBtn = e.target.closest('.btn-edit-blok');
+        if (editBtn) {
+            const kode = editBtn.dataset.kode;
+            // Find block by code in currentBlocks array
+            const block = currentBlocks.find(b => b.code === kode);
+            if (block) {
+                openEditModal(block.id);
+            } else {
+                showToast('Data blok tidak ditemukan', 'error');
+            }
+            return;
+        }
+        
+        // Handle dynamic edit buttons
+        const dynamicEditBtn = e.target.closest('.btn-edit-block');
+        if (dynamicEditBtn) {
+            const id = parseInt(dynamicEditBtn.dataset.editId);
+            openEditModal(id);
+        }
+    });
+}
+
+function setupDeleteButtons() {
+    const container = document.body;
+    
+    container.addEventListener('click', (e) => {
+        const deleteBtn = e.target.closest('.btn-delete-block');
+        if (deleteBtn) {
+            const id = parseInt(deleteBtn.dataset.deleteId);
+            const code = deleteBtn.dataset.deleteCode;
+            openDeleteModal(id, code);
+        }
+    });
+    
+    // Handle dynamically created delete modal buttons
+    container.addEventListener('click', (e) => {
+        if (e.target.id === 'btnBatalHapus') {
+            closeDeleteModal();
+        }
+        if (e.target.id === 'btnConfirmHapus') {
+            confirmDelete();
+        }
+    });
+    
+    // Handle delete modal backdrop
+    container.addEventListener('click', (e) => {
+        if (e.target.dataset.modal === 'modalHapus') {
+            closeDeleteModal();
+        }
+    });
+}

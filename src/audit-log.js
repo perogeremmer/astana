@@ -206,10 +206,48 @@ function applyFilters() {
 setInterval(async () => {
     const token = window.astanaApp.getSessionToken();
     if (!token) return;
-    
+
     // Only refresh if on first page
     if (currentOffset === 0) {
         await loadAuditLogs();
         await loadStats();
     }
 }, 30000);
+
+// ==================== EVENT LISTENERS ====================
+
+function setupEventListeners() {
+    // Logout button
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            if (window.astanaApp && window.astanaApp.logout) {
+                window.astanaApp.logout();
+            }
+        });
+    }
+
+    // Apply filters button
+    const btnApplyFilters = document.getElementById('btnApplyFilters');
+    if (btnApplyFilters) {
+        btnApplyFilters.addEventListener('click', applyFilters);
+    }
+
+    // Pagination buttons
+    const prevBtn = document.getElementById('prevBtn');
+    if (prevBtn) {
+        prevBtn.addEventListener('click', loadPreviousPage);
+    }
+
+    const nextBtn = document.getElementById('nextBtn');
+    if (nextBtn) {
+        nextBtn.addEventListener('click', loadNextPage);
+    }
+}
+
+// Setup event listeners when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupEventListeners);
+} else {
+    setupEventListeners();
+}

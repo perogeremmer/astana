@@ -221,12 +221,12 @@ function renderGravesTable() {
             ${heirsHtml}
             <td class="px-4 py-3 text-center">
                 <div class="flex items-center justify-center gap-2">
-                    <button onclick="openEditModal(${grave.id})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Edit">
+                    <button data-edit-id="${grave.id}" class="btn-edit-grave p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Edit">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                         </svg>
                     </button>
-                    <button onclick="openDeleteModal(${grave.id}, '${escapeHtml(grave.deceased_name)}')" class="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Hapus">
+                    <button data-delete-id="${grave.id}" data-delete-name="${escapeHtml(grave.deceased_name)}" class="btn-delete-grave p-1.5 text-red-600 hover:bg-red-50 rounded" title="Hapus">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                         </svg>
@@ -278,7 +278,7 @@ function renderPaginationButtons(container) {
     let html = '';
     
     // Previous button
-    html += `<button onclick="goToPage(${currentPage - 1})" class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50" ${currentPage === 1 ? 'disabled' : ''}>Sebelumnya</button>`;
+    html += `<button data-page="${currentPage - 1}" class="pagination-btn px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50" ${currentPage === 1 ? 'disabled' : ''}>Sebelumnya</button>`;
     
     // Page numbers
     const maxVisiblePages = 5;
@@ -290,7 +290,7 @@ function renderPaginationButtons(container) {
     }
     
     if (startPage > 1) {
-        html += `<button onclick="goToPage(1)" class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">1</button>`;
+        html += `<button data-page="1" class="pagination-btn px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">1</button>`;
         if (startPage > 2) {
             html += `<span class="px-2 py-1.5 text-sm text-gray-500">...</span>`;
         }
@@ -298,18 +298,18 @@ function renderPaginationButtons(container) {
     
     for (let i = startPage; i <= endPage; i++) {
         const isActive = i === currentPage;
-        html += `<button onclick="goToPage(${i})" class="px-3 py-1.5 text-sm ${isActive ? 'bg-emerald-600 text-white' : 'border border-gray-300 hover:bg-gray-50'} rounded-lg">${i}</button>`;
+        html += `<button data-page="${i}" class="pagination-btn px-3 py-1.5 text-sm ${isActive ? 'bg-emerald-600 text-white' : 'border border-gray-300 hover:bg-gray-50'} rounded-lg">${i}</button>`;
     }
     
     if (endPage < totalPages) {
         if (endPage < totalPages - 1) {
             html += `<span class="px-2 py-1.5 text-sm text-gray-500">...</span>`;
         }
-        html += `<button onclick="goToPage(${totalPages})" class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">${totalPages}</button>`;
+        html += `<button data-page="${totalPages}" class="pagination-btn px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">${totalPages}</button>`;
     }
     
     // Next button
-    html += `<button onclick="goToPage(${currentPage + 1})" class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50" ${currentPage === totalPages ? 'disabled' : ''}>Selanjutnya</button>`;
+    html += `<button data-page="${currentPage + 1}" class="pagination-btn px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50" ${currentPage === totalPages ? 'disabled' : ''}>Selanjutnya</button>`;
     
     container.innerHTML = html;
 }
@@ -1180,3 +1180,217 @@ window.closeExportExcelModal = closeExportExcelModal;
 window.setExportRange = setExportRange;
 window.confirmExportExcel = confirmExportExcel;
 window.updateYearPreview = updateYearPreview;
+window.closeSuksesModal = closeSuksesModal;
+
+// ==================== EVENT LISTENERS ====================
+
+document.addEventListener('DOMContentLoaded', () => {
+    setupEventListeners();
+});
+
+function setupEventListeners() {
+    // Logout button
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            if (window.astanaApp && window.astanaApp.logout) {
+                window.astanaApp.logout();
+            }
+        });
+    }
+
+    // Add data button
+    const btnTambahData = document.getElementById('btnTambahData');
+    if (btnTambahData) {
+        btnTambahData.addEventListener('click', openModal);
+    }
+
+    // Export Excel button
+    const btnExportExcel = document.getElementById('btnExportExcel');
+    if (btnExportExcel) {
+        btnExportExcel.addEventListener('click', openExportExcelModal);
+    }
+
+    // Modal backdrops - close when clicking outside
+    document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+        backdrop.addEventListener('click', (e) => {
+            const modalId = e.target.dataset.modal;
+            if (modalId) {
+                switch(modalId) {
+                    case 'inputModal':
+                        closeModal();
+                        break;
+                    case 'editModal':
+                        closeEditModal();
+                        break;
+                    case 'deleteModal':
+                        closeDeleteModal();
+                        break;
+                    case 'exportExcelModal':
+                        closeExportExcelModal();
+                        break;
+                    case 'modalSukses':
+                        closeSuksesModal();
+                        break;
+                }
+            }
+        });
+    });
+
+    // Close modal buttons
+    document.querySelectorAll('.btn-close-modal').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const modalId = e.target.closest('.btn-close-modal').dataset.modal;
+            if (modalId) {
+                switch(modalId) {
+                    case 'inputModal':
+                        closeModal();
+                        break;
+                    case 'editModal':
+                        closeEditModal();
+                        break;
+                    case 'deleteModal':
+                        closeDeleteModal();
+                        break;
+                    case 'exportExcelModal':
+                        closeExportExcelModal();
+                        break;
+                }
+            }
+        });
+    });
+
+    // Ahli Waris buttons - Add Modal
+    const btnTambahWaris = document.getElementById('btnTambahWaris');
+    if (btnTambahWaris) {
+        btnTambahWaris.addEventListener('click', tambahAhliWaris);
+    }
+
+    const btnHapusWaris = document.getElementById('btnHapusWaris');
+    if (btnHapusWaris) {
+        btnHapusWaris.addEventListener('click', hapusAhliWarisTerakhir);
+    }
+
+    // Save data button - Add Modal
+    const btnSimpanData = document.getElementById('btnSimpanData');
+    if (btnSimpanData) {
+        btnSimpanData.addEventListener('click', simpanData);
+    }
+
+    // Ahli Waris buttons - Edit Modal
+    const btnTambahWarisEdit = document.getElementById('btnTambahWarisEdit');
+    if (btnTambahWarisEdit) {
+        btnTambahWarisEdit.addEventListener('click', tambahAhliWarisEdit);
+    }
+
+    const btnHapusWarisEdit = document.getElementById('btnHapusWarisEdit');
+    if (btnHapusWarisEdit) {
+        btnHapusWarisEdit.addEventListener('click', hapusAhliWarisTerakhirEdit);
+    }
+
+    // Save data button - Edit Modal
+    const btnSimpanEdit = document.getElementById('btnSimpanEdit');
+    if (btnSimpanEdit) {
+        btnSimpanEdit.addEventListener('click', simpanEdit);
+    }
+
+    // Confirm delete button
+    const btnConfirmDelete = document.getElementById('btnConfirmDelete');
+    if (btnConfirmDelete) {
+        btnConfirmDelete.addEventListener('click', confirmDelete);
+    }
+
+    // Quick select buttons for export range
+    const quickSelectButtons = document.getElementById('quickSelectButtons');
+    if (quickSelectButtons) {
+        quickSelectButtons.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-range]');
+            if (btn) {
+                const range = btn.dataset.range;
+                if (range === 'all') {
+                    setExportRange('all');
+                } else {
+                    setExportRange(parseInt(range));
+                }
+            }
+        });
+    }
+
+    // Confirm export button
+    const btnConfirmExportExcel = document.getElementById('btnConfirmExportExcel');
+    if (btnConfirmExportExcel) {
+        btnConfirmExportExcel.addEventListener('click', confirmExportExcel);
+    }
+
+    // Close success modal button
+    const btnCloseSuksesModal = document.getElementById('btnCloseSuksesModal');
+    if (btnCloseSuksesModal) {
+        btnCloseSuksesModal.addEventListener('click', closeSuksesModal);
+    }
+
+    // Setup table action buttons (edit/delete) via event delegation
+    setupTableActionListeners();
+}
+
+function setupTableActionListeners() {
+    // Use event delegation for dynamically generated table rows
+    const tableContainer = document.querySelector('tbody') || document.querySelector('.overflow-x-auto');
+    if (tableContainer) {
+        tableContainer.addEventListener('click', (e) => {
+            // Handle demo edit buttons
+            const editBtn = e.target.closest('.btn-edit');
+            if (editBtn) {
+                const nama = editBtn.dataset.nama;
+                const blok = editBtn.dataset.blok;
+                const tanggal = editBtn.dataset.tanggal;
+                const heirs = JSON.parse(editBtn.dataset.heirs || '[]');
+                openEditModal(nama, blok, tanggal, heirs);
+                return;
+            }
+
+            // Handle demo delete buttons
+            const deleteBtn = e.target.closest('.btn-delete');
+            if (deleteBtn) {
+                const nama = deleteBtn.dataset.nama;
+                openDeleteModal(nama);
+                return;
+            }
+
+            // Handle dynamic grave edit buttons
+            const editGraveBtn = e.target.closest('.btn-edit-grave');
+            if (editGraveBtn) {
+                const graveId = parseInt(editGraveBtn.dataset.editId);
+                openEditModal(graveId);
+                return;
+            }
+
+            // Handle dynamic grave delete buttons
+            const deleteGraveBtn = e.target.closest('.btn-delete-grave');
+            if (deleteGraveBtn) {
+                const graveId = parseInt(deleteGraveBtn.dataset.deleteId);
+                const graveName = deleteGraveBtn.dataset.deleteName;
+                openDeleteModal(graveId, graveName);
+                return;
+            }
+        });
+    }
+
+    // Event delegation for pagination buttons
+    const paginationContainer = document.querySelector('.border-t.border-gray-200 .flex.gap-2');
+    if (paginationContainer) {
+        paginationContainer.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-page]');
+            if (btn) {
+                const page = parseInt(btn.dataset.page);
+                goToPage(page);
+            }
+        });
+    }
+}
+
+function closeSuksesModal() {
+    const modal = document.getElementById('modalSukses');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}

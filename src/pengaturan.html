@@ -118,7 +118,7 @@
                             <p class="text-xs text-emerald-200 sidebar-user-role">Petugas Makam</p>
                         </div>
                     </div>
-                    <button onclick="window.astanaApp.logout()" class="p-2 hover:bg-emerald-700 rounded-lg transition-colors" title="Logout">
+                    <button id="logoutBtn" class="p-2 hover:bg-emerald-700 rounded-lg transition-colors" title="Logout">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
                         </svg>
@@ -167,7 +167,7 @@
                                         </svg>
                                     </div>
                                     <div class="flex-1">
-                                        <button onclick="document.getElementById('logoInput').click()" class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                                        <button id="btnTriggerLogoInput" class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
                                             Pilih File Logo
                                         </button>
                                         <input type="file" id="logoInput" class="hidden" accept=".jpg,.jpeg,.png">
@@ -193,7 +193,7 @@
                             </div>
 
                             <div class="pt-3">
-                                <button onclick="saveSettings()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors">
+                                <button id="btnSaveSettings" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors">
                                     Simpan Perubahan
                                 </button>
                             </div>
@@ -218,12 +218,12 @@
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Lokasi File Database</label>
                                     <div class="flex items-center gap-2">
                                         <input type="text" id="dbPathInput" readonly class="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-600 font-mono">
-                                        <button onclick="copyPath()" class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg transition-colors" title="Copy Path">
+                                        <button id="btnCopyPath" class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg transition-colors" title="Copy Path">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                                             </svg>
                                         </button>
-                                        <button onclick="openDatabaseFolder()" class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg transition-colors" title="Buka Folder">
+                                        <button id="btnOpenDatabaseFolder" class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg transition-colors" title="Buka Folder">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"></path>
                                             </svg>
@@ -302,13 +302,13 @@
 
                                 <!-- Tombol Backup Manual -->
                                 <div class="flex gap-3">
-                                    <button onclick="backupNow()" class="flex-1 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2">
+                                    <button id="btnBackupNow" class="flex-1 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                                         </svg>
                                         Backup Sekarang
                                     </button>
-                                    <button onclick="exportDatabase()" class="px-4 py-3 border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg transition-colors flex items-center justify-center gap-2">
+                                    <button id="btnExportDatabase" class="px-4 py-3 border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg transition-colors flex items-center justify-center gap-2">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
                                         </svg>
@@ -372,7 +372,7 @@
                                     </div>
                                 </div>
                                 <div class="flex gap-3">
-                                    <button onclick="restoreDatabase()" class="flex-1 px-4 py-2.5 border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg transition-colors">
+                                    <button id="btnRestoreDatabase" class="flex-1 px-4 py-2.5 border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-lg transition-colors">
                                         Pilih File Backup
                                     </button>
                                 </div>
@@ -396,7 +396,7 @@
                 </div>
                 <h3 class="text-lg font-semibold text-gray-800 mb-2">Backup Berhasil!</h3>
                 <p class="text-sm text-gray-500 mb-6">Database berhasil di-backup ke Google Drive.</p>
-                <button onclick="closeBackupModal()" class="w-full px-4 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors">Tutup</button>
+                <button id="btnCloseBackupModal" class="w-full px-4 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors">Tutup</button>
             </div>
         </div>
     </div>

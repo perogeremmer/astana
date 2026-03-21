@@ -22,7 +22,7 @@
                     <p class="text-gray-600">Authentication & User Management Tests</p>
                 </div>
                 <button 
-                    onclick="runAllTests()" 
+                    id="btnRunAllTests" 
                     id="runTestsBtn"
                     class="bg-emerald-600 text-white px-6 py-2 rounded-lg hover:bg-emerald-700 transition-colors"
                 >
@@ -70,7 +70,7 @@
                 <div class="bg-white rounded-lg shadow">
                     <div class="p-4 border-b border-gray-200 flex justify-between items-center">
                         <h2 class="font-semibold text-gray-800">Console Output</h2>
-                        <button onclick="clearConsole()" class="text-sm text-gray-500 hover:text-gray-700">Clear</button>
+                        <button id="btnClearConsole" class="text-sm text-gray-500 hover:text-gray-700">Clear</button>
                     </div>
                     <div id="consoleOutput" class="p-4 h-64 overflow-y-auto font-mono text-sm bg-gray-900 text-gray-100 rounded-b-lg">
                         <div class="text-gray-500">> Test console ready...</div>
@@ -216,6 +216,19 @@
         if (window.location.search.includes('autorun')) {
             window.addEventListener('load', () => setTimeout(runAllTests, 500));
         }
+
+        // ==================== EVENT LISTENERS ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            const btnRunAllTests = document.getElementById('btnRunAllTests');
+            if (btnRunAllTests) {
+                btnRunAllTests.addEventListener('click', runAllTests);
+            }
+
+            const btnClearConsole = document.getElementById('btnClearConsole');
+            if (btnClearConsole) {
+                btnClearConsole.addEventListener('click', clearConsole);
+            }
+        });
     </script>
 </body>
 </html>

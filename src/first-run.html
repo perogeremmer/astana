@@ -30,7 +30,7 @@
             
             <div class="space-y-4">
                 <!-- Mulai Pertama Kali -->
-                <button onclick="startFirstTime()" class="w-full group">
+                <button id="btnStartFirstTime" class="w-full group">
                     <div class="border-2 border-emerald-200 rounded-xl p-6 hover:border-emerald-500 hover:bg-emerald-50 transition-all duration-200">
                         <div class="flex items-center gap-4">
                             <div class="w-14 h-14 bg-emerald-100 rounded-xl flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
@@ -47,7 +47,7 @@
                 </button>
                 
                 <!-- Import Database -->
-                <button onclick="importDatabase()" class="w-full group">
+                <button id="btnImportDatabase" class="w-full group">
                     <div class="border-2 border-blue-200 rounded-xl p-6 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200">
                         <div class="flex items-center gap-4">
                             <div class="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center group-hover:bg-blue-200 transition-colors">
@@ -97,7 +97,7 @@
                     <p class="text-xs text-gray-500 mt-3">⚠️ Simpan password ini dengan aman!</p>
                 </div>
             </div>
-            <button onclick="goToLogin()" class="w-full bg-emerald-600 text-white py-3 rounded-xl hover:bg-emerald-700 transition-colors font-medium">
+            <button id="btnGoToLogin" class="w-full bg-emerald-600 text-white py-3 rounded-xl hover:bg-emerald-700 transition-colors font-medium">
                 Lanjutkan ke Login
             </button>
         </div>
@@ -163,6 +163,24 @@
         function goToLogin() {
             window.location.href = 'index.html';
         }
+        
+        // ==================== EVENT LISTENERS ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            const btnStartFirstTime = document.getElementById('btnStartFirstTime');
+            if (btnStartFirstTime) {
+                btnStartFirstTime.addEventListener('click', startFirstTime);
+            }
+            
+            const btnImportDatabase = document.getElementById('btnImportDatabase');
+            if (btnImportDatabase) {
+                btnImportDatabase.addEventListener('click', importDatabase);
+            }
+            
+            const btnGoToLogin = document.getElementById('btnGoToLogin');
+            if (btnGoToLogin) {
+                btnGoToLogin.addEventListener('click', goToLogin);
+            }
+        });
     </script>
 </body>
 </html>

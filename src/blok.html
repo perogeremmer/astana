@@ -145,7 +145,7 @@
                             <p class="text-xs text-emerald-200 sidebar-user-role">Petugas Makam</p>
                         </div>
                     </div>
-                    <button onclick="window.astanaApp.logout()" class="p-2 hover:bg-emerald-700 rounded-lg transition-colors" title="Logout">
+                    <button id="logoutBtn" class="p-2 hover:bg-emerald-700 rounded-lg transition-colors" title="Logout">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
                         </svg>
@@ -155,7 +155,7 @@
         </aside>
 
         <!-- MAIN CONTENT -->
-        <main class="flex-1 flex flex-col min-w-0">
+        <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
             <!-- HEADER -->
             <header class="bg-white border-b border-gray-200 px-6 py-4">
                 <div class="flex items-center justify-between">
@@ -163,7 +163,7 @@
                         <h1 class="text-xl font-bold text-gray-800">Data Blok & Iuran</h1>
                         <p class="text-sm text-gray-500 mt-1">Kelola blok makam dan harga iuran per tahun</p>
                     </div>
-                    <button onclick="openModal()" class="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg flex items-center gap-2 transition-colors">
+                    <button id="btnTambahBlok" class="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg flex items-center gap-2 transition-colors">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                         </svg>
@@ -198,7 +198,7 @@
                                     <span class="text-2xl font-bold text-emerald-600">A</span>
                                 </div>
                                 <div class="flex gap-2">
-                                    <button onclick="openEditModal('A', '100000')" class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg" title="Edit">
+                                    <button data-kode="A" data-iuran="100000" class="btn-edit-blok p-2 text-blue-600 hover:bg-blue-50 rounded-lg" title="Edit">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                                         </svg>
@@ -240,7 +240,7 @@
                                     <span class="text-2xl font-bold text-blue-600">B</span>
                                 </div>
                                 <div class="flex gap-2">
-                                    <button onclick="openEditModal('B', '150000')" class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg" title="Edit">
+                                    <button data-kode="B" data-iuran="150000" class="btn-edit-blok p-2 text-blue-600 hover:bg-blue-50 rounded-lg" title="Edit">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                                         </svg>
@@ -282,7 +282,7 @@
                                     <span class="text-2xl font-bold text-amber-600">C</span>
                                 </div>
                                 <div class="flex gap-2">
-                                    <button onclick="openEditModal('C', '100000')" class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg" title="Edit">
+                                    <button data-kode="C" data-iuran="100000" class="btn-edit-blok p-2 text-blue-600 hover:bg-blue-50 rounded-lg" title="Edit">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                                         </svg>
@@ -324,7 +324,7 @@
                                     <span class="text-2xl font-bold text-purple-600">D</span>
                                 </div>
                                 <div class="flex gap-2">
-                                    <button onclick="openEditModal('D', '200000')" class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg" title="Edit">
+                                    <button data-kode="D" data-iuran="200000" class="btn-edit-blok p-2 text-blue-600 hover:bg-blue-50 rounded-lg" title="Edit">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                                         </svg>
@@ -366,7 +366,7 @@
                                     <span class="text-2xl font-bold text-gray-400">E</span>
                                 </div>
                                 <div class="flex gap-2">
-                                    <button onclick="openEditModal('E', '100000')" class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg" title="Edit">
+                                    <button data-kode="E" data-iuran="100000" class="btn-edit-blok p-2 text-blue-600 hover:bg-blue-50 rounded-lg" title="Edit">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                                         </svg>
@@ -401,9 +401,9 @@
                     </div>
 
                     <!-- Tambah Blok Card -->
-                    <button onclick="openModal()" class="bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 hover:border-emerald-400 hover:bg-emerald-50 transition-all p-5 flex flex-col items-center justify-center text-gray-500 hover:text-emerald-600 min-h-[280px]">
-                        <div class="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-4 group-hover:bg-emerald-200">
-                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button id="btnTambahBlokGrid" class="bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 hover:border-emerald-400 hover:bg-emerald-50 transition-all p-5 flex flex-col items-center justify-center text-gray-500 hover:text-emerald-600 min-h-[280px]">
+                        <div class="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                             </svg>
                         </div>
@@ -421,7 +421,7 @@
                             <thead class="bg-gray-50">
                                 <tr>
                                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Kode Blok</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Nama/Keterangan</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase max-w-xs">Nama/Keterangan</th>
                                     <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Kapasitas Total</th>
                                     <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Terisi</th>
                                     <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">Kosong</th>
@@ -433,7 +433,7 @@
                             <tbody class="divide-y divide-gray-200">
                                 <tr class="hover:bg-gray-50">
                                     <td class="px-4 py-3 text-sm font-medium text-gray-800">A</td>
-                                    <td class="px-4 py-3 text-sm text-gray-600">Blok standar dekat pintu masuk</td>
+                                    <td class="px-4 py-3 text-sm text-gray-600 whitespace-normal max-w-xs">Blok standar dekat pintu masuk</td>
                                     <td class="px-4 py-3 text-sm text-center text-gray-600">320</td>
                                     <td class="px-4 py-3 text-sm text-center text-emerald-600 font-medium">312</td>
                                     <td class="px-4 py-3 text-sm text-center text-gray-600">8</td>
@@ -443,7 +443,7 @@
                                     </td>
                                     <td class="px-4 py-3 text-center">
                                         <div class="flex items-center justify-center gap-2">
-                                            <button onclick="openEditModal('A', '100000')" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Edit">
+                                            <button data-kode="A" data-iuran="100000" class="btn-edit-blok p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Edit">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                                                 </svg>
@@ -458,7 +458,7 @@
                                 </tr>
                                 <tr class="hover:bg-gray-50">
                                     <td class="px-4 py-3 text-sm font-medium text-gray-800">B</td>
-                                    <td class="px-4 py-3 text-sm text-gray-600">Blok VIP dengan fasilitas terbaik</td>
+                                    <td class="px-4 py-3 text-sm text-gray-600 whitespace-normal max-w-xs">Blok VIP dengan fasilitas terbaik</td>
                                     <td class="px-4 py-3 text-sm text-center text-gray-600">450</td>
                                     <td class="px-4 py-3 text-sm text-center text-emerald-600 font-medium">428</td>
                                     <td class="px-4 py-3 text-sm text-center text-gray-600">22</td>
@@ -468,7 +468,7 @@
                                     </td>
                                     <td class="px-4 py-3 text-center">
                                         <div class="flex items-center justify-center gap-2">
-                                            <button onclick="openEditModal('B', '150000')" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Edit">
+                                            <button data-kode="B" data-iuran="150000" class="btn-edit-blok p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Edit">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                                                 </svg>
@@ -483,7 +483,7 @@
                                 </tr>
                                 <tr class="hover:bg-gray-50">
                                     <td class="px-4 py-3 text-sm font-medium text-gray-800">C</td>
-                                    <td class="px-4 py-3 text-sm text-gray-600">Blok standar tengah area</td>
+                                    <td class="px-4 py-3 text-sm text-gray-600 whitespace-normal max-w-xs">Blok standar tengah area</td>
                                     <td class="px-4 py-3 text-sm text-center text-gray-600">280</td>
                                     <td class="px-4 py-3 text-sm text-center text-emerald-600 font-medium">245</td>
                                     <td class="px-4 py-3 text-sm text-center text-gray-600">35</td>
@@ -493,7 +493,7 @@
                                     </td>
                                     <td class="px-4 py-3 text-center">
                                         <div class="flex items-center justify-center gap-2">
-                                            <button onclick="openEditModal('C', '100000')" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Edit">
+                                            <button data-kode="C" data-iuran="100000" class="btn-edit-blok p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Edit">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                                                 </svg>
@@ -508,7 +508,7 @@
                                 </tr>
                                 <tr class="hover:bg-gray-50">
                                     <td class="px-4 py-3 text-sm font-medium text-gray-800">D</td>
-                                    <td class="px-4 py-3 text-sm text-gray-600">Blok Premium dekat musala</td>
+                                    <td class="px-4 py-3 text-sm text-gray-600 whitespace-normal max-w-xs">Blok Premium dekat musala</td>
                                     <td class="px-4 py-3 text-sm text-center text-gray-600">197</td>
                                     <td class="px-4 py-3 text-sm text-center text-emerald-600 font-medium">180</td>
                                     <td class="px-4 py-3 text-sm text-center text-gray-600">17</td>
@@ -518,7 +518,7 @@
                                     </td>
                                     <td class="px-4 py-3 text-center">
                                         <div class="flex items-center justify-center gap-2">
-                                            <button onclick="openEditModal('D', '200000')" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Edit">
+                                            <button data-kode="D" data-iuran="200000" class="btn-edit-blok p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Edit">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                                                 </svg>
@@ -533,7 +533,7 @@
                                 </tr>
                                 <tr class="hover:bg-gray-50">
                                     <td class="px-4 py-3 text-sm font-medium text-gray-800">E</td>
-                                    <td class="px-4 py-3 text-sm text-gray-600">Blok baru - belum aktif</td>
+                                    <td class="px-4 py-3 text-sm text-gray-600 whitespace-normal max-w-xs">Blok baru - belum aktif</td>
                                     <td class="px-4 py-3 text-sm text-center text-gray-600">150</td>
                                     <td class="px-4 py-3 text-sm text-center text-emerald-600 font-medium">0</td>
                                     <td class="px-4 py-3 text-sm text-center text-gray-600">150</td>
@@ -543,7 +543,7 @@
                                     </td>
                                     <td class="px-4 py-3 text-center">
                                         <div class="flex items-center justify-center gap-2">
-                                            <button onclick="openEditModal('E', '100000')" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Edit">
+                                            <button data-kode="E" data-iuran="100000" class="btn-edit-blok p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Edit">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                                                 </svg>
@@ -577,12 +577,12 @@
 
     <!-- MODAL TAMBAH BLOK -->
     <div id="modalTambah" class="fixed inset-0 z-50 hidden">
-        <div class="absolute inset-0 bg-black/50" onclick="closeModal()"></div>
+        <div class="absolute inset-0 bg-black/50 modal-backdrop" data-modal="modalTambah"></div>
         <div class="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl transform transition-transform duration-300 translate-x-full" id="panelTambah">
             <div class="flex flex-col h-full">
                 <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-emerald-50">
                     <h2 class="text-lg font-semibold text-gray-800">Tambah Blok Baru</h2>
-                    <button onclick="closeModal()" class="p-2 hover:bg-gray-200 rounded-lg transition-colors">
+                    <button class="p-2 hover:bg-gray-200 rounded-lg transition-colors btn-close-modal" data-modal="modalTambah">
                         <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
@@ -622,8 +622,8 @@
                 </div>
 
                 <div class="px-6 py-4 border-t border-gray-200 flex gap-3">
-                    <button onclick="closeModal()" class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors">Batal</button>
-                    <button onclick="simpanBlock()" class="flex-1 px-4 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors">Simpan Blok</button>
+                    <button class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors btn-close-modal" data-modal="modalTambah">Batal</button>
+                    <button id="btnSimpanBlock" class="flex-1 px-4 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors">Simpan Blok</button>
                 </div>
             </div>
         </div>
@@ -631,12 +631,12 @@
 
     <!-- MODAL EDIT BLOK -->
     <div id="modalEdit" class="fixed inset-0 z-50 hidden">
-        <div class="absolute inset-0 bg-black/50" onclick="closeEditModal()"></div>
+        <div class="absolute inset-0 bg-black/50 modal-backdrop" data-modal="modalEdit"></div>
         <div class="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl transform transition-transform duration-300 translate-x-full" id="panelEdit">
             <div class="flex flex-col h-full">
                 <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-blue-50">
-                    <h2 class="text-lg font-semibold text-gray-800">Edit Blok <span id="editKodeBlok" class="text-blue-600"></span></h2>
-                    <button onclick="closeEditModal()" class="p-2 hover:bg-gray-200 rounded-lg transition-colors">
+                    <h2 class="text-lg font-semibold text-gray-800">Edit Data Blok</h2>
+                    <button class="p-2 hover:bg-gray-200 rounded-lg transition-colors btn-close-modal" data-modal="modalEdit">
                         <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
@@ -675,8 +675,8 @@
                 </div>
 
                 <div class="px-6 py-4 border-t border-gray-200 flex gap-3">
-                    <button onclick="closeEditModal()" class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors">Batal</button>
-                    <button onclick="updateBlockData()" class="flex-1 px-4 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors">Simpan Perubahan</button>
+                    <button class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors btn-close-modal" data-modal="modalEdit">Batal</button>
+                    <button id="btnUpdateBlockData" class="flex-1 px-4 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors">Simpan Perubahan</button>
                 </div>
             </div>
         </div>

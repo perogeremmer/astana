@@ -16,6 +16,12 @@ let currentPaymentData = null;
 // ==================== INITIALIZATION ====================
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Set current year display
+    const currentYearEl = document.getElementById('current-year');
+    if (currentYearEl) {
+        currentYearEl.textContent = new Date().getFullYear();
+    }
+    
     await loadBlocks();
     await loadPayments();
     setupEventListeners();
@@ -61,6 +67,193 @@ function setupEventListeners() {
     
     if (endYearSelect) {
         endYearSelect.addEventListener('change', updateYearPreview);
+    }
+    
+    // Logout button
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            if (window.astanaApp && window.astanaApp.logout) {
+                window.astanaApp.logout();
+            }
+        });
+    }
+    
+    // Export Excel button
+    const exportExcelBtn = document.getElementById('exportExcelBtn');
+    if (exportExcelBtn) {
+        exportExcelBtn.addEventListener('click', openExportExcelModal);
+    }
+    
+    // Export Excel modal - close button
+    const closeExportExcelBtn = document.getElementById('closeExportExcelBtn');
+    if (closeExportExcelBtn) {
+        closeExportExcelBtn.addEventListener('click', closeExportExcelModal);
+    }
+    
+    // Export Excel modal - backdrop click
+    const exportExcelBackdrop = document.getElementById('exportExcelBackdrop');
+    if (exportExcelBackdrop) {
+        exportExcelBackdrop.addEventListener('click', closeExportExcelModal);
+    }
+    
+    // Export Excel modal - cancel button
+    const cancelExportBtn = document.getElementById('cancelExportBtn');
+    if (cancelExportBtn) {
+        cancelExportBtn.addEventListener('click', closeExportExcelModal);
+    }
+    
+    // Export Excel modal - confirm button
+    const confirmExportBtn = document.getElementById('confirmExportBtn');
+    if (confirmExportBtn) {
+        confirmExportBtn.addEventListener('click', confirmExportExcel);
+    }
+    
+    // Quick select buttons for export range
+    document.querySelectorAll('.quick-select-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const range = e.target.dataset.range;
+            if (range === 'all') {
+                setExportRange('all');
+            } else {
+                setExportRange(parseInt(range));
+            }
+        });
+    });
+    
+    // Detail modal - close button
+    const closeDetailModalBtn = document.getElementById('closeDetailModalBtn');
+    if (closeDetailModalBtn) {
+        closeDetailModalBtn.addEventListener('click', closeDetailModal);
+    }
+    
+    // Detail modal - backdrop click
+    const detailModalBackdrop = document.getElementById('detailModalBackdrop');
+    if (detailModalBackdrop) {
+        detailModalBackdrop.addEventListener('click', closeDetailModal);
+    }
+    
+    // Success modal - close button
+    const closeSuksesModalBtn = document.getElementById('closeSuksesModalBtn');
+    if (closeSuksesModalBtn) {
+        closeSuksesModalBtn.addEventListener('click', closeSuksesModal);
+    }
+    
+    // Delete payment confirmation - cancel button
+    const cancelDeletePaymentBtn = document.getElementById('cancelDeletePaymentBtn');
+    if (cancelDeletePaymentBtn) {
+        cancelDeletePaymentBtn.addEventListener('click', closeDeletePaymentConfirmModal);
+    }
+    
+    // Delete payment confirmation - confirm button
+    const confirmDeletePaymentBtn = document.getElementById('confirmDeletePaymentBtn');
+    if (confirmDeletePaymentBtn) {
+        confirmDeletePaymentBtn.addEventListener('click', confirmDeletePayment);
+    }
+    
+    // Setup event delegation for dynamically created buttons
+    setupDynamicEventListeners();
+}
+
+function setupDynamicEventListeners() {
+    // Event delegation for table buttons (payment buttons with openPaymentModal)
+    const tbody = document.querySelector('tbody');
+    if (tbody) {
+        tbody.addEventListener('click', (e) => {
+            // Handle demo buttons
+            const demoBtn = e.target.closest('button[data-demo-trigger]');
+            if (demoBtn) {
+                const args = demoBtn.dataset.demoArgs.split(', ');
+                // Parse arguments: name, year, status, hasBukti
+                const nama = args[0].replace(/'/g, '');
+                const tahun = args[1].replace(/'/g, '');
+                const status = args[2].replace(/'/g, '');
+                const hasBukti = args[3] === 'true';
+                openDetailModal(nama, tahun, status, hasBukti);
+                return;
+            }
+            
+            // Handle real data buttons
+            const btn = e.target.closest('button[data-grave-id]');
+            if (btn) {
+                const graveId = parseInt(btn.dataset.graveId);
+                const year = parseInt(btn.dataset.year);
+                const isPaid = btn.dataset.isPaid === 'true';
+                openPaymentModal(graveId, year, isPaid);
+            }
+        });
+    }
+    
+    // Event delegation for pagination buttons
+    const paginationContainer = document.querySelector('.border-t.border-gray-200 .flex.gap-2');
+    if (paginationContainer) {
+        paginationContainer.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-page]');
+            if (btn) {
+                const page = parseInt(btn.dataset.page);
+                goToPage(page);
+            }
+        });
+    }
+    
+    // Event delegation for modal footer buttons (processPayment, deleteCurrentPayment, etc.)
+    const modalFooter = document.getElementById('modalFooter');
+    if (modalFooter) {
+        modalFooter.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-action]');
+            if (btn) {
+                const action = btn.dataset.action;
+                switch(action) {
+                    case 'close':
+                        closeDetailModal();
+                        break;
+                    case 'process':
+                        processPayment();
+                        break;
+                    case 'delete':
+                        deleteCurrentPayment();
+                        break;
+                    case 'switch-to-add-bukti':
+                        switchToAddBuktiMode();
+                        break;
+                    case 'upload-bukti':
+                        prosesUploadBukti();
+                        break;
+                    case 'switch-bukti':
+                        switchToAddBuktiMode();
+                        break;
+                    case 'proses-bayar':
+                        prosesBayar();
+                        break;
+                }
+            }
+        });
+    }
+    
+    // Event delegation for dynamic content (file upload, etc.)
+    const dynamicContent = document.getElementById('dynamicContent');
+    if (dynamicContent) {
+        dynamicContent.addEventListener('click', (e) => {
+            // File upload trigger
+            const uploadTrigger = e.target.closest('[data-trigger-upload]');
+            if (uploadTrigger) {
+                const fileInput = document.getElementById('inputFile');
+                if (fileInput) fileInput.click();
+            }
+            
+            // Clear file button
+            const clearFileBtn = e.target.closest('[data-clear-file]');
+            if (clearFileBtn) {
+                clearFile();
+            }
+        });
+        
+        dynamicContent.addEventListener('change', (e) => {
+            // File input change
+            if (e.target.id === 'inputFile') {
+                handleFileSelect(e.target);
+            }
+        });
     }
 }
 
@@ -197,7 +390,7 @@ function renderPaymentsTable() {
             
             yearCells += `
                 <td class="px-2 py-2 text-center border-r">
-                    <button onclick="openPaymentModal(${item.grave_id}, ${payment.year}, ${isPaid ? 'true' : 'false'})" 
+                    <button data-grave-id="${item.grave_id}" data-year="${payment.year}" data-is-paid="${isPaid ? 'true' : 'false'}"
                         class="w-full px-2 py-1.5 ${btnClass} text-xs font-semibold rounded-lg transition-colors">
                         ${btnText}
                     </button>
@@ -251,7 +444,7 @@ function renderPaginationButtons(container) {
     let html = '';
     
     // Previous button
-    html += `<button onclick="goToPage(${currentPage - 1})" class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50" ${currentPage === 1 ? 'disabled' : ''}>Sebelumnya</button>`;
+    html += `<button data-page="${currentPage - 1}" class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50" ${currentPage === 1 ? 'disabled' : ''}>Sebelumnya</button>`;
     
     // Page numbers
     const maxVisiblePages = 5;
@@ -263,7 +456,7 @@ function renderPaginationButtons(container) {
     }
     
     if (startPage > 1) {
-        html += `<button onclick="goToPage(1)" class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">1</button>`;
+        html += `<button data-page="1" class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">1</button>`;
         if (startPage > 2) {
             html += `<span class="px-2 py-1.5 text-sm text-gray-500">...</span>`;
         }
@@ -271,18 +464,18 @@ function renderPaginationButtons(container) {
     
     for (let i = startPage; i <= endPage; i++) {
         const isActive = i === currentPage;
-        html += `<button onclick="goToPage(${i})" class="px-3 py-1.5 text-sm ${isActive ? 'bg-emerald-600 text-white' : 'border border-gray-300 hover:bg-gray-50'} rounded-lg">${i}</button>`;
+        html += `<button data-page="${i}" class="px-3 py-1.5 text-sm ${isActive ? 'bg-emerald-600 text-white' : 'border border-gray-300 hover:bg-gray-50'} rounded-lg">${i}</button>`;
     }
     
     if (endPage < totalPages) {
         if (endPage < totalPages - 1) {
             html += `<span class="px-2 py-1.5 text-sm text-gray-500">...</span>`;
         }
-        html += `<button onclick="goToPage(${totalPages})" class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">${totalPages}</button>`;
+        html += `<button data-page="${totalPages}" class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">${totalPages}</button>`;
     }
     
     // Next button
-    html += `<button onclick="goToPage(${currentPage + 1})" class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50" ${currentPage === totalPages ? 'disabled' : ''}>Selanjutnya</button>`;
+    html += `<button data-page="${currentPage + 1}" class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50" ${currentPage === totalPages ? 'disabled' : ''}>Selanjutnya</button>`;
     
     container.innerHTML = html;
 }
@@ -322,7 +515,14 @@ async function openPaymentModal(graveId, year, isPaid) {
         
         renderPaymentModal(isPaid);
         
-        document.getElementById('modalDetail').classList.remove('hidden');
+        const modal = document.getElementById('modalDetail');
+        modal.classList.remove('hidden');
+        
+        // Scroll to top of modal content
+        const modalContent = modal.querySelector('.overflow-y-auto');
+        if (modalContent) {
+            modalContent.scrollTop = 0;
+        }
     } catch (error) {
         console.error('Failed to load payment data:', error);
         showToast('Gagal memuat data pembayaran', 'error');
@@ -382,8 +582,8 @@ function renderPaymentModal(isPaid) {
             </div>
         `;
         modalFooter.innerHTML = `
-            <button onclick="closeDetailModal()" class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors">Batal</button>
-            <button onclick="processPayment()" class="flex-1 px-4 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors">Bayar Sekarang</button>
+            <button data-action="close" class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors">Batal</button>
+            <button data-action="process" class="flex-1 px-4 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors">Bayar Sekarang</button>
         `;
     } else {
         // Mode: Lihat Detail Pembayaran
@@ -406,15 +606,21 @@ function renderPaymentModal(isPaid) {
             </div>
         `;
         modalFooter.innerHTML = `
-            <button onclick="closeDetailModal()" class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors">Tutup</button>
-            <button onclick="deleteCurrentPayment()" class="flex-1 px-4 py-2.5 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors">Hapus Pembayaran</button>
+            <button data-action="close" class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors">Tutup</button>
+            <button data-action="delete" class="flex-1 px-4 py-2.5 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors">Hapus Pembayaran</button>
         `;
     }
 }
 
 function closeDetailModal() {
-    document.getElementById('modalDetail').classList.add('hidden');
+    const modal = document.getElementById('modalDetail');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
     currentPaymentData = null;
+    
+    // Re-enable body scroll
+    document.body.style.overflow = '';
 }
 
 async function processPayment() {
@@ -521,6 +727,12 @@ let exportEndYear = null;
 function openExportExcelModal() {
     const modal = document.getElementById('exportExcelModal');
     modal.classList.remove('hidden');
+    
+    // Scroll to top of modal content
+    const modalContent = modal.querySelector('.overflow-y-auto');
+    if (modalContent) {
+        modalContent.scrollTop = 0;
+    }
     
     // Populate year options
     populateYearOptions();
@@ -855,6 +1067,308 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
 
+// ==================== FILE HANDLING ====================
+
+function handleFileSelect(input) {
+    if (input.files && input.files.length > 0) {
+        const fileName = input.files[0].name;
+        const previewFile = document.getElementById('previewFile');
+        const previewFileName = document.getElementById('previewFileName');
+        if (previewFile && previewFileName) {
+            previewFileName.textContent = fileName;
+            previewFile.classList.remove('hidden');
+        }
+    }
+}
+
+function clearFile() {
+    const inputFile = document.getElementById('inputFile');
+    const previewFile = document.getElementById('previewFile');
+    if (inputFile) inputFile.value = '';
+    if (previewFile) previewFile.classList.add('hidden');
+}
+
+// ==================== SUCCESS MODAL ====================
+
+function closeSuksesModal() {
+    const modalSukses = document.getElementById('modalSukses');
+    if (modalSukses) {
+        modalSukses.classList.add('hidden');
+    }
+}
+
+// ==================== LEGACY FUNCTIONS (for backward compatibility) ====================
+
+function prosesBayar() {
+    // Legacy function for demo mode - calls processPayment for real data
+    if (currentPaymentData) {
+        processPayment();
+    } else {
+        // Demo mode fallback
+        closeDetailModal();
+        setTimeout(() => {
+            const suksesMessage = document.getElementById('suksesMessage');
+            const modalSukses = document.getElementById('modalSukses');
+            if (suksesMessage) suksesMessage.textContent = 'Pembayaran iuran berhasil dicatat.';
+            if (modalSukses) modalSukses.classList.remove('hidden');
+        }, 300);
+    }
+}
+
+function prosesUploadBukti() {
+    // Demo mode function
+    closeDetailModal();
+    setTimeout(() => {
+        const suksesMessage = document.getElementById('suksesMessage');
+        const modalSukses = document.getElementById('modalSukses');
+        if (suksesMessage) suksesMessage.textContent = 'Bukti bayar berhasil ditambahkan.';
+        if (modalSukses) modalSukses.classList.remove('hidden');
+    }, 300);
+}
+
+function switchToAddBuktiMode() {
+    // Demo mode function
+    const { nama, tahun } = currentData || {};
+    closeDetailModal();
+    setTimeout(() => {
+        // Remove bukti from dataBukti so we can add it again
+        if (dataBukti[nama] && dataBukti[nama][tahun]) {
+            delete dataBukti[nama][tahun];
+        }
+        // Reopen modal in "lunas tanpa bukti" mode
+        openDetailModal(nama, tahun, 'lunas', false);
+    }, 300);
+}
+
+// ==================== DEMO MODE DATA & FUNCTIONS ====================
+
+// Demo data - for static/demo table
+const dataBukti = {
+    'Ahmad Sudirman': { '2022': true, '2023': true, '2024': true },
+    'Siti Aminah': { '2022': true, '2023': true },
+    'H. Muhammad Ridwan': { '2022': true, '2023': true, '2024': true },
+    'Dewi Kusuma': { '2022': true, '2023': true, '2024': true, '2025': true },
+    'Abdul Rahman': { '2022': true, '2023': true, '2024': true, '2025': true, '2026': true },
+    'Bambang Sutrisno': {}
+};
+
+const dataNominal = {
+    'Ahmad Sudirman': 100000,
+    'Siti Aminah': 100000,
+    'H. Muhammad Ridwan': 150000,
+    'Dewi Kusuma': 100000,
+    'Abdul Rahman': 200000,
+    'Bambang Sutrisno': 100000
+};
+
+let currentData = {};
+
+function formatRupiahLocal(angka) {
+    return 'Rp ' + angka.toLocaleString('id-ID');
+}
+
+function formatRupiahNoPrefixLocal(angka) {
+    return angka.toLocaleString('id-ID');
+}
+
+function openDetailModal(nama, tahun, status, hasBukti) {
+    currentData = { nama, tahun, status };
+    const nominal = dataNominal[nama] || 100000;
+    
+    document.getElementById('detailNama').textContent = nama;
+    document.getElementById('detailTahun').textContent = tahun;
+    document.getElementById('detailNominal').textContent = formatRupiahLocal(nominal);
+    
+    const dynamicContent = document.getElementById('dynamicContent');
+    const modalFooter = document.getElementById('modalFooter');
+    const modalTitle = document.getElementById('modalTitle');
+
+    if (status === 'bayar') {
+        // Mode: Input Pembayaran Baru
+        modalTitle.textContent = 'Pembayaran Iuran';
+        dynamicContent.innerHTML = `
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Tanggal Pembayaran</label>
+                    <input type="date" id="inputTanggal" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" value="${new Date().toISOString().split('T')[0]}">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Metode Pembayaran</label>
+                    <select id="inputMetode" class="w-full px-3 py-2.5 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer" style="background-image: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 fill=%22none%22 viewBox=%220 0 24 24%22 stroke=%22%236b7280%22><path stroke-linecap=%22round%22 stroke-linejoin=%22round%22 stroke-width=%222%22 d=%22M19 9l-7 7-7-7%22/></svg>'); background-position: right 0.75rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em; padding-right: 2.5rem;">
+                        <option value="tunai">Tunai</option>
+                        <option value="transfer">Transfer Bank</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Upload Bukti Bayar <span class="text-gray-400 font-normal">(Opsional)</span></label>
+                    <div class="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:bg-gray-50 transition-colors cursor-pointer" id="uploadTrigger">
+                        <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                        </div>
+                        <p class="text-xs text-gray-500">Klik untuk upload foto/struk</p>
+                        <input type="file" id="inputFile" class="hidden" accept=".jpg,.jpeg,.png,.pdf">
+                    </div>
+                    <div id="previewFile" class="hidden mt-2 bg-blue-50 rounded-lg p-2 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <span class="text-xs text-gray-700 flex-1 truncate" id="previewFileName"></span>
+                        <button class="text-red-500 hover:text-red-700" id="clearFileBtn">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Keterangan (Opsional)</label>
+                    <textarea id="inputKeterangan" rows="2" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Contoh: Dibayar oleh anak pertama"></textarea>
+                </div>
+            </div>
+        `;
+        modalFooter.innerHTML = `
+            <button data-action="close" class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors">Batal</button>
+            <button data-action="proses-bayar" class="flex-1 px-4 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors">Bayar Sekarang</button>
+        `;
+        
+        // Attach event listeners for dynamically created elements
+        setupDemoModalListeners();
+    } else {
+        // Status lunas - cek apakah sudah ada bukti
+        const sudahAdaBukti = dataBukti[nama] && dataBukti[nama][tahun];
+        
+        if (sudahAdaBukti) {
+            // Mode: Lihat Bukti yang Sudah Ada
+            modalTitle.textContent = 'Detail Bukti Bayar';
+            dynamicContent.innerHTML = `
+                <div class="space-y-4">
+                    <div class="flex items-center gap-2 text-emerald-600 bg-emerald-50 rounded-lg p-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span class="font-medium">Pembayaran Lunas - Rp ${formatRupiahNoPrefixLocal(nominal)}</span>
+                    </div>
+                    <div class="bg-gray-100 rounded-xl p-4">
+                        <p class="text-xs text-gray-500 mb-2">Bukti Pembayaran:</p>
+                        <div class="bg-white rounded-lg p-3 border border-gray-200">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    </svg>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-gray-800">Bukti_Pembayaran_${tahun}.jpg</p>
+                                    <p class="text-xs text-gray-500">Diupload: 15 Jan 2024</p>
+                                </div>
+                                <button class="text-blue-600 hover:text-blue-800 text-sm font-medium">Lihat</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-3 text-sm text-gray-600 space-y-1">
+                        <p><strong>Tanggal Bayar:</strong> 15 Januari 2024</p>
+                        <p><strong>Metode:</strong> Transfer Bank</p>
+                        <p><strong>Keterangan:</strong> Dibayar oleh anak pertama</p>
+                    </div>
+                </div>
+            `;
+            modalFooter.innerHTML = `
+                <button data-action="close" class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors">Tutup</button>
+                <button data-action="switch-bukti" class="flex-1 px-4 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors">Ganti Bukti</button>
+            `;
+        } else {
+            // Mode: Tambah Bukti Bayar (Lunas tapi belum ada bukti)
+            modalTitle.textContent = 'Tambah Bukti Bayar';
+            dynamicContent.innerHTML = `
+                <div class="space-y-4">
+                    <div class="flex items-center gap-2 text-amber-600 bg-amber-50 rounded-lg p-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                        <span class="text-sm font-medium">Pembayaran lunas tapi belum ada bukti</span>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Upload Bukti Bayar</label>
+                        <div class="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:bg-gray-50 transition-colors cursor-pointer" id="uploadTrigger">
+                            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                            </div>
+                            <p class="text-xs text-gray-500">Klik untuk upload foto/struk</p>
+                            <input type="file" id="inputFile" class="hidden" accept=".jpg,.jpeg,.png,.pdf">
+                        </div>
+                        <div id="previewFile" class="hidden mt-2 bg-blue-50 rounded-lg p-2 flex items-center gap-2">
+                            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            <span class="text-xs text-gray-700 flex-1 truncate" id="previewFileName"></span>
+                            <button class="text-red-500 hover:text-red-700" id="clearFileBtn">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Keterangan (Opsional)</label>
+                        <textarea id="inputKeterangan" rows="2" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Contoh: Transfer dari BCA"></textarea>
+                    </div>
+                </div>
+            `;
+            modalFooter.innerHTML = `
+                <button data-action="close" class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors">Batal</button>
+                <button data-action="upload-bukti" class="flex-1 px-4 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors">Simpan Bukti</button>
+            `;
+        }
+        
+        // Attach event listeners for dynamically created elements
+        setupDemoModalListeners();
+    }
+
+    const modal = document.getElementById('modalDetail');
+    modal.classList.remove('hidden');
+    
+    // Scroll to top of modal content
+    const modalContent = modal.querySelector('.overflow-y-auto');
+    if (modalContent) {
+        modalContent.scrollTop = 0;
+    }
+    
+    // Scroll backdrop to top for mobile
+    const backdrop = modal.querySelector('.overflow-y-auto');
+    if (backdrop) {
+        backdrop.scrollTop = 0;
+    }
+}
+
+function setupDemoModalListeners() {
+    // Upload trigger click
+    const uploadTrigger = document.getElementById('uploadTrigger');
+    if (uploadTrigger) {
+        uploadTrigger.addEventListener('click', () => {
+            const fileInput = document.getElementById('inputFile');
+            if (fileInput) fileInput.click();
+        });
+    }
+    
+    // File input change
+    const inputFile = document.getElementById('inputFile');
+    if (inputFile) {
+        inputFile.addEventListener('change', (e) => {
+            handleFileSelect(e.target);
+        });
+    }
+    
+    // Clear file button
+    const clearFileBtn = document.getElementById('clearFileBtn');
+    if (clearFileBtn) {
+        clearFileBtn.addEventListener('click', clearFile);
+    }
+}
+
 // Expose functions to global scope
 window.openPaymentModal = openPaymentModal;
 window.closeDetailModal = closeDetailModal;
@@ -869,3 +1383,9 @@ window.setExportRange = setExportRange;
 window.updateYearPreview = updateYearPreview;
 window.confirmExportExcel = confirmExportExcel;
 window.exportToExcel = exportToExcel;
+window.closeSuksesModal = closeSuksesModal;
+window.handleFileSelect = handleFileSelect;
+window.clearFile = clearFile;
+window.prosesBayar = prosesBayar;
+window.prosesUploadBukti = prosesUploadBukti;
+window.switchToAddBuktiMode = switchToAddBuktiMode;
