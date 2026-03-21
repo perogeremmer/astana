@@ -59,6 +59,24 @@ function setupEventListeners() {
         endYearSelect.addEventListener('change', updateYearPreview);
     }
     
+    // Sort field and order dropdowns
+    const sortField = document.getElementById('sortField');
+    const sortOrder = document.getElementById('sortOrder');
+    
+    if (sortField) {
+        sortField.addEventListener('change', () => {
+            currentPage = 1;
+            loadGraves();
+        });
+    }
+    
+    if (sortOrder) {
+        sortOrder.addEventListener('change', () => {
+            currentPage = 1;
+            loadGraves();
+        });
+    }
+    
     // Logout button
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
@@ -289,11 +307,17 @@ async function loadGraves(search = '') {
         
         const offset = (currentPage - 1) * itemsPerPage;
         
+        // Get sort parameters
+        const sortField = document.getElementById('sortField')?.value || 'nama';
+        const sortOrder = document.getElementById('sortOrder')?.value || 'asc';
+        
         const graves = await invoke('get_graves', {
             search: search || null,
             blockId: blockId,
             limit: itemsPerPage,
-            offset: offset
+            offset: offset,
+            sortField: sortField,
+            sortOrder: sortOrder
         });
         
         const totalCount = await invoke('count_graves', {

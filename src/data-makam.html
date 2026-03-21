@@ -205,10 +205,15 @@
                         </div>
                         <div class="flex items-center gap-2">
                             <label class="text-sm font-medium text-gray-600">Urutkan:</label>
-                            <select class="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                                <option value="nama">Nama (A-Z)</option>
+                            <select id="sortField" class="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                                <option value="nama">Nama</option>
                                 <option value="blok">Nomor Blok</option>
-                                <option value="terbaru">Data Terbaru</option>
+                                <option value="tanggal_wafat">Tanggal Wafat</option>
+                                <option value="tanggal_dibuat">Tanggal Data Dibuat</option>
+                            </select>
+                            <select id="sortOrder" class="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                                <option value="asc">Terkecil</option>
+                                <option value="desc">Terbesar</option>
                             </select>
                         </div>
                         <button id="btnExportExcel" class="ml-auto px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2">

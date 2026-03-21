@@ -219,7 +219,7 @@ pub struct CreateGraveWithHeirsRequest {
     pub heirs: Vec<db::CreateHeirRequest>,
 }
 
-/// Get graves with pagination and search
+/// Get graves with pagination, search, and sorting
 #[tauri::command]
 async fn get_graves(
     app_handle: tauri::AppHandle,
@@ -227,9 +227,11 @@ async fn get_graves(
     block_id: Option<i64>,
     limit: i64,
     offset: i64,
+    sort_field: Option<String>,
+    sort_order: Option<String>,
 ) -> Result<Vec<db::GraveWithBlock>, String> {
     let db = db::Database::init(&app_handle)?;
-    db.get_graves(search, block_id, limit, offset)
+    db.get_graves(search, block_id, limit, offset, sort_field, sort_order)
 }
 
 /// Count graves for pagination
@@ -569,8 +571,8 @@ async fn get_graves_with_payment_summary(
 ) -> Result<Vec<GravePaymentSummary>, String> {
     let db = db::Database::init(&app_handle)?;
     
-    // Get graves
-    let graves = db.get_graves(search.clone(), block_id, limit, offset)?;
+    // Get graves with default sorting (by created_at DESC)
+    let graves = db.get_graves(search.clone(), block_id, limit, offset, None, None)?;
     
     let mut result = Vec::new();
     for grave in graves {

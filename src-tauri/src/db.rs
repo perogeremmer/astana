@@ -359,13 +359,15 @@ impl Database {
 
     // ==================== GRAVES CRUD ====================
 
-    /// Get graves with pagination and search
+    /// Get graves with pagination, search, and sorting
     pub fn get_graves(
         &self,
         search: Option<String>,
         block_id: Option<i64>,
         limit: i64,
         offset: i64,
+        sort_field: Option<String>,
+        sort_order: Option<String>,
     ) -> Result<Vec<GraveWithBlock>, String> {
         let mut query = String::from(
             "SELECT g.id, g.deceased_name, g.block_id, g.number, g.date_of_death, g.burial_date, g.notes, g.created_at, g.updated_at,
@@ -389,7 +391,25 @@ impl Database {
             params.push(Box::new(bid));
         }
 
-        query.push_str(" ORDER BY g.created_at DESC LIMIT ? OFFSET ?");
+        // Build ORDER BY clause
+        let order_by = match sort_field.as_deref() {
+            Some("nama") => "g.deceased_name",
+            Some("blok") => "b.code, g.number",
+            Some("tanggal_wafat") => "g.date_of_death",
+            Some("tanggal_dibuat") => "g.created_at",
+            _ => "g.created_at",
+        };
+
+        let order_dir = if sort_order.as_deref() == Some("desc") {
+            "DESC"
+        } else {
+            "ASC"
+        };
+
+        query.push_str(&format!(
+            " ORDER BY {} {} LIMIT ? OFFSET ?",
+            order_by, order_dir
+        ));
         params.push(Box::new(limit));
         params.push(Box::new(offset));
 
