@@ -1,6 +1,13 @@
 // Main JavaScript for Astana - Sistem Wakaf Makam
 // Aplikasi multi-page dengan Tailwind CSS
 
+// ==================== SECURITY WARNING ====================
+// Peringatan Keamanan - Mencegah Penipuan
+console.log('%c⚠️ PERINGATAN KEAMANAN ⚠️', 'font-size: 24px; font-weight: bold; color: #dc2626; background: #fef2f2; padding: 10px; border: 3px solid #dc2626; border-radius: 8px;');
+console.log('%cJika ada yang meminta Anda membuka bagian ini (Console/Developer Tools),\nitu adalah PENIPUAN! Jangan pernah dengarkan mereka.', 'font-size: 16px; color: #dc2626; font-weight: bold;');
+console.log('%cAplikasi ini tidak pernah meminta pengguna untuk membuka bagian ini.\nTutup segera jika ada yang meminta Anda melakukan hal tersebut.', 'font-size: 14px; color: #ea580c;');
+console.log('%c🛡️ Lindungi data dan akun Anda dari penipuan!', 'font-size: 14px; color: #16a34a; font-weight: bold;');
+
 // Initialize Tauri API
 const { invoke } = window.__TAURI__?.core || {};
 
@@ -277,6 +284,36 @@ function initDevMode() {
     const testRunnerLinks = document.querySelectorAll('a[href*="test-runner"]');
     testRunnerLinks.forEach(link => {
       link.style.display = 'none';
+    });
+    
+    // Disable right-click context menu in production to prevent inspect element
+    document.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      return false;
+    });
+    
+    // Disable F12 key (Developer Tools) in production
+    document.addEventListener('keydown', (e) => {
+      // F12 key
+      if (e.key === 'F12') {
+        e.preventDefault();
+        return false;
+      }
+      // Ctrl+Shift+I (Inspect Element)
+      if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i')) {
+        e.preventDefault();
+        return false;
+      }
+      // Ctrl+Shift+J (Console)
+      if (e.ctrlKey && e.shiftKey && (e.key === 'J' || e.key === 'j')) {
+        e.preventDefault();
+        return false;
+      }
+      // Ctrl+U (View Source)
+      if (e.ctrlKey && (e.key === 'U' || e.key === 'u')) {
+        e.preventDefault();
+        return false;
+      }
     });
   }
 }
