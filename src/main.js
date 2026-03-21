@@ -262,10 +262,35 @@ function updateSidebarUser() {
     });
 }
 
+// Development mode detection
+// Hide test runner link in production builds
+function initDevMode() {
+  // Check if we're in development mode
+  // In Tauri dev mode, the window title usually contains "localhost" or specific dev markers
+  const isDevMode = window.location.hostname === 'localhost' || 
+                    window.location.hostname === '127.0.0.1' ||
+                    window.location.protocol === 'http:';
+  
+  // Also check if test-runner.html exists by trying to fetch it
+  if (!isDevMode) {
+    // Hide test runner link in production
+    const testRunnerLinks = document.querySelectorAll('a[href*="test-runner"]');
+    testRunnerLinks.forEach(link => {
+      link.style.display = 'none';
+    });
+  }
+}
+
 // Expose functions globally for cross-page communication
 window.loadSidebarInfo = loadSidebarInfo;
 window.updateSidebar = updateSidebar;
 window.updateSidebarUser = updateSidebarUser;
+window.initDevMode = initDevMode;
+
+// Initialize on DOM ready
+document.addEventListener('DOMContentLoaded', () => {
+  initDevMode();
+});
 
 // Log aplikasi sudah siap
 console.log('🕌 Astana - Sistem Wakaf Makam berhasil dimuat');
