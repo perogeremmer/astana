@@ -12,11 +12,23 @@ let totalLogs = 0;
 
 // Initialize page
 document.addEventListener('DOMContentLoaded', async () => {
+    console.log('Audit log page initializing...');
+    
+    // Check current user
+    const currentUser = window.astanaApp.getCurrentUser();
+    console.log('Current user:', currentUser);
+    
     // Check authentication and role
     const hasAccess = await window.astanaApp.requireRole('superadmin_or_superadmin_0');
-    if (!hasAccess) return;
+    console.log('Has access:', hasAccess);
+    
+    if (!hasAccess) {
+        console.log('Access denied - user does not have required role');
+        return;
+    }
     
     // Load audit logs
+    console.log('Loading audit logs...');
     await loadAuditLogs();
     await loadStats();
 });
@@ -25,6 +37,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function loadAuditLogs() {
     const token = window.astanaApp.getSessionToken();
     
+    console.log('Loading audit logs with token:', token ? 'present' : 'missing');
+    
     try {
         const result = await window.__TAURI__?.core?.invoke('get_audit_logs', { 
             token, 
@@ -32,20 +46,31 @@ async function loadAuditLogs() {
             offset: currentOffset 
         });
         
+        console.log('Audit log result:', result);
+        console.log('Result type:', typeof result);
+        console.log('Is array:', Array.isArray(result));
+        
         // Result can be either an array (success) or a string (error message)
         if (Array.isArray(result)) {
             logs = result;
+            console.log('Loaded', logs.length, 'audit logs');
             renderAuditTable();
             updatePagination();
         } else if (typeof result === 'string') {
             // This is an error message from the backend
+            console.error('Error from backend:', result);
             alert(result);
+        } else if (result && typeof result === 'object' && result.Err) {
+            // Handle nested Result type
+            console.error('Error from nested result:', result.Err);
+            alert(result.Err);
         } else {
+            console.error('Unexpected result format:', result);
             alert('Gagal memuat audit log');
         }
     } catch (error) {
         console.error('Error loading audit logs:', error);
-        alert('Terjadi kesalahan saat memuat audit log');
+        alert('Terjadi kesalahan saat memuat audit log: ' + error.message);
     }
 }
 
