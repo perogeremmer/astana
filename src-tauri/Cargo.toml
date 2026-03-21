@@ -1,8 +1,8 @@
 [package]
 name = "astana"
 version = "1.4.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "Aplikasi desktop untuk manajemen data makam dan iuran makam. Dirancang khusus untuk memudahkan petugas makam dalam mengelola data almarhum, ahli waris, pembayaran iuran, dan pelaporan secara efisien."
+authors = ["perogeremmer"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
