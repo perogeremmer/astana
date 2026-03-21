@@ -19,14 +19,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Set current year display
     const currentYearEl = document.getElementById('current-year');
     if (currentYearEl) {
-        currentYearEl.textContent = new Date().getFullYear();
+        currentYearEl.textContent = currentYear;
     }
+    
+    // Populate year dropdown
+    populateYearDropdown();
     
     await loadBlocks();
     await loadPayments();
     setupEventListeners();
     updateActiveYearDisplay();
 });
+
+function populateYearDropdown() {
+    const yearSelect = document.getElementById('yearSelect');
+    if (!yearSelect) return;
+    
+    yearSelect.innerHTML = '';
+    
+    // Add last 5 years (descending order - current year first)
+    for (let i = 0; i < 5; i++) {
+        const year = currentYear - i;
+        const option = document.createElement('option');
+        option.value = year;
+        option.textContent = year;
+        if (year === currentYear) {
+            option.selected = true;
+        }
+        yearSelect.appendChild(option);
+    }
+}
 
 function setupEventListeners() {
     // Search input
@@ -48,12 +70,14 @@ function setupEventListeners() {
     }
     
     // Year filter
-    const yearSelect = document.querySelectorAll('select')[2];
+    const yearSelect = document.getElementById('yearSelect');
     if (yearSelect) {
         yearSelect.addEventListener('change', async (e) => {
             currentYear = parseInt(e.target.value);
             currentPage = 1;
             await loadPayments();
+            // Update table header when year changes
+            renderTableHeader();
         });
     }
     
@@ -350,9 +374,37 @@ async function loadPayments() {
 
 // ==================== RENDER TABLE ====================
 
+function renderTableHeader() {
+    const thead = document.getElementById('paymentsTableHead');
+    if (!thead) return;
+    
+    // Generate year columns (current year and 4 years back, in descending order)
+    let yearHeaders = '';
+    for (let i = 0; i < 5; i++) {
+        const year = currentYear - i;
+        const isLast = i === 4;
+        yearHeaders += `
+            <th class="px-3 py-3 text-center text-xs font-semibold text-emerald-600 uppercase tracking-wider ${isLast ? '' : 'border-r'} w-32">${year}</th>
+        `;
+    }
+    
+    thead.innerHTML = `
+        <tr>
+            <th class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10 border-r">No</th>
+            <th class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sticky left-10 bg-gray-50 z-10 border-r">Nama Almarhum</th>
+            <th class="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider border-r">Blok</th>
+            <th class="px-3 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider border-r">Iuran/Tahun</th>
+            ${yearHeaders}
+        </tr>
+    `;
+}
+
 function renderPaymentsTable() {
-    const tbody = document.querySelector('tbody');
+    const tbody = document.getElementById('paymentsTableBody');
     if (!tbody) return;
+    
+    // Render header first
+    renderTableHeader();
     
     tbody.innerHTML = '';
     
@@ -371,25 +423,26 @@ function renderPaymentsTable() {
         const row = document.createElement('tr');
         row.className = 'hover:bg-gray-50';
         
-        // Generate year columns (5 years)
+        // Generate year columns (5 years) - already in descending order from backend
         let yearCells = '';
-        item.recent_payments.forEach(payment => {
+        item.recent_payments.forEach((payment, idx) => {
             const isPaid = payment.is_paid;
             // Convert amount to number and handle null/undefined
             const amount = parseInt(payment.amount) || 0;
             const btnClass = isPaid 
                 ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-800' 
                 : 'bg-red-100 hover:bg-red-200 text-red-700';
-            // Debug: log untuk melihat nilai sebenarnya
-            console.log('Payment debug:', { isPaid, amount, rawAmount: payment.amount, year: payment.year });
             // Jika lunas tapi amount 0/null, tampilkan "Lunas"
             // Jika lunas dan ada amount, tampilkan angka
             const btnText = isPaid 
                 ? (amount > 0 ? formatRupiahShort(amount) : 'Lunas')
                 : 'Bayar';
             
+            // Last column doesn't have border-r
+            const isLast = idx === item.recent_payments.length - 1;
+            
             yearCells += `
-                <td class="px-2 py-2 text-center border-r">
+                <td class="px-2 py-2 text-center ${isLast ? '' : 'border-r'}">
                     <button data-grave-id="${item.grave_id}" data-year="${payment.year}" data-is-paid="${isPaid ? 'true' : 'false'}"
                         class="w-full px-2 py-1.5 ${btnClass} text-xs font-semibold rounded-lg transition-colors">
                         ${btnText}

@@ -246,12 +246,8 @@
                         </div>
                         <div class="flex items-center gap-2">
                             <label class="text-sm font-medium text-gray-600">Tahun:</label>
-                            <select class="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer" style="background-image: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 fill=%22none%22 viewBox=%220 0 24 24%22 stroke=%22%236b7280%22><path stroke-linecap=%22round%22 stroke-linejoin=%22round%22 stroke-width=%222%22 d=%22M19 9l-7 7-7-7%22/></svg>'); background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1em 1em; padding-right: 2rem; min-width: 90px;">
-                                <option value="2026">2026</option>
-                                <option value="2025">2025</option>
-                                <option value="2024">2024</option>
-                                <option value="2023">2023</option>
-                                <option value="2022">2022</option>
+                            <select id="yearSelect" class="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer" style="background-image: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 fill=%22none%22 viewBox=%220 0 24 24%22 stroke=%22%236b7280%22><path stroke-linecap=%22round%22 stroke-linejoin=%22round%22 stroke-width=%222%22 d=%22M19 9l-7 7-7-7%22/></svg>'); background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1em 1em; padding-right: 2rem; min-width: 90px;">
+                                <!-- Options will be populated dynamically by JS -->
                             </select>
                         </div>
                         <div class="flex-1"></div>
@@ -267,153 +263,12 @@
                 <!-- TABEL PEMBAYARAN -->
                 <div class="bg-white rounded-xl border border-gray-200 shadow-sm">
                     <div class="overflow-x-auto scrollbar-thin">
-                        <table class="w-full min-w-max">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10 border-r">No</th>
-                                    <th class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sticky left-10 bg-gray-50 z-10 border-r">Nama Almarhum</th>
-                                    <th class="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider border-r">Blok</th>
-                                    <th class="px-3 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider border-r">Iuran/Tahun</th>
-                                    <th class="px-3 py-3 text-center text-xs font-semibold text-emerald-600 uppercase tracking-wider border-r w-32">2022</th>
-                                    <th class="px-3 py-3 text-center text-xs font-semibold text-emerald-600 uppercase tracking-wider border-r w-32">2023</th>
-                                    <th class="px-3 py-3 text-center text-xs font-semibold text-emerald-600 uppercase tracking-wider border-r w-32">2024</th>
-                                    <th class="px-3 py-3 text-center text-xs font-semibold text-emerald-600 uppercase tracking-wider border-r w-32">2025</th>
-                                    <th class="px-3 py-3 text-center text-xs font-semibold text-emerald-600 uppercase tracking-wider w-32">2026</th>
-                                </tr>
+                        <table class="w-full min-w-max" id="paymentsTable">
+                            <thead class="bg-gray-50" id="paymentsTableHead">
+                                <!-- Table header will be rendered dynamically by JS -->
                             </thead>
-                            <tbody class="divide-y divide-gray-200">
-                                <!-- Row 1 - Lunas Semua (dengan bukti) -->
-                                <tr class="hover:bg-gray-50">
-                                    <td class="px-3 py-3 text-sm text-gray-500 sticky left-0 bg-white border-r">1</td>
-                                    <td class="px-3 py-3 text-sm font-medium text-gray-800 sticky left-10 bg-white border-r">Ahmad Sudirman</td>
-                                    <td class="px-3 py-3 text-sm text-center text-gray-600 border-r">A-12</td>
-                                    <td class="px-3 py-3 text-sm text-right text-gray-600 border-r">Rp 100.000</td>
-                                    <td class="px-2 py-2 text-center border-r">
-                                        <button data-demo-trigger='openDetailModal' data-demo-args='Ahmad Sudirman', '2022', 'lunas', true)" class="w-full px-2 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs font-semibold rounded-lg transition-colors">100.000</button>
-                                    </td>
-                                    <td class="px-2 py-2 text-center border-r">
-                                        <button data-demo-trigger='openDetailModal' data-demo-args='Ahmad Sudirman', '2023', 'lunas', true)" class="w-full px-2 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs font-semibold rounded-lg transition-colors">100.000</button>
-                                    </td>
-                                    <td class="px-2 py-2 text-center border-r">
-                                        <button data-demo-trigger='openDetailModal' data-demo-args='Ahmad Sudirman', '2024', 'lunas', true)" class="w-full px-2 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs font-semibold rounded-lg transition-colors">100.000</button>
-                                    </td>
-                                    <td class="px-2 py-2 text-center border-r">
-                                        <button data-demo-trigger='openDetailModal' data-demo-args='Ahmad Sudirman', '2025', 'lunas', false)" class="w-full px-2 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs font-semibold rounded-lg transition-colors">100.000</button>
-                                    </td>
-                                    <td class="px-2 py-2 text-center">
-                                        <button data-demo-trigger='openDetailModal' data-demo-args='Ahmad Sudirman', '2026', 'lunas', false)" class="w-full px-2 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs font-semibold rounded-lg transition-colors">100.000</button>
-                                    </td>
-                                </tr>
-                                <!-- Row 2 - Ada Tunggakan -->
-                                <tr class="hover:bg-gray-50">
-                                    <td class="px-3 py-3 text-sm text-gray-500 sticky left-0 bg-white border-r">2</td>
-                                    <td class="px-3 py-3 text-sm font-medium text-gray-800 sticky left-10 bg-white border-r">Siti Aminah</td>
-                                    <td class="px-3 py-3 text-sm text-center text-gray-600 border-r">A-13</td>
-                                    <td class="px-3 py-3 text-sm text-right text-gray-600 border-r">Rp 100.000</td>
-                                    <td class="px-2 py-2 text-center border-r">
-                                        <button data-demo-trigger='openDetailModal' data-demo-args='Siti Aminah', '2022', 'lunas', true)" class="w-full px-2 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs font-semibold rounded-lg transition-colors">100.000</button>
-                                    </td>
-                                    <td class="px-2 py-2 text-center border-r">
-                                        <button data-demo-trigger='openDetailModal' data-demo-args='Siti Aminah', '2023', 'lunas', true)" class="w-full px-2 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs font-semibold rounded-lg transition-colors">100.000</button>
-                                    </td>
-                                    <td class="px-2 py-2 text-center border-r">
-                                        <button data-demo-trigger='openDetailModal' data-demo-args='Siti Aminah', '2024', 'bayar', false)" class="w-full px-2 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold rounded-lg transition-colors">Bayar</button>
-                                    </td>
-                                    <td class="px-2 py-2 text-center border-r">
-                                        <button data-demo-trigger='openDetailModal' data-demo-args='Siti Aminah', '2025', 'bayar', false)" class="w-full px-2 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold rounded-lg transition-colors">Bayar</button>
-                                    </td>
-                                    <td class="px-2 py-2 text-center">
-                                        <button data-demo-trigger='openDetailModal' data-demo-args='Siti Aminah', '2026', 'bayar', false)" class="w-full px-2 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold rounded-lg transition-colors">Bayar</button>
-                                    </td>
-                                </tr>
-                                <!-- Row 3 - Partial -->
-                                <tr class="hover:bg-gray-50">
-                                    <td class="px-3 py-3 text-sm text-gray-500 sticky left-0 bg-white border-r">3</td>
-                                    <td class="px-3 py-3 text-sm font-medium text-gray-800 sticky left-10 bg-white border-r">H. Muhammad Ridwan</td>
-                                    <td class="px-3 py-3 text-sm text-center text-gray-600 border-r">B-05</td>
-                                    <td class="px-3 py-3 text-sm text-right text-gray-600 border-r">Rp 150.000</td>
-                                    <td class="px-2 py-2 text-center border-r">
-                                        <button data-demo-trigger='openDetailModal' data-demo-args='H. Muhammad Ridwan', '2022', 'lunas', true)" class="w-full px-2 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs font-semibold rounded-lg transition-colors">150.000</button>
-                                    </td>
-                                    <td class="px-2 py-2 text-center border-r">
-                                        <button data-demo-trigger='openDetailModal' data-demo-args='H. Muhammad Ridwan', '2023', 'lunas', true)" class="w-full px-2 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs font-semibold rounded-lg transition-colors">150.000</button>
-                                    </td>
-                                    <td class="px-2 py-2 text-center border-r">
-                                        <button data-demo-trigger='openDetailModal' data-demo-args='H. Muhammad Ridwan', '2024', 'lunas', true)" class="w-full px-2 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs font-semibold rounded-lg transition-colors">150.000</button>
-                                    </td>
-                                    <td class="px-2 py-2 text-center border-r">
-                                        <button data-demo-trigger='openDetailModal' data-demo-args='H. Muhammad Ridwan', '2025', 'bayar', false)" class="w-full px-2 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold rounded-lg transition-colors">Bayar</button>
-                                    </td>
-                                    <td class="px-2 py-2 text-center">
-                                        <button data-demo-trigger='openDetailModal' data-demo-args='H. Muhammad Ridwan', '2026', 'bayar', false)" class="w-full px-2 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold rounded-lg transition-colors">Bayar</button>
-                                    </td>
-                                </tr>
-                                <!-- Row 4 - Lunas Semua -->
-                                <tr class="hover:bg-gray-50">
-                                    <td class="px-3 py-3 text-sm text-gray-500 sticky left-0 bg-white border-r">4</td>
-                                    <td class="px-3 py-3 text-sm font-medium text-gray-800 sticky left-10 bg-white border-r">Dewi Kusuma</td>
-                                    <td class="px-3 py-3 text-sm text-center text-gray-600 border-r">B-06</td>
-                                    <td class="px-3 py-3 text-sm text-right text-gray-600 border-r">Rp 100.000</td>
-                                    <td class="px-2 py-2 text-center border-r">
-                                        <button data-demo-trigger='openDetailModal' data-demo-args='Dewi Kusuma', '2022', 'lunas', true)" class="w-full px-2 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs font-semibold rounded-lg transition-colors">100.000</button>
-                                    </td>
-                                    <td class="px-2 py-2 text-center border-r">
-                                        <button data-demo-trigger='openDetailModal' data-demo-args='Dewi Kusuma', '2023', 'lunas', true)" class="w-full px-2 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs font-semibold rounded-lg transition-colors">100.000</button>
-                                    </td>
-                                    <td class="px-2 py-2 text-center border-r">
-                                        <button data-demo-trigger='openDetailModal' data-demo-args='Dewi Kusuma', '2024', 'lunas', true)" class="w-full px-2 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs font-semibold rounded-lg transition-colors">100.000</button>
-                                    </td>
-                                    <td class="px-2 py-2 text-center border-r">
-                                        <button data-demo-trigger='openDetailModal' data-demo-args='Dewi Kusuma', '2025', 'lunas', true)" class="w-full px-2 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs font-semibold rounded-lg transition-colors">100.000</button>
-                                    </td>
-                                    <td class="px-2 py-2 text-center">
-                                        <button data-demo-trigger='openDetailModal' data-demo-args='Dewi Kusuma', '2026', 'bayar', false)" class="w-full px-2 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold rounded-lg transition-colors">Bayar</button>
-                                    </td>
-                                </tr>
-                                <!-- Row 5 - Lunas Semua (Premium) -->
-                                <tr class="hover:bg-gray-50">
-                                    <td class="px-3 py-3 text-sm text-gray-500 sticky left-0 bg-white border-r">5</td>
-                                    <td class="px-3 py-3 text-sm font-medium text-gray-800 sticky left-10 bg-white border-r">Abdul Rahman</td>
-                                    <td class="px-3 py-3 text-sm text-center text-gray-600 border-r">C-01</td>
-                                    <td class="px-3 py-3 text-sm text-right text-gray-600 border-r">Rp 200.000</td>
-                                    <td class="px-2 py-2 text-center border-r">
-                                        <button data-demo-trigger='openDetailModal' data-demo-args='Abdul Rahman', '2022', 'lunas', true)" class="w-full px-2 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs font-semibold rounded-lg transition-colors">200.000</button>
-                                    </td>
-                                    <td class="px-2 py-2 text-center border-r">
-                                        <button data-demo-trigger='openDetailModal' data-demo-args='Abdul Rahman', '2023', 'lunas', true)" class="w-full px-2 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs font-semibold rounded-lg transition-colors">200.000</button>
-                                    </td>
-                                    <td class="px-2 py-2 text-center border-r">
-                                        <button data-demo-trigger='openDetailModal' data-demo-args='Abdul Rahman', '2024', 'lunas', true)" class="w-full px-2 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs font-semibold rounded-lg transition-colors">200.000</button>
-                                    </td>
-                                    <td class="px-2 py-2 text-center border-r">
-                                        <button data-demo-trigger='openDetailModal' data-demo-args='Abdul Rahman', '2025', 'lunas', true)" class="w-full px-2 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs font-semibold rounded-lg transition-colors">200.000</button>
-                                    </td>
-                                    <td class="px-2 py-2 text-center">
-                                        <button data-demo-trigger='openDetailModal' data-demo-args='Abdul Rahman', '2026', 'lunas', true)" class="w-full px-2 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs font-semibold rounded-lg transition-colors">200.000</button>
-                                    </td>
-                                </tr>
-                                <!-- Row 6 - Belum Bayar Semua -->
-                                <tr class="hover:bg-gray-50">
-                                    <td class="px-3 py-3 text-sm text-gray-500 sticky left-0 bg-white border-r">6</td>
-                                    <td class="px-3 py-3 text-sm font-medium text-gray-800 sticky left-10 bg-white border-r">Bambang Sutrisno</td>
-                                    <td class="px-3 py-3 text-sm text-center text-gray-600 border-r">A-15</td>
-                                    <td class="px-3 py-3 text-sm text-right text-gray-600 border-r">Rp 100.000</td>
-                                    <td class="px-2 py-2 text-center border-r">
-                                        <button data-demo-trigger='openDetailModal' data-demo-args='Bambang Sutrisno', '2022', 'bayar', false)" class="w-full px-2 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold rounded-lg transition-colors">Bayar</button>
-                                    </td>
-                                    <td class="px-2 py-2 text-center border-r">
-                                        <button data-demo-trigger='openDetailModal' data-demo-args='Bambang Sutrisno', '2023', 'bayar', false)" class="w-full px-2 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold rounded-lg transition-colors">Bayar</button>
-                                    </td>
-                                    <td class="px-2 py-2 text-center border-r">
-                                        <button data-demo-trigger='openDetailModal' data-demo-args='Bambang Sutrisno', '2024', 'bayar', false)" class="w-full px-2 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold rounded-lg transition-colors">Bayar</button>
-                                    </td>
-                                    <td class="px-2 py-2 text-center border-r">
-                                        <button data-demo-trigger='openDetailModal' data-demo-args='Bambang Sutrisno', '2025', 'bayar', false)" class="w-full px-2 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold rounded-lg transition-colors">Bayar</button>
-                                    </td>
-                                    <td class="px-2 py-2 text-center">
-                                        <button data-demo-trigger='openDetailModal' data-demo-args='Bambang Sutrisno', '2026', 'bayar', false)" class="w-full px-2 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold rounded-lg transition-colors">Bayar</button>
-                                    </td>
-                                </tr>
+                            <tbody class="divide-y divide-gray-200" id="paymentsTableBody">
+                                <!-- Table body will be rendered dynamically by JS -->
                             </tbody>
                         </table>
                     </div>

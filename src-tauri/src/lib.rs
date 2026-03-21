@@ -582,10 +582,10 @@ async fn get_graves_with_payment_summary(
         // Check if paid for requested year
         let payment_for_year = payments.iter().find(|p| p.year == year).cloned();
         
-        // Get last 5 years payment status
+        // Get last 5 years payment status (descending order: current year first)
         let current_year = year;
         let mut recent_payments = Vec::new();
-        for y in (current_year - 4)..=current_year {
+        for y in ((current_year - 4)..=current_year).rev() {
             let p = payments.iter().find(|p| p.year == y);
             recent_payments.push(YearPaymentStatus {
                 year: y,
