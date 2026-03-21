@@ -8,13 +8,13 @@ console.log('Login.js loaded');
 async function checkDatabaseStatus() {
     console.log('Checking database status...');
     try {
-        const { invoke } = window.__TAURI__?.core || {};
+        
         if (!invoke) {
             console.log('Tauri not available, skipping database check');
             return;
         }
         
-        const status = await invoke('check_database_status');
+        const status = await window.__TAURI__?.core?.invoke('check_database_status');
         console.log('Database status:', status);
         
         // If no database or empty database, redirect to first-run page

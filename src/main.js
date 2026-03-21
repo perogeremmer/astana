@@ -1,4 +1,4 @@
-// Main JavaScript for Astana - Sistem Wakaf Makam
+// Main JavaScript for Astana - Sistem Manajemen Iuran Makam
 // Aplikasi multi-page dengan Tailwind CSS
 
 // ==================== SECURITY WARNING ====================
@@ -330,5 +330,5 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Log aplikasi sudah siap
-console.log('🕌 Astana - Sistem Wakaf Makam berhasil dimuat');
+console.log('🕌 Astana - Sistem Manajemen Iuran Makam berhasil dimuat');
 console.log('📱 Aplikasi siap digunakan');

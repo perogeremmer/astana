@@ -260,7 +260,7 @@ async function updateLaporan() {
         }
         
         // Fetch report data from backend using currentYear
-        const report = await invoke('get_yearly_report', { year: currentYear });
+        const report = await window.__TAURI__?.core?.invoke('get_yearly_report', { year: currentYear });
         
         updateUIWithReport(report);
         

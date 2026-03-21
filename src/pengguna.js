@@ -1,7 +1,7 @@
 // User Management JavaScript for Astana
 // Handles CRUD operations for users
 
-const { invoke } = window.__TAURI__?.core || {};
+
 
 // Current user list
 let users = [];
@@ -21,7 +21,7 @@ async function loadUsers() {
     const token = window.astanaApp.getSessionToken();
     
     try {
-        const result = await invoke('get_users', { token });
+        const result = await window.__TAURI__?.core?.invoke('get_users', { token });
         
         console.log('get_users result:', result);
         console.log('Result type:', typeof result);
@@ -237,7 +237,7 @@ document.getElementById('addUserForm').addEventListener('submit', async (e) => {
     };
     
     try {
-        const result = await invoke('create_user', { token, user: userData });
+        const result = await window.__TAURI__?.core?.invoke('create_user', { token, user: userData });
         
         console.log('create_user result:', result);
         
@@ -287,7 +287,7 @@ document.getElementById('editUserForm').addEventListener('submit', async (e) => 
     };
     
     try {
-        const result = await invoke('update_user', { token, userId, user: userData });
+        const result = await window.__TAURI__?.core?.invoke('update_user', { token, userId, user: userData });
         
         console.log('update_user result:', result);
         
@@ -334,7 +334,7 @@ document.getElementById('resetPasswordForm').addEventListener('submit', async (e
     const newPassword = generatePassword();
     
     try {
-        const result = await invoke('reset_user_password', { token, userId, newPassword });
+        const result = await window.__TAURI__?.core?.invoke('reset_user_password', { token, userId, newPassword });
         
         console.log('reset_user_password result:', result);
         
@@ -414,7 +414,7 @@ async function confirmDeleteUser() {
     
     try {
         console.log('Deleting user:', userId);
-        const result = await invoke('delete_user', { token, userId });
+        const result = await window.__TAURI__?.core?.invoke('delete_user', { token, userId });
         
         console.log('delete_user result:', result);
         

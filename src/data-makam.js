@@ -1,7 +1,7 @@
 // Data Makam - CRUD JavaScript for Graves and Heirs
 // Integrates with Tauri backend
 
-const { invoke } = window.__TAURI__.core || {};
+
 
 // Global state
 let currentGraves = [];
@@ -236,7 +236,7 @@ function debounce(func, wait) {
 
 async function loadBlocks() {
     try {
-        currentBlocks = await invoke('get_blocks');
+        currentBlocks = await window.__TAURI__?.core?.invoke('get_blocks');
         populateBlockFilter();
         populateTambahBlockSelect();
         populateEditBlockSelect();
@@ -311,7 +311,7 @@ async function loadGraves(search = '') {
         const sortField = document.getElementById('sortField')?.value || 'nama';
         const sortOrder = document.getElementById('sortOrder')?.value || 'asc';
         
-        const graves = await invoke('get_graves', {
+        const graves = await window.__TAURI__?.core?.invoke('get_graves', {
             search: search || null,
             blockId: blockId,
             limit: itemsPerPage,
@@ -320,7 +320,7 @@ async function loadGraves(search = '') {
             sortOrder: sortOrder
         });
         
-        const totalCount = await invoke('count_graves', {
+        const totalCount = await window.__TAURI__?.core?.invoke('count_graves', {
             search: search || null,
             blockId: blockId
         });
@@ -340,7 +340,7 @@ async function loadGraves(search = '') {
 
 async function loadHeirsForGrave(graveId) {
     try {
-        return await invoke('get_heirs_by_grave', { graveId });
+        return await window.__TAURI__?.core?.invoke('get_heirs_by_grave', { graveId });
     } catch (error) {
         console.error('Failed to load heirs:', error);
         return [];
@@ -669,7 +669,7 @@ async function simpanData() {
         };
         
         showLoading(true);
-        await invoke('create_grave_with_heirs', { request });
+        await window.__TAURI__?.core?.invoke('create_grave_with_heirs', { request });
         
         closeModal();
         showToast('Data makam berhasil disimpan', 'success');
@@ -690,7 +690,7 @@ async function openEditModal(graveId) {
     try {
         showLoading(true);
         
-        const detail = await invoke('get_grave_detail', { id: graveId });
+        const detail = await window.__TAURI__?.core?.invoke('get_grave_detail', { id: graveId });
         if (!detail) {
             showToast('Data makam tidak ditemukan', 'error');
             return;
@@ -841,7 +841,7 @@ async function simpanEdit() {
         showLoading(true);
         
         // Update grave
-        await invoke('update_grave', {
+        await window.__TAURI__?.core?.invoke('update_grave', {
             id: currentEditingId,
             grave: {
                 deceased_name: nama,
@@ -854,7 +854,7 @@ async function simpanEdit() {
         });
         
         // Update heirs
-        await invoke('update_grave_heirs', {
+        await window.__TAURI__?.core?.invoke('update_grave_heirs', {
             graveId: currentEditingId,
             heirs: heirs
         });
@@ -890,7 +890,7 @@ async function confirmDelete() {
     
     try {
         showLoading(true);
-        await invoke('delete_grave', { id: currentDeletingId });
+        await window.__TAURI__?.core?.invoke('delete_grave', { id: currentDeletingId });
         
         closeDeleteModal();
         showToast('Data makam berhasil dihapus', 'success');
@@ -1065,7 +1065,7 @@ async function updateExportDataCount() {
         const blockSelect = document.querySelector('aside + main select');
         const blockId = blockSelect && blockSelect.value ? parseInt(blockSelect.value) : null;
         
-        const count = await invoke('count_graves', {
+        const count = await window.__TAURI__?.core?.invoke('count_graves', {
             search: search || null,
             blockId: blockId
         });
@@ -1097,7 +1097,7 @@ async function exportToExcel(startYear, endYear) {
         const isAll = allBtn && allBtn.classList.contains('active');
         
         // Fetch all graves with heirs for export
-        const result = await invoke('export_graves', {
+        const result = await window.__TAURI__?.core?.invoke('export_graves', {
             search: search || null,
             blockId: blockId,
             startYear: isAll ? null : startYear,
@@ -1240,7 +1240,7 @@ async function exportToExcel(startYear, endYear) {
                 const fileData = Array.from(uint8Array);
                 
                 // Use Tauri command to save with dialog
-                const savedPath = await invoke('save_excel_file', {
+                const savedPath = await window.__TAURI__?.core?.invoke('save_excel_file', {
                     fileData: fileData,
                     defaultName: defaultFilename
                 });

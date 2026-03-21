@@ -1,7 +1,7 @@
 // Pembayaran - Payment Management JavaScript
 // Integrates with Tauri backend
 
-const { invoke } = window.__TAURI__.core || {};
+
 
 // Global state
 let currentPayments = [];
@@ -447,7 +447,7 @@ function updateActiveYearDisplay() {
 
 async function loadBlocks() {
     try {
-        currentBlocks = await invoke('get_blocks');
+        currentBlocks = await window.__TAURI__?.core?.invoke('get_blocks');
         populateBlockFilter();
     } catch (error) {
         console.error('Failed to load blocks:', error);
@@ -492,7 +492,7 @@ async function loadPayments() {
         
         const offset = (currentPage - 1) * itemsPerPage;
         
-        const payments = await invoke('get_graves_with_payment_summary', {
+        const payments = await window.__TAURI__?.core?.invoke('get_graves_with_payment_summary', {
             search: search || null,
             blockId: blockId,
             year: currentYear,
@@ -501,7 +501,7 @@ async function loadPayments() {
             offset: offset
         });
         
-        const totalCount = await invoke('count_graves_with_payment_status', {
+        const totalCount = await window.__TAURI__?.core?.invoke('count_graves_with_payment_status', {
             search: search || null,
             blockId: blockId,
             year: currentYear,
@@ -703,14 +703,14 @@ async function openPaymentModal(graveId, year, isPaid) {
         showLoading(true);
         
         // Get grave detail
-        const graveDetail = await invoke('get_grave_detail', { id: graveId });
+        const graveDetail = await window.__TAURI__?.core?.invoke('get_grave_detail', { id: graveId });
         if (!graveDetail) {
             showToast('Data makam tidak ditemukan', 'error');
             return;
         }
         
         // Get existing payment for this year
-        const existingPayment = await invoke('get_payment_by_grave_and_year', { 
+        const existingPayment = await window.__TAURI__?.core?.invoke('get_payment_by_grave_and_year', { 
             graveId: graveId, 
             year: year 
         });
@@ -858,7 +858,7 @@ async function processPayment() {
         // Get expected_fee from block's annual_fee (snapshot at time of payment)
         const expectedFee = currentPaymentData.grave?.annual_fee || jumlah;
         
-        await invoke('create_payment', {
+        await window.__TAURI__?.core?.invoke('create_payment', {
             payment: {
                 grave_id: currentPaymentData.graveId,
                 year: currentPaymentData.year,
@@ -909,7 +909,7 @@ async function confirmDeletePayment() {
     try {
         showLoading(true);
         
-        await invoke('delete_payment', {
+        await window.__TAURI__?.core?.invoke('delete_payment', {
             id: paymentIdToDelete
         });
         
@@ -1058,7 +1058,7 @@ async function updateExportDataCount() {
         const blockSelect = document.querySelector('select');
         const blockId = blockSelect && blockSelect.value ? parseInt(blockSelect.value) : null;
         
-        const count = await invoke('count_graves', {
+        const count = await window.__TAURI__?.core?.invoke('count_graves', {
             search: search || null,
             blockId: blockId
         });
@@ -1090,7 +1090,7 @@ async function exportToExcel(startYear, endYear) {
         const isAll = allBtn && allBtn.classList.contains('active');
         
         // Fetch all graves with payment data for export
-        const result = await invoke('export_graves', {
+        const result = await window.__TAURI__?.core?.invoke('export_graves', {
             search: search || null,
             blockId: blockId,
             startYear: isAll ? null : startYear,
@@ -1194,7 +1194,7 @@ async function exportToExcel(startYear, endYear) {
                 const fileData = Array.from(uint8Array);
                 
                 // Use Tauri command to save with dialog
-                const savedPath = await invoke('save_excel_file', {
+                const savedPath = await window.__TAURI__?.core?.invoke('save_excel_file', {
                     fileData: fileData,
                     defaultName: defaultFilename
                 });

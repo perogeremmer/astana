@@ -1,7 +1,8 @@
 // Audit Log JavaScript for Astana
 // Handles audit log viewing and filtering
 
-const { invoke } = window.__TAURI__?.core || {};
+// Use invoke from global window.__TAURI__ or from main.js
+
 
 // State
 let logs = [];
@@ -25,7 +26,7 @@ async function loadAuditLogs() {
     const token = window.astanaApp.getSessionToken();
     
     try {
-        const result = await invoke('get_audit_logs', { 
+        const result = await window.__TAURI__?.core?.invoke('get_audit_logs', { 
             token, 
             limit,
             offset: currentOffset 
@@ -50,7 +51,7 @@ async function loadStats() {
     
     try {
         // Get total count
-        const countResult = await invoke('count_audit_logs', { token });
+        const countResult = await window.__TAURI__?.core?.invoke('count_audit_logs', { token });
         if (countResult.success) {
             totalLogs = countResult.data;
             document.getElementById('totalLogs').textContent = totalLogs.toLocaleString('id-ID');

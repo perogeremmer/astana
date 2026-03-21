@@ -88,7 +88,7 @@ async function loadCurrentLogo() {
     try {
         if (!invoke) return;
         
-        const logoDataUrl = await invoke('get_logo_data');
+        const logoDataUrl = await window.__TAURI__?.core?.invoke('get_logo_data');
         if (logoDataUrl) {
             const preview = document.getElementById('logoPreview');
             if (preview) {
@@ -104,7 +104,7 @@ async function loadCurrentLogo() {
 async function loadSettings() {
     try {
         showLoading(true);
-        const settings = await invoke('get_settings');
+        const settings = await window.__TAURI__?.core?.invoke('get_settings');
         currentSettings = settings;
         
         // Update form fields
@@ -167,8 +167,8 @@ async function loadDatabaseStats() {
             return;
         }
         
-        const stats = await invoke('get_database_stats');
-        const settings = await invoke('get_settings');
+        const stats = await window.__TAURI__?.core?.invoke('get_database_stats');
+        const settings = await window.__TAURI__?.core?.invoke('get_settings');
         updateDatabaseStats(stats, settings.last_backup);
         
     } catch (error) {
@@ -181,7 +181,7 @@ async function loadDatabasePath() {
     try {
         if (!invoke) return;
         
-        const dbPath = await invoke('get_database_path');
+        const dbPath = await window.__TAURI__?.core?.invoke('get_database_path');
         const dbPathInput = document.getElementById('dbPathInput');
         if (dbPathInput) {
             dbPathInput.value = dbPath;
@@ -249,7 +249,7 @@ async function saveSettings() {
                 showNotification('Logo upload memerlukan Tauri runtime', 'error');
             } else {
                 try {
-                    logoPath = await invoke('upload_logo', { 
+                    logoPath = await window.__TAURI__?.core?.invoke('upload_logo', { 
                         fileData: Array.from(selectedLogoData),
                         fileName: selectedLogoFile.name 
                     });
@@ -280,7 +280,7 @@ async function saveSettings() {
             return;
         }
         
-        await invoke('update_settings', { settings });
+        await window.__TAURI__?.core?.invoke('update_settings', { settings });
         showNotification('Pengaturan berhasil disimpan!', 'success');
         
         // Get the foundation name for sidebar update
@@ -351,10 +351,10 @@ async function backupNow() {
         }
         
         // Use backend command that handles dialog + backup
-        const result = await invoke('backup_database_with_dialog');
+        const result = await window.__TAURI__?.core?.invoke('backup_database_with_dialog');
         
         console.log('Backup result:', result);
-        await invoke('update_last_backup');
+        await window.__TAURI__?.core?.invoke('update_last_backup');
         const modal = document.getElementById('modalBackupSuccess');
         if (modal) modal.classList.remove('hidden');
         await loadDatabaseStats(); // Refresh stats
@@ -382,7 +382,7 @@ async function exportDatabase() {
         console.log('Opening save dialog...');
         
         // Use backend command that handles dialog + backup
-        const result = await invoke('backup_database_with_dialog');
+        const result = await window.__TAURI__?.core?.invoke('backup_database_with_dialog');
         
         console.log('Export result:', result);
         showNotification(result, 'success');
@@ -411,7 +411,7 @@ async function restoreDatabase() {
         showLoading(true);
         
         // Use backend command that handles dialog + restore
-        const result = await invoke('restore_database_with_dialog');
+        const result = await window.__TAURI__?.core?.invoke('restore_database_with_dialog');
         
         console.log('Restore result:', result);
         showNotification(result, 'success');
@@ -495,7 +495,7 @@ async function openDatabaseFolder() {
         }
         
         console.log('Opening database folder...');
-        await invoke('open_database_folder');
+        await window.__TAURI__?.core?.invoke('open_database_folder');
         console.log('Folder opened successfully');
         
     } catch (error) {

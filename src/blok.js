@@ -1,7 +1,7 @@
 // Blok - CRUD JavaScript for Blocks
 // Integrates with Tauri backend
 
-const { invoke } = window.__TAURI__.core || {};
+
 
 // Global state
 let currentBlocks = [];
@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function loadBlocks() {
     try {
         showLoading(true);
-        currentBlocks = await invoke('get_blocks');
+        currentBlocks = await window.__TAURI__?.core?.invoke('get_blocks');
         renderBlockCards();
         renderBlockTable();
     } catch (error) {
@@ -33,7 +33,7 @@ async function loadBlocks() {
 
 async function getBlockStats(blockId) {
     try {
-        return await invoke('get_block_stats', { blockId });
+        return await window.__TAURI__?.core?.invoke('get_block_stats', { blockId });
     } catch (error) {
         console.error('Failed to load block stats:', error);
         return { total_capacity: 0, occupied: 0, available: 0 };
@@ -271,7 +271,7 @@ async function simpanBlock() {
         
         showLoading(true);
         
-        await invoke('create_block', {
+        await window.__TAURI__?.core?.invoke('create_block', {
             block: {
                 code,
                 description,
@@ -300,7 +300,7 @@ async function openEditModal(blockId) {
     try {
         showLoading(true);
         
-        const block = await invoke('get_block_by_id', { id: blockId });
+        const block = await window.__TAURI__?.core?.invoke('get_block_by_id', { id: blockId });
         if (!block) {
             showToast('Data blok tidak ditemukan', 'error');
             return;
@@ -354,7 +354,7 @@ async function updateBlockData() {
         
         showLoading(true);
         
-        await invoke('update_block', {
+        await window.__TAURI__?.core?.invoke('update_block', {
             id: currentEditingId,
             block: {
                 code: null,
@@ -430,7 +430,7 @@ async function confirmDelete() {
     
     try {
         showLoading(true);
-        await invoke('delete_block', { id: currentDeletingId });
+        await window.__TAURI__?.core?.invoke('delete_block', { id: currentDeletingId });
         
         closeDeleteModal();
         showToast('Blok berhasil dihapus', 'success');
