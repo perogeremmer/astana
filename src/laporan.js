@@ -3,6 +3,10 @@
 // Get invoke function from Tauri
 const invoke = window.__TAURI__.core?.invoke;
 
+// Global state for year picker
+let currentYear = new Date().getFullYear();
+let yearPickerBaseYear = currentYear;
+
 // Format currency to Rupiah with full format (e.g., 75.000 instead of 75rb)
 function formatRupiah(amount) {
     return 'Rp ' + amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
@@ -13,14 +17,153 @@ function formatNumber(num) {
     return num.toLocaleString('id-ID');
 }
 
-// Initialize reports page
-document.addEventListener('DOMContentLoaded', async () => {
-    // Add change event listener to year selector
-    const tahunSelect = document.getElementById('tahunSelect');
-    if (tahunSelect) {
-        tahunSelect.addEventListener('change', updateLaporan);
+// Initialize year picker
+function initYearPicker() {
+    const yearPickerInput = document.getElementById('yearPickerInput');
+    const yearPickerDropdown = document.getElementById('yearPickerDropdown');
+    const yearPickerPrev = document.getElementById('yearPickerPrev');
+    const yearPickerNext = document.getElementById('yearPickerNext');
+    
+    if (!yearPickerInput || !yearPickerDropdown) return;
+    
+    // Set initial value
+    yearPickerInput.value = currentYear;
+    yearPickerBaseYear = currentYear;
+    renderYearPickerGrid();
+    
+    // Prevent typing in input
+    yearPickerInput.addEventListener('keydown', (e) => {
+        e.preventDefault();
+    });
+    
+    yearPickerInput.addEventListener('input', (e) => {
+        e.preventDefault();
+        yearPickerInput.value = currentYear;
+    });
+    
+    // Toggle dropdown on input click
+    yearPickerInput.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        
+        const isHidden = yearPickerDropdown.classList.contains('hidden');
+        
+        if (isHidden) {
+            yearPickerDropdown.classList.remove('hidden');
+            positionDropdown();
+        } else {
+            yearPickerDropdown.classList.add('hidden');
+        }
+    });
+    
+    // Position dropdown
+    function positionDropdown() {
+        const rect = yearPickerInput.getBoundingClientRect();
+        
+        let left = rect.left;
+        let top = rect.bottom + 8;
+        
+        if (left + 180 > window.innerWidth) {
+            left = window.innerWidth - 180 - 16;
+        }
+        
+        if (top + 200 > window.innerHeight) {
+            top = rect.top - 200 - 8;
+        }
+        
+        yearPickerDropdown.style.position = 'fixed';
+        yearPickerDropdown.style.left = `${Math.max(8, left)}px`;
+        yearPickerDropdown.style.top = `${Math.max(8, top)}px`;
+        yearPickerDropdown.style.zIndex = '9999';
     }
     
+    // Previous button
+    if (yearPickerPrev) {
+        yearPickerPrev.addEventListener('click', (e) => {
+            e.stopPropagation();
+            yearPickerBaseYear -= 9;
+            renderYearPickerGrid();
+        });
+    }
+    
+    // Next button
+    if (yearPickerNext) {
+        yearPickerNext.addEventListener('click', (e) => {
+            e.stopPropagation();
+            yearPickerBaseYear += 9;
+            renderYearPickerGrid();
+        });
+    }
+    
+    // Close when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!yearPickerDropdown.contains(e.target) && e.target !== yearPickerInput) {
+            yearPickerDropdown.classList.add('hidden');
+        }
+    });
+    
+    // Close on escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            yearPickerDropdown.classList.add('hidden');
+        }
+    });
+    
+    // Prevent dropdown close on inside click
+    yearPickerDropdown.addEventListener('click', (e) => {
+        e.stopPropagation();
+    });
+}
+
+// Render year picker grid
+function renderYearPickerGrid() {
+    const yearPickerGrid = document.getElementById('yearPickerGrid');
+    const yearPickerRange = document.getElementById('yearPickerRange');
+    
+    if (!yearPickerGrid) return;
+    
+    const startYear = yearPickerBaseYear - 4;
+    const endYear = yearPickerBaseYear + 4;
+    
+    if (yearPickerRange) {
+        yearPickerRange.textContent = `${startYear} - ${endYear}`;
+    }
+    
+    yearPickerGrid.innerHTML = '';
+    
+    for (let year = startYear; year <= endYear; year++) {
+        const yearBtn = document.createElement('button');
+        yearBtn.type = 'button';
+        yearBtn.textContent = year;
+        yearBtn.className = `px-2 py-2 text-sm rounded-lg transition-colors font-medium ${
+            year === currentYear 
+                ? 'bg-emerald-600 text-white shadow-sm' 
+                : 'hover:bg-emerald-50 text-gray-700'
+        }`;
+        
+        yearBtn.addEventListener('click', async () => {
+            currentYear = year;
+            
+            const yearPickerInput = document.getElementById('yearPickerInput');
+            if (yearPickerInput) {
+                yearPickerInput.value = year;
+            }
+            
+            const yearPickerDropdown = document.getElementById('yearPickerDropdown');
+            if (yearPickerDropdown) {
+                yearPickerDropdown.classList.add('hidden');
+            }
+            
+            renderYearPickerGrid();
+            await updateLaporan();
+        });
+        
+        yearPickerGrid.appendChild(yearBtn);
+    }
+}
+
+// Initialize reports page
+document.addEventListener('DOMContentLoaded', async () => {
     // Check if Tauri is available
     if (!invoke) {
         console.warn('Tauri not available, using dummy data');
@@ -28,50 +171,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
     
-    await initializeYearSelector();
+    // Initialize year picker
+    initYearPicker();
+    
     await updateLaporan();
 });
-
-// Initialize year selector with available years
-async function initializeYearSelector() {
-    try {
-        const years = await invoke('get_available_years');
-        const select = document.getElementById('tahunSelect');
-        
-        // Clear existing options
-        select.innerHTML = '';
-        
-        // Add years from database
-        years.forEach(year => {
-            const option = document.createElement('option');
-            option.value = year;
-            option.textContent = year;
-            if (year === new Date().getFullYear()) {
-                option.selected = true;
-            }
-            select.appendChild(option);
-        });
-    } catch (error) {
-        console.error('Error loading years:', error);
-        // Fallback to default years if error
-        const select = document.getElementById('tahunSelect');
-        const currentYear = new Date().getFullYear();
-        select.innerHTML = '';
-        for (let i = currentYear - 2; i <= currentYear + 1; i++) {
-            const option = document.createElement('option');
-            option.value = i;
-            option.textContent = i;
-            if (i === currentYear) option.selected = true;
-            select.appendChild(option);
-        }
-    }
-}
 
 // Load dummy data for development/testing
 function loadDummyData() {
     const dataLaporan = {
-        year: 2025,
-        active_year: 2025,
+        year: currentYear,
+        active_year: currentYear,
         total_graves: 1247,
         total_paid: 892,
         total_unpaid: 355,
@@ -138,8 +248,6 @@ function loadDummyData() {
 
 // Main function to update report display
 async function updateLaporan() {
-    const tahun = parseInt(document.getElementById('tahunSelect').value);
-    
     try {
         // Show loading state
         showLoading(true);
@@ -151,8 +259,8 @@ async function updateLaporan() {
             return;
         }
         
-        // Fetch report data from backend
-        const report = await invoke('get_yearly_report', { year: tahun });
+        // Fetch report data from backend using currentYear
+        const report = await invoke('get_yearly_report', { year: currentYear });
         
         updateUIWithReport(report);
         
