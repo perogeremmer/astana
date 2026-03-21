@@ -617,7 +617,7 @@ async fn get_graves_with_payment_summary(
     }
     
     // Apply pagination
-    let total = result.len() as i64;
+    let _total = result.len() as i64;
     let paginated_result: Vec<GravePaymentSummary> = result
         .into_iter()
         .skip(offset as usize)
