@@ -48,6 +48,16 @@ function initYearPicker() {
     yearPickerBaseYear = currentYear;
     renderYearPickerGrid();
     
+    // Prevent typing in input
+    yearPickerInput.addEventListener('keydown', (e) => {
+        e.preventDefault();
+    });
+    
+    yearPickerInput.addEventListener('input', (e) => {
+        e.preventDefault();
+        yearPickerInput.value = currentYear;
+    });
+    
     // Toggle dropdown on input click
     yearPickerInput.addEventListener('click', (e) => {
         e.stopPropagation();
