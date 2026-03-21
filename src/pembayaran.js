@@ -51,8 +51,48 @@ function initYearPicker() {
     // Toggle dropdown on input click
     yearPickerInput.addEventListener('click', (e) => {
         e.stopPropagation();
-        yearPickerDropdown.classList.toggle('hidden');
+        e.preventDefault();
+        
+        // Toggle visibility
+        const isHidden = yearPickerDropdown.classList.contains('hidden');
+        
+        // Close all other dropdowns first
+        document.querySelectorAll('.year-picker-dropdown').forEach(el => {
+            el.classList.add('hidden');
+        });
+        
+        if (isHidden) {
+            yearPickerDropdown.classList.remove('hidden');
+            positionDropdown();
+        } else {
+            yearPickerDropdown.classList.add('hidden');
+        }
     });
+    
+    // Position dropdown correctly
+    function positionDropdown() {
+        const rect = yearPickerInput.getBoundingClientRect();
+        const dropdownRect = yearPickerDropdown.getBoundingClientRect();
+        
+        // Check if dropdown would go off screen
+        let left = rect.left;
+        let top = rect.bottom + 8;
+        
+        // Adjust if too close to right edge
+        if (left + dropdownRect.width > window.innerWidth) {
+            left = window.innerWidth - dropdownRect.width - 16;
+        }
+        
+        // Adjust if too close to bottom
+        if (top + dropdownRect.height > window.innerHeight) {
+            top = rect.top - dropdownRect.height - 8;
+        }
+        
+        yearPickerDropdown.style.position = 'fixed';
+        yearPickerDropdown.style.left = `${Math.max(8, left)}px`;
+        yearPickerDropdown.style.top = `${Math.max(8, top)}px`;
+        yearPickerDropdown.style.zIndex = '9999';
+    }
     
     // Previous button
     if (yearPickerPrev) {
@@ -75,6 +115,13 @@ function initYearPicker() {
     // Close when clicking outside
     document.addEventListener('click', (e) => {
         if (!yearPickerDropdown.contains(e.target) && e.target !== yearPickerInput) {
+            yearPickerDropdown.classList.add('hidden');
+        }
+    });
+    
+    // Close on escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
             yearPickerDropdown.classList.add('hidden');
         }
     });
@@ -105,10 +152,10 @@ function renderYearPickerGrid() {
         const yearBtn = document.createElement('button');
         yearBtn.type = 'button';
         yearBtn.textContent = year;
-        yearBtn.className = `px-2 py-1.5 text-sm rounded-lg transition-colors ${
+        yearBtn.className = `px-2 py-2 text-sm rounded-lg transition-colors font-medium ${
             year === currentYear 
-                ? 'bg-emerald-600 text-white' 
-                : 'hover:bg-gray-100 text-gray-700'
+                ? 'bg-emerald-600 text-white shadow-sm' 
+                : 'hover:bg-emerald-50 text-gray-700'
         }`;
         
         yearBtn.addEventListener('click', async () => {
@@ -148,14 +195,23 @@ function setupEventListeners() {
     }
 
     // Block filter
-    const blockSelect = document.querySelector('select');
+    const blockSelect = document.getElementById('blockFilter');
     if (blockSelect) {
         blockSelect.addEventListener('change', async () => {
             currentPage = 1;
             await loadPayments();
         });
     }
-    
+
+    // Status filter
+    const statusFilter = document.getElementById('statusFilter');
+    if (statusFilter) {
+        statusFilter.addEventListener('change', async () => {
+            currentPage = 1;
+            await loadPayments();
+        });
+    }
+
     // Year picker is initialized in initYearPicker() and handles its own events
     
     // Export modal year selectors
@@ -418,8 +474,11 @@ async function loadPayments() {
         const searchInput = document.querySelector('input[type="text"][placeholder*="Cari"]');
         const search = searchInput ? searchInput.value : '';
         
-        const blockSelect = document.querySelector('select');
+        const blockSelect = document.getElementById('blockFilter');
         const blockId = blockSelect && blockSelect.value ? parseInt(blockSelect.value) : null;
+        
+        const statusFilter = document.getElementById('statusFilter');
+        const status = statusFilter ? statusFilter.value : '';
         
         const offset = (currentPage - 1) * itemsPerPage;
         
@@ -427,19 +486,22 @@ async function loadPayments() {
             search: search || null,
             blockId: blockId,
             year: currentYear,
+            status: status || null,
             limit: itemsPerPage,
             offset: offset
         });
         
-        const totalCount = await invoke('count_graves', {
+        const totalCount = await invoke('count_graves_with_payment_status', {
             search: search || null,
-            blockId: blockId
+            blockId: blockId,
+            year: currentYear,
+            status: status || null
         });
         
         currentPayments = payments;
         totalPages = Math.ceil(totalCount / itemsPerPage) || 1;
         
-        renderPaymentsTable();
+        renderPaymentsTable(status);
         updatePagination(totalCount);
     } catch (error) {
         console.error('Failed to load payments:', error);
@@ -486,10 +548,18 @@ function renderPaymentsTable() {
     tbody.innerHTML = '';
     
     if (currentPayments.length === 0) {
+        let emptyMessage = 'Tidak ada data pembayaran';
+        
+        if (statusFilter === 'lunas') {
+            emptyMessage = 'Belum ada data makam yang melakukan pelunasan';
+        } else if (statusFilter === 'belum') {
+            emptyMessage = 'Semua makam sudah melakukan pelunasan';
+        }
+        
         tbody.innerHTML = `
             <tr>
                 <td colspan="9" class="px-3 py-8 text-center text-gray-500">
-                    Tidak ada data pembayaran
+                    ${emptyMessage}
                 </td>
             </tr>
         `;

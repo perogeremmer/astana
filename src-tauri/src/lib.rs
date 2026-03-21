@@ -566,13 +566,14 @@ async fn get_graves_with_payment_summary(
     search: Option<String>,
     block_id: Option<i64>,
     year: i32,
+    status: Option<String>,
     limit: i64,
     offset: i64,
 ) -> Result<Vec<GravePaymentSummary>, String> {
     let db = db::Database::init(&app_handle)?;
     
-    // Get graves with default sorting (by created_at DESC)
-    let graves = db.get_graves(search.clone(), block_id, limit, offset, None, None)?;
+    // Get all graves first (we'll filter by payment status later)
+    let graves = db.get_graves(search.clone(), block_id, 10000, 0, None, None)?;
     
     let mut result = Vec::new();
     for grave in graves {
@@ -581,6 +582,16 @@ async fn get_graves_with_payment_summary(
         
         // Check if paid for requested year
         let payment_for_year = payments.iter().find(|p| p.year == year).cloned();
+        let is_paid_for_year = payment_for_year.is_some();
+        
+        // Apply status filter
+        if let Some(ref status_filter) = status {
+            match status_filter.as_str() {
+                "lunas" if !is_paid_for_year => continue,
+                "belum" if is_paid_for_year => continue,
+                _ => {}
+            }
+        }
         
         // Get last 5 years payment status (descending order: current year first)
         let current_year = year;
@@ -605,7 +616,52 @@ async fn get_graves_with_payment_summary(
         });
     }
     
-    Ok(result)
+    // Apply pagination
+    let total = result.len() as i64;
+    let paginated_result: Vec<GravePaymentSummary> = result
+        .into_iter()
+        .skip(offset as usize)
+        .take(limit as usize)
+        .collect();
+    
+    Ok(paginated_result)
+}
+
+/// Count graves with payment status filter
+#[tauri::command]
+async fn count_graves_with_payment_status(
+    app_handle: tauri::AppHandle,
+    search: Option<String>,
+    block_id: Option<i64>,
+    year: i32,
+    status: Option<String>,
+) -> Result<i64, String> {
+    let db = db::Database::init(&app_handle)?;
+    
+    // Get all graves
+    let graves = db.get_graves(search, block_id, 10000, 0, None, None)?;
+    
+    let mut count = 0;
+    for grave in graves {
+        // Get payments for this grave
+        let payments = db.get_payments_by_grave(grave.id)?;
+        
+        // Check if paid for requested year
+        let is_paid_for_year = payments.iter().any(|p| p.year == year);
+        
+        // Apply status filter
+        if let Some(ref status_filter) = status {
+            match status_filter.as_str() {
+                "lunas" if !is_paid_for_year => continue,
+                "belum" if is_paid_for_year => continue,
+                _ => {}
+            }
+        }
+        
+        count += 1;
+    }
+    
+    Ok(count)
 }
 
 /// Year payment status
@@ -1390,6 +1446,7 @@ pub fn run() {
             update_payment,
             delete_payment,
             get_graves_with_payment_summary,
+            count_graves_with_payment_status,
             // Dashboard
             get_dashboard_stats,
             get_recent_payments,
