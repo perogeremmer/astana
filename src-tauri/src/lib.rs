@@ -14,6 +14,23 @@ use uuid::Uuid;
 // Modul database
 pub mod db;
 
+// Helper function to format number with dots as thousand separators
+fn format_number(num: i64) -> String {
+    num.to_string()
+        .as_bytes()
+        .rchunks(3)
+        .rev()
+        .map(std::str::from_utf8)
+        .collect::<Result<Vec<&str>, _>>()
+        .unwrap()
+        .join(".")
+}
+
+// Helper function to format rupiah
+fn format_rupiah(amount: i64) -> String {
+    format!("Rp. {}", format_number(amount))
+}
+
 // Global session storage
 pub struct SessionStore {
     sessions: Mutex<HashMap<String, db::Session>>,
@@ -107,7 +124,11 @@ async fn get_database_stats(app_handle: tauri::AppHandle) -> Result<db::Database
 
 /// Command untuk backup database with dialog
 #[tauri::command]
-async fn backup_database_with_dialog(app_handle: tauri::AppHandle) -> Result<String, String> {
+async fn backup_database_with_dialog(
+    app_handle: tauri::AppHandle,
+    sessions: State<'_, SessionStore>,
+    token: String,
+) -> Result<String, String> {
     use tauri_plugin_dialog::DialogExt;
     
     let default_name = format!("astana_backup_{}.db", chrono::Local::now().format("%Y-%m-%d"));
@@ -122,7 +143,29 @@ async fn backup_database_with_dialog(app_handle: tauri::AppHandle) -> Result<Str
     match file_path {
         Some(path) => {
             let backup_path = path.as_path().unwrap();
-            db::backup_database_command(app_handle, backup_path.to_string_lossy().to_string())?;
+            let backup_path_str = backup_path.to_string_lossy().to_string();
+            db::backup_database_command(app_handle.clone(), backup_path_str.clone())?;
+            
+            // Get user info for audit log
+            let (user_id, username) = sessions
+                .get_session(&token)
+                .map(|s| (Some(s.user_id), Some(s.username)))
+                .unwrap_or((None, None));
+            
+            // Log audit
+            let db = db::Database::init(&app_handle)?;
+            let details = format!("Backup database ke: {}", backup_path_str);
+            db.log_audit(
+                user_id,
+                username.as_deref(),
+                "BACKUP",
+                "database",
+                None,
+                None,
+                None,
+                Some(&details),
+            )?;
+            
             Ok("Database berhasil di-export".to_string())
         }
         None => Err("Dialog dibatalkan".to_string())
@@ -186,23 +229,115 @@ async fn get_block_by_id(app_handle: tauri::AppHandle, id: i64) -> Result<Option
 
 /// Create new block
 #[tauri::command]
-async fn create_block(app_handle: tauri::AppHandle, block: db::CreateBlockRequest) -> Result<i64, String> {
+async fn create_block(
+    app_handle: tauri::AppHandle,
+    sessions: State<'_, SessionStore>,
+    token: String,
+    block: db::CreateBlockRequest,
+) -> Result<i64, String> {
     let db = db::Database::init(&app_handle)?;
-    db.create_block(&block)
+    let block_id = db.create_block(&block)?;
+    
+    // Get user info for audit log
+    let (user_id, username) = sessions
+        .get_session(&token)
+        .map(|s| (Some(s.user_id), Some(s.username)))
+        .unwrap_or((None, None));
+    
+    // Log audit
+    let details = format!("Membuat blok: {} dengan kapasitas {} dan iuran Rp. {}", 
+        block.code, block.total_capacity, block.annual_fee);
+    db.log_audit(
+        user_id,
+        username.as_deref(),
+        "CREATE",
+        "block",
+        Some(block_id),
+        None,
+        Some(&serde_json::to_string(&block).unwrap_or_default()),
+        Some(&details),
+    )?;
+    
+    Ok(block_id)
 }
 
 /// Update block
 #[tauri::command]
-async fn update_block(app_handle: tauri::AppHandle, id: i64, block: db::UpdateBlockRequest) -> Result<(), String> {
+async fn update_block(
+    app_handle: tauri::AppHandle,
+    sessions: State<'_, SessionStore>,
+    token: String,
+    id: i64,
+    block: db::UpdateBlockRequest,
+) -> Result<(), String> {
     let db = db::Database::init(&app_handle)?;
-    db.update_block(id, &block)
+    
+    // Get old block data for audit
+    let old_block = db.get_block_by_id(id)?;
+    let old_block_name = old_block.as_ref().map(|b| b.code.clone()).unwrap_or_else(|| "Unknown".to_string());
+    let old_data = serde_json::to_string(&old_block).unwrap_or_default();
+    
+    db.update_block(id, &block)?;
+    
+    // Get user info for audit log
+    let (user_id, username) = sessions
+        .get_session(&token)
+        .map(|s| (Some(s.user_id), Some(s.username)))
+        .unwrap_or((None, None));
+    
+    // Log audit
+    let details = format!("Mengupdate blok: {} (ID: {})", old_block_name, id);
+    db.log_audit(
+        user_id,
+        username.as_deref(),
+        "UPDATE",
+        "block",
+        Some(id),
+        Some(&old_data),
+        Some(&serde_json::to_string(&block).unwrap_or_default()),
+        Some(&details),
+    )?;
+    
+    Ok(())
 }
 
 /// Delete block
 #[tauri::command]
-async fn delete_block(app_handle: tauri::AppHandle, id: i64) -> Result<(), String> {
+async fn delete_block(
+    app_handle: tauri::AppHandle,
+    sessions: State<'_, SessionStore>,
+    token: String,
+    id: i64,
+) -> Result<(), String> {
     let db = db::Database::init(&app_handle)?;
-    db.delete_block(id)
+    
+    // Get block data before deletion for audit
+    let block = db.get_block_by_id(id)?;
+    let old_data = serde_json::to_string(&block).unwrap_or_default();
+    
+    db.delete_block(id)?;
+    
+    // Get user info for audit log
+    let (user_id, username) = sessions
+        .get_session(&token)
+        .map(|s| (Some(s.user_id), Some(s.username)))
+        .unwrap_or((None, None));
+    
+    // Log audit
+    let block_name = block.as_ref().map(|b| b.code.clone()).unwrap_or_default();
+    let details = format!("Menghapus blok: {} (ID: {})", block_name, id);
+    db.log_audit(
+        user_id,
+        username.as_deref(),
+        "DELETE",
+        "block",
+        Some(id),
+        Some(&old_data),
+        None,
+        Some(&details),
+    )?;
+    
+    Ok(())
 }
 
 /// Get block stats
@@ -261,6 +396,8 @@ async fn get_grave_by_id(
 #[tauri::command]
 async fn export_graves(
     app_handle: tauri::AppHandle,
+    sessions: State<'_, SessionStore>,
+    token: String,
     search: Option<String>,
     block_id: Option<i64>,
     start_year: Option<i32>,
@@ -292,6 +429,26 @@ async fn export_graves(
     } else {
         (start_year.unwrap(), end_year.unwrap())
     };
+    
+    // Get user info for audit log
+    let (user_id, username) = sessions
+        .get_session(&token)
+        .map(|s| (Some(s.user_id), Some(s.username)))
+        .unwrap_or((None, None));
+    
+    // Log audit
+    let details = format!("Export data makam: {} records, tahun {}-{}", 
+        graves.len(), actual_start_year, actual_end_year);
+    db.log_audit(
+        user_id,
+        username.as_deref(),
+        "EXPORT",
+        "grave",
+        None,
+        None,
+        None,
+        Some(&details),
+    )?;
     
     Ok(ExportGravesResult {
         graves,
@@ -375,6 +532,8 @@ async fn save_excel_file(
 #[tauri::command]
 async fn create_grave_with_heirs(
     app_handle: tauri::AppHandle,
+    sessions: State<'_, SessionStore>,
+    token: String,
     request: CreateGraveWithHeirsRequest,
 ) -> Result<i64, String> {
     let db = db::Database::init(&app_handle)?;
@@ -383,10 +542,32 @@ async fn create_grave_with_heirs(
     let grave_id = db.create_grave(&request.grave)?;
     
     // Create heirs
-    for mut heir in request.heirs {
+    for mut heir in request.heirs.clone() {
         heir.grave_id = grave_id;
         db.create_heir(&heir)?;
     }
+    
+    // Get user info for audit log
+    let (user_id, username) = sessions
+        .get_session(&token)
+        .map(|s| (Some(s.user_id), Some(s.username)))
+        .unwrap_or((None, None));
+    
+    // Log audit
+    let details = format!("Membuat data makam: {} di Blok {} No {}", 
+        request.grave.deceased_name, 
+        request.grave.block_id, 
+        request.grave.number);
+    db.log_audit(
+        user_id,
+        username.as_deref(),
+        "CREATE",
+        "grave",
+        Some(grave_id),
+        None,
+        Some(&serde_json::to_string(&request).unwrap_or_default()),
+        Some(&details),
+    )?;
     
     Ok(grave_id)
 }
@@ -395,21 +576,81 @@ async fn create_grave_with_heirs(
 #[tauri::command]
 async fn update_grave(
     app_handle: tauri::AppHandle,
+    sessions: State<'_, SessionStore>,
+    token: String,
     id: i64,
     grave: db::UpdateGraveRequest,
 ) -> Result<(), String> {
     let db = db::Database::init(&app_handle)?;
-    db.update_grave(id, &grave)
+    
+    // Get old grave data for audit
+    let old_grave = db.get_grave_by_id(id)?;
+    let old_data = serde_json::to_string(&old_grave).unwrap_or_default();
+    
+    db.update_grave(id, &grave)?;
+    
+    // Get user info for audit log
+    let (user_id, username) = sessions
+        .get_session(&token)
+        .map(|s| (Some(s.user_id), Some(s.username)))
+        .unwrap_or((None, None));
+    
+    // Log audit
+    let grave_name = old_grave.as_ref().map(|g| g.deceased_name.clone()).unwrap_or_default();
+    let details = format!("Mengupdate data makam: {} (ID: {})", 
+        grave_name, id);
+    db.log_audit(
+        user_id,
+        username.as_deref(),
+        "UPDATE",
+        "grave",
+        Some(id),
+        Some(&old_data),
+        Some(&serde_json::to_string(&grave).unwrap_or_default()),
+        Some(&details),
+    )?;
+    
+    Ok(())
 }
 
 /// Delete grave (will cascade delete heirs and payments)
 #[tauri::command]
 async fn delete_grave(
     app_handle: tauri::AppHandle,
+    sessions: State<'_, SessionStore>,
+    token: String,
     id: i64,
 ) -> Result<(), String> {
     let db = db::Database::init(&app_handle)?;
-    db.delete_grave(id)
+    
+    // Get grave data before deletion for audit
+    let grave = db.get_grave_by_id(id)?;
+    let old_data = serde_json::to_string(&grave).unwrap_or_default();
+    
+    db.delete_grave(id)?;
+    
+    // Get user info for audit log
+    let (user_id, username) = sessions
+        .get_session(&token)
+        .map(|s| (Some(s.user_id), Some(s.username)))
+        .unwrap_or((None, None));
+    
+    // Log audit
+    let grave_name = grave.as_ref().map(|g| g.deceased_name.clone()).unwrap_or_default();
+    let details = format!("Menghapus data makam: {} (ID: {})", 
+        grave_name, id);
+    db.log_audit(
+        user_id,
+        username.as_deref(),
+        "DELETE",
+        "grave",
+        Some(id),
+        Some(&old_data),
+        None,
+        Some(&details),
+    )?;
+    
+    Ok(())
 }
 
 // ==================== HEIRS COMMANDS ====================
@@ -532,10 +773,43 @@ async fn get_payment_by_grave_and_year(
 #[tauri::command]
 async fn create_payment(
     app_handle: tauri::AppHandle,
+    sessions: State<'_, SessionStore>,
+    token: String,
     payment: db::CreatePaymentRequest,
 ) -> Result<i64, String> {
     let db = db::Database::init(&app_handle)?;
-    db.create_payment(&payment)
+    let payment_id = db.create_payment(&payment)?;
+
+    // Get user info for audit log
+    let (user_id, username) = sessions
+        .get_session(&token)
+        .map(|s| (Some(s.user_id), Some(s.username)))
+        .unwrap_or((None, None));
+
+    // Get grave info for details
+    let grave = db.get_grave_by_id(payment.grave_id)?;
+    let grave_name = grave.as_ref().map(|g| g.deceased_name.clone()).unwrap_or_default();
+
+    // Log audit
+    let details = format!(
+        "Membuat pembayaran: {} untuk makam {} (ID: {}) tahun {}",
+        format_rupiah(payment.amount),
+        grave_name,
+        payment.grave_id,
+        payment.year
+    );
+    db.log_audit(
+        user_id,
+        username.as_deref(),
+        "CREATE",
+        "payment",
+        Some(payment_id),
+        None,
+        Some(&serde_json::to_string(&payment).unwrap_or_default()),
+        Some(&details),
+    )?;
+
+    Ok(payment_id)
 }
 
 /// Update payment
@@ -555,10 +829,51 @@ async fn update_payment(
 #[tauri::command]
 async fn delete_payment(
     app_handle: tauri::AppHandle,
+    sessions: State<'_, SessionStore>,
+    token: String,
     id: i64,
 ) -> Result<(), String> {
     let db = db::Database::init(&app_handle)?;
-    db.delete_payment(id)
+
+    // Get payment info before deletion for audit
+    let payments = db.get_payments_by_grave(id)?;
+    let payment = payments.iter().find(|p| p.id == id);
+    let payment_data = payment.map(|p| serde_json::to_string(p).unwrap_or_default());
+    let payment_info = payment.map(|p| {
+        (p.grave_id, p.year, p.amount)
+    });
+
+    db.delete_payment(id)?;
+
+    // Get user info for audit log
+    let (user_id, username) = sessions
+        .get_session(&token)
+        .map(|s| (Some(s.user_id), Some(s.username)))
+        .unwrap_or((None, None));
+
+    // Get grave info for details
+    let details = if let Some((grave_id, year, amount)) = payment_info {
+        let grave = db.get_grave_by_id(grave_id)?;
+        let grave_name = grave.as_ref().map(|g| g.deceased_name.clone()).unwrap_or_default();
+        format!("Menghapus pembayaran: {} untuk makam {} tahun {}",
+            format_rupiah(amount), grave_name, year)
+    } else {
+        format!("Menghapus pembayaran ID: {}", id)
+    };
+
+    // Log audit
+    db.log_audit(
+        user_id,
+        username.as_deref(),
+        "DELETE",
+        "payment",
+        Some(id),
+        payment_data.as_deref(),
+        None,
+        Some(&details),
+    )?;
+
+    Ok(())
 }
 
 /// Get graves with payment summary for payment page
@@ -757,20 +1072,12 @@ async fn get_available_years(
     db.get_available_years()
 }
 
-/// Get detailed grave payment data for PDF report
-#[tauri::command]
-async fn get_graves_payment_detail(
-    app_handle: tauri::AppHandle,
-    year: i32,
-) -> Result<Vec<db::GravePaymentDetail>, String> {
-    let db = db::Database::init(&app_handle)?;
-    db.get_graves_payment_detail(year)
-}
-
 /// Generate PDF report for a specific year with save dialog
 #[tauri::command]
 async fn generate_pdf_report(
     app_handle: tauri::AppHandle,
+    sessions: State<'_, SessionStore>,
+    token: String,
     year: i32,
 ) -> Result<Result<String, String>, String> {
     use printpdf::*;
@@ -1049,12 +1356,33 @@ async fn generate_pdf_report(
     match file_path {
         Some(path) => {
             let save_path = path.as_path().unwrap();
+            let save_path_str = save_path.to_string_lossy().to_string();
             // Copy temp file to selected location
             fs::copy(&temp_pdf_path, save_path)
                 .map_err(|e| format!("Failed to save PDF: {}", e))?;
             // Clean up temp file
             let _ = fs::remove_file(&temp_pdf_path);
-            Ok(Ok(save_path.to_string_lossy().to_string()))
+            
+            // Get user info for audit log
+            let (user_id, username) = sessions
+                .get_session(&token)
+                .map(|s| (Some(s.user_id), Some(s.username)))
+                .unwrap_or((None, None));
+            
+            // Log audit
+            let details = format!("Export laporan PDF Tahun {} ke: {}", year, save_path_str);
+            db.log_audit(
+                user_id,
+                username.as_deref(),
+                "EXPORT",
+                "report",
+                None,
+                None,
+                None,
+                Some(&details),
+            )?;
+            
+            Ok(Ok(save_path_str))
         }
         None => {
             // Clean up temp file
@@ -1079,10 +1407,34 @@ async fn get_settings(
 #[tauri::command]
 async fn update_settings(
     app_handle: tauri::AppHandle,
+    sessions: State<'_, SessionStore>,
+    token: String,
     settings: db::UpdateSettingsRequest,
 ) -> Result<(), String> {
     let db = db::Database::init(&app_handle)?;
-    db.update_settings(&settings)
+
+    // Get user info for audit log
+    let (user_id, username) = sessions
+        .get_session(&token)
+        .map(|s| (Some(s.user_id), Some(s.username)))
+        .unwrap_or((None, None));
+
+    db.update_settings(&settings)?;
+
+    // Log audit
+    let details = "Mengupdate pengaturan aplikasi".to_string();
+    db.log_audit(
+        user_id,
+        username.as_deref(),
+        "UPDATE",
+        "settings",
+        None,
+        None,
+        Some(&serde_json::to_string(&settings).unwrap_or_default()),
+        Some(&details),
+    )?;
+
+    Ok(())
 }
 
 /// Update last backup time
@@ -1413,7 +1765,22 @@ async fn create_user(
     }
     
     let db = db::Database::init(&app_handle)?;
-    Ok(Ok(db.create_user(&user, session.user_id)?))
+    let user_id = db.create_user(&user, session.user_id)?;
+
+    // Log audit
+    let details = format!("Membuat user: {} dengan role {}", user.username, user.role);
+    db.log_audit(
+        Some(session.user_id),
+        Some(&session.username),
+        "CREATE",
+        "user",
+        Some(user_id),
+        None,
+        Some(&serde_json::to_string(&user).unwrap_or_default()),
+        Some(&details),
+    )?;
+
+    Ok(Ok(user_id))
 }
 
 /// Update user (Superadmin only)
@@ -1445,7 +1812,22 @@ async fn update_user(
         }
     }
     
-    Ok(Ok(db.update_user(user_id, &user, session.user_id)?))
+    db.update_user(user_id, &user, session.user_id)?;
+
+    // Log audit
+    let details = format!("Mengupdate user ID: {}", user_id);
+    db.log_audit(
+        Some(session.user_id),
+        Some(&session.username),
+        "UPDATE",
+        "user",
+        Some(user_id),
+        None,
+        Some(&serde_json::to_string(&user).unwrap_or_default()),
+        Some(&details),
+    )?;
+
+    Ok(Ok(()))
 }
 
 /// Delete user (Superadmin only)
@@ -1469,7 +1851,28 @@ async fn delete_user(
     }
     
     let db = db::Database::init(&app_handle)?;
-    db.delete_user(user_id, session.user_id)
+
+    // Get user info before deletion for audit
+    let user = db.get_user_by_id(user_id)?;
+    let user_data = user.as_ref().map(|u| serde_json::to_string(u).unwrap_or_default());
+    let user_name = user.as_ref().map(|u| u.username.clone()).unwrap_or_default();
+
+    let _ = db.delete_user(user_id, session.user_id)?;
+
+    // Log audit
+    let details = format!("Menghapus user: {} (ID: {})", user_name, user_id);
+    db.log_audit(
+        Some(session.user_id),
+        Some(&session.username),
+        "DELETE",
+        "user",
+        Some(user_id),
+        user_data.as_deref(),
+        None,
+        Some(&details),
+    )?;
+
+    Ok(Ok(()))
 }
 
 /// Reset user password (Superadmin only)
@@ -1495,7 +1898,27 @@ async fn reset_user_password(
     }
     
     let db = db::Database::init(&app_handle)?;
-    Ok(Ok(db.reset_user_password(user_id, &new_password, session.user_id)?))
+
+    // Get user info before reset for audit
+    let user = db.get_user_by_id(user_id)?;
+    let user_name = user.as_ref().map(|u| u.username.clone()).unwrap_or_default();
+
+    db.reset_user_password(user_id, &new_password, session.user_id)?;
+
+    // Log audit
+    let details = format!("Reset password user: {} (ID: {})", user_name, user_id);
+    db.log_audit(
+        Some(session.user_id),
+        Some(&session.username),
+        "UPDATE",
+        "user",
+        Some(user_id),
+        None,
+        None,
+        Some(&details),
+    )?;
+
+    Ok(Ok(()))
 }
 
 // ==================== AUDIT LOG COMMANDS ====================

@@ -450,7 +450,9 @@ async function exportToPDF() {
         }
         
         // Generate PDF on backend with save dialog
+        const token = window.astanaApp.getSessionToken();
         const result = await window.__TAURI__?.core?.invoke('generate_pdf_report', { 
+            token,
             year: currentYear 
         });
         

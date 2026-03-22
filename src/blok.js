@@ -271,7 +271,9 @@ async function simpanBlock() {
         
         showLoading(true);
         
+        const token = window.astanaApp.getSessionToken();
         await window.__TAURI__?.core?.invoke('create_block', {
+            token,
             block: {
                 code,
                 description,
@@ -354,7 +356,9 @@ async function updateBlockData() {
         
         showLoading(true);
         
+        const token = window.astanaApp.getSessionToken();
         await window.__TAURI__?.core?.invoke('update_block', {
+            token,
             id: currentEditingId,
             block: {
                 code: null,
@@ -430,7 +434,8 @@ async function confirmDelete() {
     
     try {
         showLoading(true);
-        await window.__TAURI__?.core?.invoke('delete_block', { id: currentDeletingId });
+        const token = window.astanaApp.getSessionToken();
+        await window.__TAURI__?.core?.invoke('delete_block', { token, id: currentDeletingId });
         
         closeDeleteModal();
         showToast('Blok berhasil dihapus', 'success');

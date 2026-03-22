@@ -280,7 +280,8 @@ async function saveSettings() {
             return;
         }
         
-        await window.__TAURI__?.core?.invoke('update_settings', { settings });
+        const token = window.astanaApp.getSessionToken();
+        await window.__TAURI__?.core?.invoke('update_settings', { token, settings });
         showNotification('Pengaturan berhasil disimpan!', 'success');
         
         // Get the foundation name for sidebar update
@@ -350,8 +351,10 @@ async function backupNow() {
             return;
         }
         
+        const token = window.astanaApp.getSessionToken();
+        
         // Use backend command that handles dialog + backup
-        const result = await window.__TAURI__?.core?.invoke('backup_database_with_dialog');
+        const result = await window.__TAURI__?.core?.invoke('backup_database_with_dialog', { token });
         
         console.log('Backup result:', result);
         await window.__TAURI__?.core?.invoke('update_last_backup');
@@ -381,8 +384,10 @@ async function exportDatabase() {
         
         console.log('Opening save dialog...');
         
+        const token = window.astanaApp.getSessionToken();
+        
         // Use backend command that handles dialog + backup
-        const result = await window.__TAURI__?.core?.invoke('backup_database_with_dialog');
+        const result = await window.__TAURI__?.core?.invoke('backup_database_with_dialog', { token });
         
         console.log('Export result:', result);
         showNotification(result, 'success');

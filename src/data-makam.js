@@ -669,7 +669,8 @@ async function simpanData() {
         };
         
         showLoading(true);
-        await window.__TAURI__?.core?.invoke('create_grave_with_heirs', { request });
+        const token = window.astanaApp.getSessionToken();
+        await window.__TAURI__?.core?.invoke('create_grave_with_heirs', { token, request });
         
         closeModal();
         showToast('Data makam berhasil disimpan', 'success');
@@ -840,8 +841,11 @@ async function simpanEdit() {
         
         showLoading(true);
         
+        const token = window.astanaApp.getSessionToken();
+        
         // Update grave
         await window.__TAURI__?.core?.invoke('update_grave', {
+            token,
             id: currentEditingId,
             grave: {
                 deceased_name: nama,
@@ -890,7 +894,8 @@ async function confirmDelete() {
     
     try {
         showLoading(true);
-        await window.__TAURI__?.core?.invoke('delete_grave', { id: currentDeletingId });
+        const token = window.astanaApp.getSessionToken();
+        await window.__TAURI__?.core?.invoke('delete_grave', { token, id: currentDeletingId });
         
         closeDeleteModal();
         showToast('Data makam berhasil dihapus', 'success');
@@ -1096,8 +1101,11 @@ async function exportToExcel(startYear, endYear) {
         const allBtn = document.querySelector('button[data-range="all"]');
         const isAll = allBtn && allBtn.classList.contains('active');
         
+        const token = window.astanaApp.getSessionToken();
+        
         // Fetch all graves with heirs for export
         const result = await window.__TAURI__?.core?.invoke('export_graves', {
+            token,
             search: search || null,
             blockId: blockId,
             startYear: isAll ? null : startYear,

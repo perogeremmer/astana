@@ -858,7 +858,9 @@ async function processPayment() {
         // Get expected_fee from block's annual_fee (snapshot at time of payment)
         const expectedFee = currentPaymentData.grave?.annual_fee || jumlah;
         
+        const token = window.astanaApp.getSessionToken();
         await window.__TAURI__?.core?.invoke('create_payment', {
+            token,
             payment: {
                 grave_id: currentPaymentData.graveId,
                 year: currentPaymentData.year,
@@ -909,7 +911,9 @@ async function confirmDeletePayment() {
     try {
         showLoading(true);
         
+        const token = window.astanaApp.getSessionToken();
         await window.__TAURI__?.core?.invoke('delete_payment', {
+            token,
             id: paymentIdToDelete
         });
         
@@ -1089,8 +1093,11 @@ async function exportToExcel(startYear, endYear) {
         const allBtn = document.querySelector('button[data-range="all"]');
         const isAll = allBtn && allBtn.classList.contains('active');
         
+        const token = window.astanaApp.getSessionToken();
+        
         // Fetch all graves with payment data for export
         const result = await window.__TAURI__?.core?.invoke('export_graves', {
+            token,
             search: search || null,
             blockId: blockId,
             startYear: isAll ? null : startYear,
