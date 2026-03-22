@@ -438,9 +438,32 @@ function showLoading(show) {
     }
 }
 
-// Export to PDF (placeholder - would need PDF library)
+// Export to PDF using browser print dialog
 function exportToPDF() {
-    alert('Fitur export PDF akan segera tersedia!');
+    // Update print header data
+    const printDateEl = document.getElementById('printDate');
+    const printTahunEl = document.getElementById('printTahun');
+    
+    if (printDateEl) {
+        const now = new Date();
+        printDateEl.textContent = now.toLocaleDateString('id-ID', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+    
+    if (printTahunEl) {
+        printTahunEl.textContent = currentYear;
+    }
+    
+    // Small delay to ensure content is updated
+    setTimeout(() => {
+        window.print();
+    }, 100);
 }
 
 // Export to Excel (placeholder)
