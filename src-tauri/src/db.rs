@@ -1158,6 +1158,20 @@ impl Database {
 
     // ==================== REPORT QUERIES ====================
 
+    /// Get total capacity from all blocks
+    pub fn get_total_capacity(&self) -> Result<i64, String> {
+        let total_capacity: i64 = self
+            .conn
+            .query_row(
+                "SELECT COALESCE(SUM(total_capacity), 0) FROM blocks",
+                [],
+                |row| row.get::<_, i64>(0),
+            )
+            .map_err(|e| format!("Failed to get total capacity: {}", e))?;
+
+        Ok(total_capacity)
+    }
+
     /// Get yearly report data for all blocks
     pub fn get_yearly_report(&self, year: i32) -> Result<YearlyReport, String> {
         // Get active year
@@ -1176,6 +1190,7 @@ impl Database {
                 b.id,
                 b.code,
                 b.annual_fee,
+                b.total_capacity,
                 COUNT(g.id) as total_graves,
                 COUNT(CASE WHEN p.id IS NOT NULL THEN 1 END) as paid_count,
                 COUNT(CASE WHEN p.id IS NULL THEN 1 END) as unpaid_count,
@@ -1183,23 +1198,25 @@ impl Database {
              FROM blocks b
              LEFT JOIN graves g ON b.id = g.block_id
              LEFT JOIN payments p ON g.id = p.grave_id AND p.year = ?1
-             GROUP BY b.id, b.code, b.annual_fee
+             GROUP BY b.id, b.code, b.annual_fee, b.total_capacity
              ORDER BY b.code",
             )
             .map_err(|e| format!("Failed to prepare yearly report query: {}", e))?;
 
         let block_reports: Vec<BlockReport> = stmt
             .query_map([year], |row| {
-                let total_graves: i64 = row.get(3)?;
-                let paid_count: i64 = row.get(4)?;
-                let unpaid_count: i64 = row.get(5)?;
+                let total_capacity: i64 = row.get(3)?;
+                let total_graves: i64 = row.get(4)?;
+                let paid_count: i64 = row.get(5)?;
+                let unpaid_count: i64 = row.get(6)?;
                 let annual_fee: i64 = row.get(2)?;
-                let total_revenue: i64 = row.get(6)?;
+                let total_revenue: i64 = row.get(7)?;
                 let expected_revenue = total_graves * annual_fee;
 
                 Ok(BlockReport {
                     block_id: row.get(0)?,
                     block_code: row.get(1)?,
+                    total_capacity,
                     total_graves,
                     paid_count,
                     unpaid_count,
@@ -1333,6 +1350,57 @@ impl Database {
 
         Ok(years)
     }
+
+    /// Get detailed grave payment data for PDF report
+    pub fn get_graves_payment_detail(&self, year: i32) -> Result<Vec<GravePaymentDetail>, String> {
+        let mut stmt = self
+            .conn
+            .prepare(
+                "SELECT 
+                g.id,
+                g.deceased_name,
+                b.code as block_code,
+                g.number as grave_number,
+                b.annual_fee,
+                p.id as payment_id,
+                p.amount,
+                p.payment_date
+             FROM graves g
+             JOIN blocks b ON g.block_id = b.id
+             LEFT JOIN payments p ON g.id = p.grave_id AND p.year = ?1
+             ORDER BY b.code, g.number, g.deceased_name",
+            )
+            .map_err(|e| format!("Failed to prepare graves detail query: {}", e))?;
+
+        let details: Vec<GravePaymentDetail> = stmt
+            .query_map([year], |row| {
+                let payment_id: Option<i64> = row.get(5)?;
+                let amount: Option<i64> = row.get(6)?;
+                let payment_date: Option<String> = row.get(7)?;
+
+                let status = if payment_id.is_some() {
+                    PaymentStatus::Paid
+                } else {
+                    PaymentStatus::Unpaid
+                };
+
+                Ok(GravePaymentDetail {
+                    id: row.get(0)?,
+                    deceased_name: row.get(1)?,
+                    block_code: row.get(2)?,
+                    grave_number: row.get(3)?,
+                    annual_fee: row.get(4)?,
+                    status,
+                    amount,
+                    payment_date,
+                })
+            })
+            .map_err(|e| format!("Failed to query graves detail: {}", e))?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("Failed to collect graves detail: {}", e))?;
+
+        Ok(details)
+    }
 }
 
 // ==================== DATA STRUCTURES ====================
@@ -1451,6 +1519,26 @@ pub struct BlockStats {
     pub total_capacity: i64,
     pub occupied: i64,
     pub available: i64,
+}
+
+/// Payment status for PDF report
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub enum PaymentStatus {
+    Paid,
+    Unpaid,
+}
+
+/// Grave payment detail for PDF report
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct GravePaymentDetail {
+    pub id: i64,
+    pub deceased_name: String,
+    pub block_code: String,
+    pub grave_number: String,
+    pub annual_fee: i64,
+    pub status: PaymentStatus,
+    pub amount: Option<i64>,
+    pub payment_date: Option<String>,
 }
 
 /// Grave data structure
@@ -1632,6 +1720,7 @@ pub struct YearlyReport {
 pub struct BlockReport {
     pub block_id: i64,
     pub block_code: String,
+    pub total_capacity: i64,
     pub total_graves: i64,
     pub paid_count: i64,
     pub unpaid_count: i64,

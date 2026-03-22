@@ -1,25 +1,17 @@
 // Login JavaScript for Astana
 // Handles authentication and password change
 
-// Debug: Check if Tauri is available
-console.log('Login.js loaded');
-
 // Check database status on page load
 async function checkDatabaseStatus() {
-    console.log('Checking database status...');
     try {
-        
         if (!invoke) {
-            console.log('Tauri not available, skipping database check');
             return;
         }
         
         const status = await window.__TAURI__?.core?.invoke('check_database_status');
-        console.log('Database status:', status);
         
         // If no database or empty database, redirect to first-run page
         if (!status.exists || status.is_empty) {
-            console.log('No database found or empty, redirecting to first-run page...');
             window.location.href = 'first-run.html';
         }
     } catch (error) {
@@ -33,9 +25,7 @@ checkDatabaseStatus();
 // Helper function to call invoke (avoid duplicate declaration)
 async function callInvoke(command, args) {
     try {
-        console.log(`Invoking ${command} with args:`, args);
         const result = await window.__TAURI__?.core?.invoke(command, args);
-        console.log(`${command} result:`, result);
         return result;
     } catch (error) {
         console.error(`Error invoking ${command}:`, error);
@@ -45,22 +35,16 @@ async function callInvoke(command, args) {
 
 // Toggle password visibility
 function initPasswordToggle() {
-    console.log('Initializing password toggle...');
     const togglePassword = document.getElementById('togglePassword');
     const passwordInput = document.getElementById('password');
     const eyeIcon = document.getElementById('eyeIcon');
     const eyeOffIcon = document.getElementById('eyeOffIcon');
     
-    console.log('togglePassword element:', togglePassword);
-    console.log('passwordInput element:', passwordInput);
-    
     if (!togglePassword || !passwordInput) {
-        console.error('Password toggle elements not found!');
         return;
     }
     
     togglePassword.addEventListener('click', (e) => {
-        console.log('Toggle password clicked');
         e.preventDefault();
         e.stopPropagation();
         
@@ -80,7 +64,6 @@ function initPasswordToggle() {
             eyeOffIcon?.classList.remove('hidden');
         }
     });
-    console.log('Password toggle initialized successfully');
 }
 
 // Show error message
@@ -160,14 +143,8 @@ function initLoginForm() {
         const usernameInput = document.getElementById('username');
         const passwordInput = document.getElementById('password');
         
-        console.log('Username input:', usernameInput);
-        console.log('Password input:', passwordInput);
-        
         const username = usernameInput?.value?.trim();
         const password = passwordInput?.value;
-        
-        console.log('Username:', username);
-        console.log('Password length:', password?.length);
         
         if (!username || !password) {
             showError('Username dan password harus diisi');
@@ -183,9 +160,7 @@ function initLoginForm() {
         setLoading(true);
         
         try {
-            console.log('Calling login command...');
             const result = await callInvoke('login', { username, password });
-            console.log('Login result:', result);
             
             if (result.success) {
                 // Save session
@@ -220,15 +195,12 @@ function initLoginForm() {
 
 // Handle change password form submission
 function initChangePasswordForm() {
-    console.log('Initializing change password form...');
     const changePasswordFormElement = document.getElementById('changePasswordFormElement');
     if (!changePasswordFormElement) {
-        console.log('Change password form not found (might be hidden)');
         return;
     }
     
     changePasswordFormElement.addEventListener('submit', async (e) => {
-        console.log('Change password form submitted!');
         e.preventDefault();
         hideError(true);
         
@@ -253,20 +225,12 @@ function initChangePasswordForm() {
         setLoading(true, true);
         
         try {
-            console.log('Calling change_password with:', {
-                token: window.currentToken ? 'present' : 'missing',
-                newPassword: newPassword ? 'present' : 'missing',
-                isFirstChange: window.isFirstChange
-            });
-            
             const result = await callInvoke('change_password', {
                 token: window.currentToken,
                 oldPassword: null,
                 newPassword: newPassword,
                 isFirstChange: window.isFirstChange
             });
-            
-            console.log('Change password result:', result);
             
             // Handle Result<Result<(), String>, String> structure
             let success = false;

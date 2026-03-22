@@ -12,23 +12,14 @@ let totalLogs = 0;
 
 // Initialize page
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('Audit log page initializing...');
-    
-    // Check current user
-    const currentUser = window.astanaApp.getCurrentUser();
-    console.log('Current user:', currentUser);
-    
     // Check authentication and role
     const hasAccess = await window.astanaApp.requireRole('superadmin_or_superadmin_0');
-    console.log('Has access:', hasAccess);
     
     if (!hasAccess) {
-        console.log('Access denied - user does not have required role');
         return;
     }
     
     // Load audit logs
-    console.log('Loading audit logs...');
     await loadAuditLogs();
     await loadStats();
 });
@@ -37,19 +28,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function loadAuditLogs() {
     const token = window.astanaApp.getSessionToken();
     
-    console.log('Loading audit logs with token:', token ? 'present' : 'missing');
-    
     try {
         const result = await window.__TAURI__?.core?.invoke('get_audit_logs', { 
             token, 
             limit,
             offset: currentOffset 
         });
-        
-        console.log('Audit log result:', result);
-        console.log('Result type:', typeof result);
-        console.log('Is array:', Array.isArray(result));
-        console.log('Result keys:', result ? Object.keys(result) : 'null');
         
         // In Tauri, Rust Result<T, E> is serialized as { Ok: T } or { Err: E }
         if (result && typeof result === 'object') {
@@ -58,7 +42,6 @@ async function loadAuditLogs() {
                 const data = result.Ok;
                 if (Array.isArray(data)) {
                     logs = data;
-                    console.log('Loaded', logs.length, 'audit logs');
                     renderAuditTable();
                     updatePagination();
                 } else {
@@ -77,7 +60,6 @@ async function loadAuditLogs() {
         } else if (Array.isArray(result)) {
             // Direct array (fallback)
             logs = result;
-            console.log('Loaded', logs.length, 'audit logs (direct array)');
             renderAuditTable();
             updatePagination();
         } else {

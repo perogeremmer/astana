@@ -438,32 +438,58 @@ function showLoading(show) {
     }
 }
 
-// Export to PDF using browser print dialog
-function exportToPDF() {
-    // Update print header data
-    const printDateEl = document.getElementById('printDate');
-    const printTahunEl = document.getElementById('printTahun');
+// Export to PDF using native backend generation
+async function exportToPDF() {
+    const btn = document.getElementById('btnExportPDF');
     
-    if (printDateEl) {
-        const now = new Date();
-        printDateEl.textContent = now.toLocaleDateString('id-ID', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
+    try {
+        // Show loading state
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="animate-spin">&#9696;</span> Generating...';
+        }
+        
+        // Generate PDF on backend with save dialog
+        const result = await window.__TAURI__?.core?.invoke('generate_pdf_report', { 
+            year: currentYear 
         });
+        
+        // Handle nested Result type from Rust
+        if (!result) {
+            throw new Error('Gagal generate PDF');
+        }
+        
+        if (result.Err) {
+            throw new Error(result.Err);
+        }
+        
+        if (result.Ok) {
+            const savedPath = result.Ok;
+            // Show success message
+            if (window.showToast) {
+                window.showToast(`PDF berhasil disimpan di: ${savedPath}`, 'success');
+            } else {
+                alert(`PDF berhasil disimpan!`);
+            }
+        }
+        
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        if (error.message !== 'Dialog dibatalkan') {
+            alert('Gagal membuat PDF: ' + error.message);
+        }
+    } finally {
+        // Reset button
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = `
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                </svg>
+                Export PDF
+            `;
+        }
     }
-    
-    if (printTahunEl) {
-        printTahunEl.textContent = currentYear;
-    }
-    
-    // Small delay to ensure content is updated
-    setTimeout(() => {
-        window.print();
-    }, 100);
 }
 
 // Export to Excel (placeholder)

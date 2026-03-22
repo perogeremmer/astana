@@ -2,9 +2,11 @@
 // Library utama untuk aplikasi Tauri
 
 use std::collections::HashMap;
+use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
+use chrono::{Datelike, Timelike};
 use tauri::Manager;
 use tauri::State;
 use uuid::Uuid;
@@ -755,6 +757,313 @@ async fn get_available_years(
     db.get_available_years()
 }
 
+/// Get detailed grave payment data for PDF report
+#[tauri::command]
+async fn get_graves_payment_detail(
+    app_handle: tauri::AppHandle,
+    year: i32,
+) -> Result<Vec<db::GravePaymentDetail>, String> {
+    let db = db::Database::init(&app_handle)?;
+    db.get_graves_payment_detail(year)
+}
+
+/// Generate PDF report for a specific year with save dialog
+#[tauri::command]
+async fn generate_pdf_report(
+    app_handle: tauri::AppHandle,
+    year: i32,
+) -> Result<Result<String, String>, String> {
+    use printpdf::*;
+    use std::fs;
+    use std::io::BufWriter;
+    use tauri_plugin_dialog::DialogExt;
+
+    // Get report data
+    let db = db::Database::init(&app_handle)?;
+    let report = db.get_yearly_report(year)?;
+    let grave_details = db.get_graves_payment_detail(year)?;
+    
+    // Get total capacity from all blocks
+    let total_capacity = db.get_total_capacity()?;
+
+    // Create PDF document (A4 Portrait)
+    let (doc, page1, layer1) = PdfDocument::new(
+        &format!("Laporan Pembayaran Makam - Tahun {}", year),
+        Mm(210.0), // A4 width
+        Mm(297.0), // A4 height
+        "Layer 1",
+    );
+
+    let font = doc.add_builtin_font(BuiltinFont::Helvetica).unwrap();
+    let font_bold = doc.add_builtin_font(BuiltinFont::HelveticaBold).unwrap();
+
+    let left_margin = Mm(20.0);
+    
+    // Helper function to format number with dots as thousand separators
+    fn format_number(num: i64) -> String {
+        num.to_string()
+            .as_bytes()
+            .rchunks(3)
+            .rev()
+            .map(std::str::from_utf8)
+            .collect::<Result<Vec<&str>, _>>()
+            .unwrap()
+            .join(".")
+    }
+    
+    // Helper function to format rupiah
+    fn format_rupiah(amount: i64) -> String {
+        format!("Rp. {}", format_number(amount))
+    }
+    
+    // Indonesian month names
+    let indonesian_months = [
+        "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+        "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+    ];
+    let now = chrono::Local::now();
+    let month_name = indonesian_months[(now.month() - 1) as usize];
+    let current_date = format!("{:02} {} {} - {:02}:{:02} (WIB)", now.day(), month_name, now.year(), now.hour(), now.minute());
+
+    // Helper closure to get current layer
+    let mut current_page = page1;
+    let mut current_layer = layer1;
+    let mut page_num = 1;
+
+    // ===== PAGE 1: SUMMARY =====
+    let layer = doc.get_page(current_page).get_layer(current_layer);
+    let mut y_pos = Mm(270.0);
+
+    // Title
+    layer.use_text("LAPORAN PEMBAYARAN MAKAM", 16.0, left_margin, y_pos, &font_bold);
+    y_pos -= Mm(10.0);
+    layer.use_text(&format!("Tahun {}", year), 14.0, left_margin, y_pos, &font);
+    y_pos -= Mm(10.0);
+    layer.use_text(&format!("Tanggal Cetak: {}", current_date), 10.0, left_margin, y_pos, &font);
+    y_pos -= Mm(20.0);
+
+    // Statistics Section
+    layer.use_text("RINGKASAN STATISTIK", 12.0, left_margin, y_pos, &font_bold);
+    y_pos -= Mm(12.0);
+
+    let pending_revenue = report.total_expected_revenue - report.total_revenue;
+    
+    let stats = vec![
+        ("Total Makam (Kapasitas):", format!("{} jiwa", format_number(total_capacity))),
+        ("Total Makam Terisi:", format!("{} jiwa", format_number(report.total_graves))),
+        ("Sudah Bayar:", format!("{} jiwa", format_number(report.total_paid))),
+        ("Belum Bayar:", format!("{} jiwa", format_number(report.total_unpaid))),
+        ("Total Pendapatan:", format_rupiah(report.total_revenue)),
+        ("Pendapatan Tertunda:", format_rupiah(pending_revenue)),
+    ];
+
+    for (label, value) in stats {
+        layer.use_text(label, 10.0, left_margin, y_pos, &font);
+        layer.use_text(&value, 10.0, Mm(80.0), y_pos, &font);
+        y_pos -= Mm(7.0);
+    }
+
+    y_pos -= Mm(15.0);
+
+    // Block summary
+    layer.use_text("RINGKASAN PER BLOK", 12.0, left_margin, y_pos, &font_bold);
+    y_pos -= Mm(12.0);
+
+    // Table headers - susunan: Blok, Harga Iuran, Total Kapasitas, Total Makam Terisi, Belum Bayar, Sudah Bayar, Pendapatan Tertunda, Total Pendapatan
+    // Adjusted column widths to fit A4 page (total ~168mm to fit within 190mm available width)
+    let headers = vec!["Blok", "Harga Iuran", "Kapasitas", "Terisi", "Belum Bayar", "Sudah Bayar", "Tertunda", "Total Pendapatan"];
+    let col_widths = vec![12.0, 26.0, 18.0, 18.0, 20.0, 20.0, 26.0, 28.0];
+    let mut x = left_margin;
+    for (i, header) in headers.iter().enumerate() {
+        layer.use_text(*header, 6.0, x, y_pos, &font_bold);
+        x += Mm(col_widths[i]);
+    }
+    y_pos -= Mm(5.0);
+
+    // Line
+    layer.add_line(Line {
+        points: vec![
+            (Point::new(left_margin, y_pos + Mm(3.0)), false),
+            (Point::new(Mm(190.0), y_pos + Mm(3.0)), false),
+        ],
+        is_closed: false,
+    });
+    y_pos -= Mm(3.0);
+
+    // Block data
+    for block in &report.block_reports {
+        let pending = block.expected_revenue - block.total_revenue;
+        x = left_margin;
+        layer.use_text(&block.block_code, 6.0, x, y_pos, &font);
+        x += Mm(col_widths[0]);
+        layer.use_text(&format_rupiah(block.annual_fee), 5.0, x, y_pos, &font);
+        x += Mm(col_widths[1]);
+        layer.use_text(&format_number(block.total_capacity), 6.0, x, y_pos, &font);
+        x += Mm(col_widths[2]);
+        layer.use_text(&format_number(block.total_graves), 6.0, x, y_pos, &font);
+        x += Mm(col_widths[3]);
+        layer.use_text(&format_number(block.unpaid_count), 6.0, x, y_pos, &font);
+        x += Mm(col_widths[4]);
+        layer.use_text(&format_number(block.paid_count), 6.0, x, y_pos, &font);
+        x += Mm(col_widths[5]);
+        layer.use_text(&format_rupiah(pending), 5.0, x, y_pos, &font);
+        x += Mm(col_widths[6]);
+        layer.use_text(&format_rupiah(block.total_revenue), 5.0, x, y_pos, &font);
+        y_pos -= Mm(5.0);
+    }
+
+    // ===== DETAIL PAGES =====
+    if !grave_details.is_empty() {
+        // Add new page for details
+        let (new_page, new_layer) = doc.add_page(Mm(210.0), Mm(297.0), "Detail Layer");
+        current_page = new_page;
+        current_layer = new_layer;
+        page_num += 1;
+
+        let layer = doc.get_page(current_page).get_layer(current_layer);
+        y_pos = Mm(270.0);
+
+        layer.use_text("DAFTAR DETAIL PEMBAYARAN", 14.0, left_margin, y_pos, &font_bold);
+        y_pos -= Mm(10.0);
+        layer.use_text(&format!("Total: {} makam", format_number(grave_details.len() as i64)), 10.0, left_margin, y_pos, &font);
+        y_pos -= Mm(15.0);
+
+        // Table headers
+        let detail_headers = vec!["No", "Nama", "Blok", "No.Makam", "Status Pembayaran"];
+        let detail_cols = vec![15.0, 80.0, 20.0, 30.0, 50.0];
+        x = left_margin;
+        for (i, header) in detail_headers.iter().enumerate() {
+            layer.use_text(*header, 9.0, x, y_pos, &font_bold);
+            x += Mm(detail_cols[i]);
+        }
+        y_pos -= Mm(8.0);
+
+        // Line
+        layer.add_line(Line {
+            points: vec![
+                (Point::new(left_margin, y_pos + Mm(5.0)), false),
+                (Point::new(Mm(190.0), y_pos + Mm(5.0)), false),
+            ],
+            is_closed: false,
+        });
+        y_pos -= Mm(5.0);
+
+        // Detail rows
+        let mut row_num = 1;
+        let row_height = Mm(7.0); // Increased row height for better spacing
+        
+        for grave in &grave_details {
+            // Check if we need a new page
+            if y_pos < Mm(40.0) {
+                let (new_page, new_layer) = doc.add_page(Mm(210.0), Mm(297.0), &format!("Detail Layer {}", page_num));
+                current_page = new_page;
+                current_layer = new_layer;
+                page_num += 1;
+
+                let layer = doc.get_page(current_page).get_layer(current_layer);
+                y_pos = Mm(270.0);
+
+                layer.use_text(&format!("DAFTAR DETAIL PEMBAYARAN (Lanjutan)"), 14.0, left_margin, y_pos, &font_bold);
+                y_pos -= Mm(15.0);
+
+                // Table headers again
+                x = left_margin;
+                for (i, header) in detail_headers.iter().enumerate() {
+                    layer.use_text(*header, 9.0, x, y_pos, &font_bold);
+                    x += Mm(detail_cols[i]);
+                }
+                y_pos -= Mm(8.0);
+
+                // Line
+                layer.add_line(Line {
+                    points: vec![
+                        (Point::new(left_margin, y_pos + Mm(5.0)), false),
+                        (Point::new(Mm(190.0), y_pos + Mm(5.0)), false),
+                    ],
+                    is_closed: false,
+                });
+                y_pos -= Mm(5.0);
+            }
+
+            // Get fresh layer reference for each row
+            let layer = doc.get_page(current_page).get_layer(current_layer);
+            
+            x = left_margin;
+            layer.use_text(&row_num.to_string(), 8.0, x, y_pos, &font);
+            x += Mm(detail_cols[0]);
+            layer.use_text(&grave.deceased_name, 8.0, x, y_pos, &font);
+            x += Mm(detail_cols[1]);
+            layer.use_text(&grave.block_code, 8.0, x, y_pos, &font);
+            x += Mm(detail_cols[2]);
+            layer.use_text(&grave.grave_number, 8.0, x, y_pos, &font);
+            x += Mm(detail_cols[3]);
+
+            let status_text = match grave.status {
+                db::PaymentStatus::Paid => {
+                    if let Some(amount) = grave.amount {
+                        format_rupiah(amount)
+                    } else {
+                        "LUNAS".to_string()
+                    }
+                }
+                db::PaymentStatus::Unpaid => "BELUM DIBAYAR".to_string(),
+            };
+            layer.use_text(&status_text, 8.0, x, y_pos, &font);
+
+            y_pos -= row_height;
+            row_num += 1;
+        }
+    }
+
+    // Add footer to the last page
+    let layer = doc.get_page(current_page).get_layer(current_layer);
+    layer.use_text("Astana - Manajemen Iuran Makam", 8.0, Mm(75.0), Mm(15.0), &font);
+
+    // Generate temp file path
+    let temp_dir = std::env::temp_dir();
+    let pdf_filename = format!("Laporan_Makam_{}_{}.pdf", year, chrono::Local::now().timestamp());
+    let temp_pdf_path = temp_dir.join(&pdf_filename);
+
+    // Save PDF to temp file
+    let file = fs::File::create(&temp_pdf_path).map_err(|e| e.to_string())?;
+    let mut buf_writer = BufWriter::new(file);
+    doc.save(&mut buf_writer).map_err(|e| format!("Failed to save PDF document: {}", e))?;
+
+    // Ensure buffer is flushed
+    buf_writer.flush().map_err(|e| format!("Failed to flush PDF buffer: {}", e))?;
+
+    // Verify file was created and has content
+    let metadata = fs::metadata(&temp_pdf_path).map_err(|e| format!("Failed to read PDF metadata: {}", e))?;
+    if metadata.len() == 0 {
+        return Err("Generated PDF file is empty".to_string());
+    }
+
+    // Open save dialog
+    let default_name = format!("Laporan_Makam_{}.pdf", year);
+    let file_path = app_handle.dialog()
+        .file()
+        .set_file_name(&default_name)
+        .add_filter("PDF Document", &["pdf"])
+        .blocking_save_file();
+
+    match file_path {
+        Some(path) => {
+            let save_path = path.as_path().unwrap();
+            // Copy temp file to selected location
+            fs::copy(&temp_pdf_path, save_path)
+                .map_err(|e| format!("Failed to save PDF: {}", e))?;
+            // Clean up temp file
+            let _ = fs::remove_file(&temp_pdf_path);
+            Ok(Ok(save_path.to_string_lossy().to_string()))
+        }
+        None => {
+            // Clean up temp file
+            let _ = fs::remove_file(&temp_pdf_path);
+            Ok(Err("Dialog dibatalkan".to_string()))
+        }
+    }
+}
+
 // ==================== SETTINGS COMMANDS ====================
 
 /// Get settings
@@ -1464,6 +1773,7 @@ pub fn run() {
             // Reports
             get_yearly_report,
             get_available_years,
+            generate_pdf_report,
             // Settings
             get_settings,
             update_settings,
@@ -1473,4 +1783,127 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+// ==================== UNIT TESTS ====================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_pdf_generation_basic() {
+        use printpdf::*;
+        use std::io::BufWriter;
+
+        // Create temp directory
+        let temp_dir = TempDir::new().unwrap();
+        let pdf_path = temp_dir.path().join("test_basic.pdf");
+
+        // Create simple PDF
+        let (doc, page1, layer1) = PdfDocument::new(
+            "Test PDF",
+            Mm(210.0),
+            Mm(297.0),
+            "Layer 1",
+        );
+
+        let current_layer = doc.get_page(page1).get_layer(layer1);
+        let font = doc.add_builtin_font(BuiltinFont::Helvetica).unwrap();
+        
+        current_layer.use_text("Hello World", 12.0, Mm(10.0), Mm(280.0), &font);
+
+        // Save PDF
+        let file = fs::File::create(&pdf_path).unwrap();
+        let mut buf_writer = BufWriter::new(file);
+        doc.save(&mut buf_writer).unwrap();
+        buf_writer.flush().unwrap();
+
+        // Verify file exists and has content
+        let metadata = fs::metadata(&pdf_path).unwrap();
+        assert!(metadata.len() > 0, "PDF file should not be empty");
+        println!("Basic PDF generated: {} bytes", metadata.len());
+    }
+
+    #[test]
+    fn test_pdf_generation_with_data() {
+        use printpdf::*;
+        use std::io::BufWriter;
+
+        let temp_dir = TempDir::new().unwrap();
+        let pdf_path = temp_dir.path().join("test_with_data.pdf");
+
+        // Create PDF with multiple elements
+        let (doc, page1, layer1) = PdfDocument::new(
+            "Test Report",
+            Mm(297.0), // A4 Landscape
+            Mm(210.0),
+            "Layer 1",
+        );
+
+        let current_layer = doc.get_page(page1).get_layer(layer1);
+        let font = doc.add_builtin_font(BuiltinFont::Helvetica).unwrap();
+        let font_bold = doc.add_builtin_font(BuiltinFont::HelveticaBold).unwrap();
+
+        // Add title
+        current_layer.use_text("TEST REPORT", 18.0, Mm(20.0), Mm(190.0), &font_bold);
+        current_layer.use_text("Tahun 2025", 14.0, Mm(20.0), Mm(180.0), &font);
+
+        // Add table-like data
+        let mut y = 160.0;
+        for i in 0..5 {
+            current_layer.use_text(&format!("Row {}", i), 10.0, Mm(20.0), Mm(y), &font);
+            current_layer.use_text(&format!("Value {}", i * 100), 10.0, Mm(80.0), Mm(y), &font);
+            y -= 10.0;
+        }
+
+        // Save PDF
+        let file = fs::File::create(&pdf_path).unwrap();
+        let mut buf_writer = BufWriter::new(file);
+        doc.save(&mut buf_writer).unwrap();
+        buf_writer.flush().unwrap();
+
+        // Verify file
+        let metadata = fs::metadata(&pdf_path).unwrap();
+        assert!(metadata.len() > 0, "PDF with data should not be empty");
+        assert!(metadata.len() > 500, "PDF should have reasonable size");
+        println!("PDF with data generated: {} bytes", metadata.len());
+    }
+
+    #[test]
+    fn test_pdf_generation_landscape() {
+        use printpdf::*;
+        use std::io::BufWriter;
+
+        let temp_dir = TempDir::new().unwrap();
+        let pdf_path = temp_dir.path().join("test_landscape.pdf");
+
+        // Create A4 Landscape PDF
+        let (doc, page1, layer1) = PdfDocument::new(
+            "Landscape Test",
+            Mm(297.0), // A4 width in landscape
+            Mm(210.0), // A4 height
+            "Layer 1",
+        );
+
+        let current_layer = doc.get_page(page1).get_layer(layer1);
+        let font = doc.add_builtin_font(BuiltinFont::Helvetica).unwrap();
+
+        // Add content across the width
+        current_layer.use_text("Left", 12.0, Mm(20.0), Mm(190.0), &font);
+        current_layer.use_text("Center", 12.0, Mm(140.0), Mm(190.0), &font);
+        current_layer.use_text("Right", 12.0, Mm(260.0), Mm(190.0), &font);
+
+        // Save and verify
+        let file = fs::File::create(&pdf_path).unwrap();
+        let mut buf_writer = BufWriter::new(file);
+        doc.save(&mut buf_writer).unwrap();
+        buf_writer.flush().unwrap();
+
+        let metadata = fs::metadata(&pdf_path).unwrap();
+        assert!(metadata.len() > 0, "Landscape PDF should not be empty");
+        println!("Landscape PDF generated: {} bytes", metadata.len());
+    }
 }
