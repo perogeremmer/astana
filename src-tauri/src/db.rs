@@ -9,6 +9,7 @@ use rusqlite::{Connection, OptionalExtension};
 use std::fs;
 use std::path::PathBuf;
 
+use log;
 use tauri::AppHandle;
 use tauri::Manager;
 
@@ -18,6 +19,8 @@ const DB_FILENAME: &str = "astana.db";
 /// Embedded SQL migration scripts
 const MIGRATION_SQL_V1: &str = include_str!("../migrations/001_initial.sql");
 const MIGRATION_SQL_V2: &str = include_str!("../migrations/002_auth.sql");
+const MIGRATION_SQL_V3: &str = include_str!("../migrations/003_grave_type.sql");
+const MIGRATION_SQL_V4: &str = include_str!("../migrations/004_birth_fields.sql");
 
 /// Database management structure
 pub struct Database {
@@ -102,6 +105,45 @@ impl Database {
         self.conn
             .execute_batch(MIGRATION_SQL_V2)
             .map_err(|e| format!("Failed to run V2 migrations: {}", e))?;
+
+        // Run V3 migration (grave type) - handle case where column already exists
+        match self.conn.execute_batch(MIGRATION_SQL_V3) {
+            Ok(_) => {
+                log::info!("✅ V3 migration (grave_type) applied successfully");
+            }
+            Err(e) => {
+                let error_msg = e.to_string();
+                // Check if error is because column already exists
+                if error_msg.contains("duplicate column name")
+                    || error_msg.contains("already exists")
+                    || error_msg.contains(" Grave_type")
+                {
+                    log::info!("ℹ️ V3 migration skipped: grave_type column already exists");
+                } else {
+                    // For other errors, still log but don't fail - the column might already exist
+                    log::warn!("⚠️ V3 migration warning (non-critical): {}", e);
+                }
+            }
+        }
+
+        // Run V4 migration (birth fields) - handle case where column already exists
+        match self.conn.execute_batch(MIGRATION_SQL_V4) {
+            Ok(_) => {
+                log::info!("✅ V4 migration (birth_place, birth_date) applied successfully");
+            }
+            Err(e) => {
+                let error_msg = e.to_string();
+                // Check if error is because column already exists
+                if error_msg.contains("duplicate column name")
+                    || error_msg.contains("already exists")
+                {
+                    log::info!("ℹ️ V4 migration skipped: birth fields already exist");
+                } else {
+                    // For other errors, still log but don't fail
+                    log::warn!("⚠️ V4 migration warning (non-critical): {}", e);
+                }
+            }
+        }
 
         Ok(())
     }
@@ -378,7 +420,7 @@ impl Database {
         sort_order: Option<String>,
     ) -> Result<Vec<GraveWithBlock>, String> {
         let mut query = String::from(
-            "SELECT g.id, g.deceased_name, g.block_id, g.number, g.date_of_death, g.burial_date, g.notes, g.created_at, g.updated_at,
+            "SELECT g.id, g.deceased_name, g.block_id, g.number, g.birth_place, g.birth_date, g.date_of_death, g.burial_date, g.notes, g.grave_type, g.created_at, g.updated_at,
                     b.code, b.annual_fee
                     FROM graves g
                     JOIN blocks b ON g.block_id = b.id
@@ -435,13 +477,16 @@ impl Database {
                     deceased_name: row.get(1)?,
                     block_id: row.get(2)?,
                     number: row.get(3)?,
-                    date_of_death: row.get(4)?,
-                    burial_date: row.get(5)?,
-                    notes: row.get(6)?,
-                    created_at: row.get(7)?,
-                    updated_at: row.get(8)?,
-                    code: row.get(9)?,
-                    annual_fee: row.get(10)?,
+                    birth_place: row.get(4)?,
+                    birth_date: row.get(5)?,
+                    date_of_death: row.get(6)?,
+                    burial_date: row.get(7)?,
+                    notes: row.get(8)?,
+                    grave_type: row.get(9)?,
+                    created_at: row.get(10)?,
+                    updated_at: row.get(11)?,
+                    code: row.get(12)?,
+                    annual_fee: row.get(13)?,
                 })
             })
             .map_err(|e| format!("Failed to query graves: {}", e))?
@@ -455,14 +500,17 @@ impl Database {
     pub fn create_grave(&self, grave: &CreateGraveRequest) -> Result<i64, String> {
         self.conn
             .execute(
-                "INSERT INTO graves (deceased_name, block_id, number, date_of_death, burial_date, notes) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                "INSERT INTO graves (deceased_name, block_id, number, birth_place, birth_date, date_of_death, burial_date, notes, grave_type) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
                 [
                     &grave.deceased_name as &dyn rusqlite::ToSql,
                     &grave.block_id as &dyn rusqlite::ToSql,
                     &grave.number as &dyn rusqlite::ToSql,
+                    &grave.birth_place.as_deref().unwrap_or("") as &dyn rusqlite::ToSql,
+                    &grave.birth_date.as_deref().unwrap_or("") as &dyn rusqlite::ToSql,
                     &grave.date_of_death as &dyn rusqlite::ToSql,
                     &grave.burial_date.as_deref().unwrap_or("") as &dyn rusqlite::ToSql,
                     &grave.notes.as_deref().unwrap_or("") as &dyn rusqlite::ToSql,
+                    &grave.grave_type as &dyn rusqlite::ToSql,
                 ],
             )
             .map_err(|e| format!("Failed to create grave: {}", e))?;
@@ -474,7 +522,7 @@ impl Database {
     pub fn get_grave_by_id(&self, id: i64) -> Result<Option<GraveWithBlock>, String> {
         let grave = self.conn
             .query_row(
-                "SELECT g.id, g.deceased_name, g.block_id, g.number, g.date_of_death, g.burial_date, g.notes, g.created_at, g.updated_at,
+                "SELECT g.id, g.deceased_name, g.block_id, g.number, g.birth_place, g.birth_date, g.date_of_death, g.burial_date, g.notes, g.grave_type, g.created_at, g.updated_at,
                         b.code, b.annual_fee
                  FROM graves g
                  JOIN blocks b ON g.block_id = b.id
@@ -486,13 +534,16 @@ impl Database {
                         deceased_name: row.get(1)?,
                         block_id: row.get(2)?,
                         number: row.get(3)?,
-                        date_of_death: row.get(4)?,
-                        burial_date: row.get(5)?,
-                        notes: row.get(6)?,
-                        created_at: row.get(7)?,
-                        updated_at: row.get(8)?,
-                        code: row.get(9)?,
-                        annual_fee: row.get(10)?,
+                        birth_place: row.get(4)?,
+                        birth_date: row.get(5)?,
+                        date_of_death: row.get(6)?,
+                        burial_date: row.get(7)?,
+                        notes: row.get(8)?,
+                        grave_type: row.get(9)?,
+                        created_at: row.get(10)?,
+                        updated_at: row.get(11)?,
+                        code: row.get(12)?,
+                        annual_fee: row.get(13)?,
                     })
                 },
             )
@@ -510,17 +561,23 @@ impl Database {
                     deceased_name = COALESCE(?1, deceased_name),
                     block_id = COALESCE(?2, block_id),
                     number = COALESCE(?3, number),
-                    date_of_death = COALESCE(?4, date_of_death),
-                    burial_date = COALESCE(?5, burial_date),
-                    notes = COALESCE(?6, notes)
-                 WHERE id = ?7",
+                    birth_place = COALESCE(?4, birth_place),
+                    birth_date = COALESCE(?5, birth_date),
+                    date_of_death = COALESCE(?6, date_of_death),
+                    burial_date = COALESCE(?7, burial_date),
+                    notes = COALESCE(?8, notes),
+                    grave_type = COALESCE(?9, grave_type)
+                 WHERE id = ?10",
                 [
                     &grave.deceased_name as &dyn rusqlite::ToSql,
                     &grave.block_id.map(|v| v.to_string()) as &dyn rusqlite::ToSql,
                     &grave.number as &dyn rusqlite::ToSql,
+                    &grave.birth_place as &dyn rusqlite::ToSql,
+                    &grave.birth_date as &dyn rusqlite::ToSql,
                     &grave.date_of_death as &dyn rusqlite::ToSql,
                     &grave.burial_date as &dyn rusqlite::ToSql,
                     &grave.notes as &dyn rusqlite::ToSql,
+                    &grave.grave_type as &dyn rusqlite::ToSql,
                     &id as &dyn rusqlite::ToSql,
                 ],
             )
@@ -578,7 +635,7 @@ impl Database {
     ) -> Result<Vec<GraveExportData>, String> {
         // Build query for graves
         let mut query = String::from(
-            "SELECT g.id, g.deceased_name, g.block_id, g.number, g.date_of_death, g.burial_date, g.notes, g.created_at, g.updated_at,
+            "SELECT g.id, g.deceased_name, g.block_id, g.number, g.birth_place, g.birth_date, g.date_of_death, g.burial_date, g.notes, g.grave_type, g.created_at, g.updated_at,
                     b.code, b.annual_fee
                     FROM graves g
                     JOIN blocks b ON g.block_id = b.id
@@ -615,13 +672,16 @@ impl Database {
                     deceased_name: row.get(1)?,
                     block_id: row.get(2)?,
                     number: row.get(3)?,
-                    date_of_death: row.get(4)?,
-                    burial_date: row.get(5)?,
-                    notes: row.get(6)?,
-                    created_at: row.get(7)?,
-                    updated_at: row.get(8)?,
-                    code: row.get(9)?,
-                    annual_fee: row.get(10)?,
+                    birth_place: row.get(4)?,
+                    birth_date: row.get(5)?,
+                    date_of_death: row.get(6)?,
+                    burial_date: row.get(7)?,
+                    notes: row.get(8)?,
+                    grave_type: row.get(9)?,
+                    created_at: row.get(10)?,
+                    updated_at: row.get(11)?,
+                    code: row.get(12)?,
+                    annual_fee: row.get(13)?,
                 })
             })
             .map_err(|e| format!("Failed to query graves: {}", e))?
@@ -638,9 +698,12 @@ impl Database {
                 deceased_name: grave.deceased_name,
                 block_code: grave.code,
                 number: grave.number,
+                birth_place: grave.birth_place,
+                birth_date: grave.birth_date,
                 date_of_death: grave.date_of_death,
                 burial_date: grave.burial_date,
                 notes: grave.notes,
+                grave_type: grave.grave_type,
                 annual_fee: grave.annual_fee,
                 heirs,
                 payments,
@@ -1550,7 +1613,10 @@ pub struct Grave {
     pub number: String,
     pub date_of_death: Option<String>,
     pub burial_date: Option<String>,
+    pub birth_place: Option<String>,
+    pub birth_date: Option<String>,
     pub notes: Option<String>,
+    pub grave_type: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -1563,7 +1629,10 @@ pub struct GraveWithBlock {
     pub number: String,
     pub date_of_death: Option<String>,
     pub burial_date: Option<String>,
+    pub birth_place: Option<String>,
+    pub birth_date: Option<String>,
     pub notes: Option<String>,
+    pub grave_type: Option<String>,
     pub created_at: String,
     pub updated_at: String,
     pub code: String,
@@ -1577,7 +1646,10 @@ pub struct CreateGraveRequest {
     pub number: String,
     pub date_of_death: String,
     pub burial_date: Option<String>,
+    pub birth_place: Option<String>,
+    pub birth_date: Option<String>,
     pub notes: Option<String>,
+    pub grave_type: String,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -1587,7 +1659,10 @@ pub struct UpdateGraveRequest {
     pub number: Option<String>,
     pub date_of_death: Option<String>,
     pub burial_date: Option<String>,
+    pub birth_place: Option<String>,
+    pub birth_date: Option<String>,
     pub notes: Option<String>,
+    pub grave_type: Option<String>,
 }
 
 /// Grave export data structure (includes heirs and payments)
@@ -1599,7 +1674,10 @@ pub struct GraveExportData {
     pub number: String,
     pub date_of_death: Option<String>,
     pub burial_date: Option<String>,
+    pub birth_place: Option<String>,
+    pub birth_date: Option<String>,
     pub notes: Option<String>,
+    pub grave_type: Option<String>,
     pub annual_fee: i64,
     pub heirs: Vec<Heir>,
     pub payments: Vec<Payment>,
