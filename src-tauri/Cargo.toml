@@ -1,6 +1,6 @@
 [package]
 name = "astana"
-version = "1.6.1"
+version = "1.7.0"
 description = "Aplikasi desktop untuk manajemen data makam dan iuran makam. Dirancang khusus untuk memudahkan petugas makam dalam mengelola data almarhum, ahli waris, pembayaran iuran, dan pelaporan secara efisien."
 authors = ["perogeremmer"]
 edition = "2021"
