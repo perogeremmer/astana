@@ -225,11 +225,11 @@
                         </div>
                         
                         <div class="p-6">
-                            <div class="grid grid-cols-3 gap-4 mb-4">
+                            <div class="grid grid-cols-2 gap-4 mb-4">
                                 <!-- Nama Almarhum -->
-                                <div class="col-span-2">
+                                <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Nama Lengkap <span class="text-red-500">*</span></label>
-                                    <input type="text" id="classicNama" class="w-full h-10 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder="Masukkan nama almarhum">
+                                    <input type="text" id="classicNama" class="w-full h-10 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder="Masukkan nama almarhum/mah">
                                 </div>
                                 <!-- Tipe Makam -->
                                 <div>
@@ -242,7 +242,7 @@
                                 </div>
                             </div>
                             
-                            <div class="grid grid-cols-4 gap-4 mb-4">
+                            <div class="grid grid-cols-3 gap-4 mb-4">
                                 <!-- Blok -->
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Blok <span class="text-red-500">*</span></label>
@@ -253,17 +253,12 @@
                                 <!-- Nomor Makam -->
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Nomor Makam <span class="text-red-500">*</span></label>
-                                    <input type="text" id="classicNomor" class="w-full h-10 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder="Contoh: 12">
+                                    <input type="text" id="classicNomor" class="w-full h-10 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder="contoh A12">
                                 </div>
-                                <!-- Tanggal Wafat -->
+                                <!-- Tanggal Dimakamkan -->
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Tanggal Wafat <span class="text-red-500">*</span></label>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Tanggal Dimakamkan</label>
                                     <input type="date" id="classicTanggal" class="w-full h-10 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
-                                </div>
-                                <!-- Tanggal Lahir -->
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Tanggal Lahir</label>
-                                    <input type="date" id="classicTanggalLahir" class="w-full h-10 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
                                 </div>
                             </div>
                             
@@ -273,10 +268,18 @@
                                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Tempat Lahir</label>
                                     <input type="text" id="classicTempatLahir" class="w-full h-10 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder="Masukkan tempat lahir">
                                 </div>
-                                <!-- Catatan -->
+                                <!-- Tanggal Lahir -->
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Catatan</label>
-                                    <input type="text" id="classicCatatan" class="w-full h-10 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder="Catatan tambahan (opsional)">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Tanggal Lahir</label>
+                                    <input type="date" id="classicTanggalLahir" class="w-full h-10 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 gap-4 mb-4">
+                                <!-- Keterangan -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Keterangan</label>
+                                    <input type="text" id="classicKeterangan" class="w-full h-10 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder="Keterangan tambahan (opsional)">
                                 </div>
                             </div>
                             
@@ -374,12 +377,8 @@
                     <div class="flex flex-wrap items-center gap-4">
                         <div class="flex items-center gap-2">
                             <label class="text-sm font-medium text-gray-600">Blok:</label>
-                            <select class="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <select id="filterBlockSelect" class="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                                 <option value="">Semua Blok</option>
-                                <option value="A">Blok A</option>
-                                <option value="B">Blok B</option>
-                                <option value="C">Blok C</option>
-                                <option value="D">Blok D</option>
                             </select>
                         </div>
                         <div class="flex items-center gap-2">
@@ -387,7 +386,7 @@
                             <select id="sortField" class="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                                 <option value="nama">Nama</option>
                                 <option value="blok">Nomor Blok</option>
-                                <option value="tanggal_wafat">Tanggal Wafat</option>
+                                <option value="tanggal_wafat">Tanggal Dimakamkan</option>
                                 <option value="tanggal_dibuat">Tanggal Data Dibuat</option>
                             </select>
                             <select id="sortOrder" class="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
@@ -462,7 +461,7 @@
                         <div class="space-y-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Nama Lengkap <span class="text-red-500">*</span></label>
-                                <input type="text" id="tambahNama" class="w-full h-11 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder="Masukkan nama almarhum">
+                                <input type="text" id="tambahNama" class="w-full h-11 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder="Masukkan nama almarhum/mah">
                             </div>
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
@@ -473,12 +472,12 @@
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Nomor Makam <span class="text-red-500">*</span></label>
-                                    <input type="text" id="tambahNomor" class="w-full h-11 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder="Contoh: 12, 05A">
+                                    <input type="text" id="tambahNomor" class="w-full h-11 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder="contoh A12">
                                 </div>
                             </div>
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Tanggal Wafat <span class="text-red-500">*</span></label>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Tanggal Dimakamkan</label>
                                     <input type="date" id="tambahTanggal" class="w-full h-11 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
                                 </div>
                                 <div>
@@ -595,7 +594,7 @@
                         <div class="space-y-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1.5">Nama Lengkap <span class="text-red-500">*</span></label>
-                                <input type="text" id="editNama" class="w-full h-11 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Masukkan nama almarhum">
+                                <input type="text" id="editNama" class="w-full h-11 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Masukkan nama almarhum/mah">
                             </div>
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
@@ -606,12 +605,12 @@
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1.5">Nomor Makam <span class="text-red-500">*</span></label>
-                                    <input type="text" id="editNomor" class="w-full h-11 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="Contoh: 12, 05A">
+                                    <input type="text" id="editNomor" class="w-full h-11 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="contoh A12">
                                 </div>
                             </div>
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Tanggal Wafat <span class="text-red-500">*</span></label>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Tanggal Dimakamkan</label>
                                     <input type="date" id="editTanggal" class="w-full h-11 px-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
                                 </div>
                                 <div>
@@ -757,8 +756,8 @@
                                 <p class="text-sm text-gray-800" id="detailTanggalDimakamkan">-</p>
                             </div>
                             <div class="col-span-2">
-                                <label class="text-xs text-gray-500 mb-1 block">Catatan</label>
-                                <p class="text-sm text-gray-800" id="detailCatatan">-</p>
+                                <label class="text-xs text-gray-500 mb-1 block">Keterangan</label>
+                                <p class="text-sm text-gray-800" id="detailKeterangan">-</p>
                             </div>
                         </div>
                     </div>

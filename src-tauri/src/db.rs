@@ -21,6 +21,7 @@ const MIGRATION_SQL_V1: &str = include_str!("../migrations/001_initial.sql");
 const MIGRATION_SQL_V2: &str = include_str!("../migrations/002_auth.sql");
 const MIGRATION_SQL_V3: &str = include_str!("../migrations/003_grave_type.sql");
 const MIGRATION_SQL_V4: &str = include_str!("../migrations/004_birth_fields.sql");
+const MIGRATION_SQL_V5: &str = include_str!("../migrations/005_remove_grave_unique_constraint.sql");
 
 /// Database management structure
 pub struct Database {
@@ -141,6 +142,40 @@ impl Database {
                 } else {
                     // For other errors, still log but don't fail
                     log::warn!("⚠️ V4 migration warning (non-critical): {}", e);
+                }
+            }
+        }
+
+        // Run V5 migration (remove unique constraint on graves) - only if not already done
+        let v5_already_done: bool = self
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='sqlite_autoindex_graves_1'",
+                [],
+                |row| row.get::<_, i64>(0),
+            )
+            .map(|count| count == 0)  // If count is 0, constraint already removed
+            .unwrap_or(false);
+
+        if v5_already_done {
+            println!("ℹ️ V5 migration skipped: unique constraint already removed");
+            log::info!("ℹ️ V5 migration skipped: unique constraint already removed");
+        } else {
+            println!("Running V5 migration...");
+            match self.conn.execute_batch(MIGRATION_SQL_V5) {
+                Ok(_) => {
+                    println!("✅ V5 migration applied successfully");
+                    log::info!("✅ V5 migration (remove unique constraint) applied successfully");
+                }
+                Err(e) => {
+                    let error_msg = e.to_string();
+                    println!("⚠️ V5 migration error: {}", error_msg);
+                    // Table might already be migrated or other non-critical error
+                    if error_msg.contains("already exists") || error_msg.contains("duplicate") {
+                        log::info!("ℹ️ V5 migration skipped: constraint already removed");
+                    } else {
+                        log::warn!("⚠️ V5 migration warning (non-critical): {}", e);
+                    }
                 }
             }
         }

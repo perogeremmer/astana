@@ -696,6 +696,16 @@ async fn delete_heir(
     db.delete_heir(id)
 }
 
+/// Delete all heirs by grave ID
+#[tauri::command]
+async fn delete_heirs_by_grave(
+    app_handle: tauri::AppHandle,
+    grave_id: i64,
+) -> Result<(), String> {
+    let db = db::Database::init(&app_handle)?;
+    db.delete_heirs_by_grave(grave_id)
+}
+
 /// Update heirs for a grave (bulk update - delete all and recreate)
 #[tauri::command]
 async fn update_grave_heirs(
@@ -2210,6 +2220,7 @@ pub fn run() {
             create_heir,
             update_heir,
             delete_heir,
+            delete_heirs_by_grave,
             update_grave_heirs,
             // Payments
             get_payments_by_grave,

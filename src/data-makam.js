@@ -118,7 +118,7 @@ function setupEventListeners() {
     }
 
     // Block filter
-    const blockSelect = document.querySelector('aside + main select');
+    const blockSelect = document.getElementById('filterBlockSelect');
     if (blockSelect) {
         blockSelect.addEventListener('change', async () => {
             currentPage = 1;
@@ -355,7 +355,7 @@ function resetClassicForm() {
         'classicTipeMakam', 
         'classicTempatLahir', 
         'classicTanggalLahir', 
-        'classicCatatan'
+        'classicKeterangan'
     ];
     
     fieldIds.forEach(fieldId => {
@@ -420,7 +420,7 @@ function populateClassicForm(grave, heirs) {
         'classicTipeMakam': grave.grave_type,
         'classicTempatLahir': grave.birth_place,
         'classicTanggalLahir': grave.birth_date,
-        'classicCatatan': grave.notes
+        'classicKeterangan': grave.notes
     };
     
     Object.entries(fieldMap).forEach(([fieldId, value]) => {
@@ -486,7 +486,7 @@ function collectClassicFormData() {
         grave_type: document.getElementById('classicTipeMakam')?.value,
         birth_place: document.getElementById('classicTempatLahir')?.value?.trim() || null,
         birth_date: document.getElementById('classicTanggalLahir')?.value || null,
-        notes: document.getElementById('classicCatatan')?.value?.trim() || null,
+        notes: document.getElementById('classicKeterangan')?.value?.trim() || null,
         heirs: []
     };
     
@@ -502,6 +502,7 @@ function collectClassicFormData() {
         
         if (nama || index === 0) { // Include if has name or is first (required)
             data.heirs.push({
+                grave_id: 0,  // Will be set by backend
                 order_number: index + 1,
                 full_name: nama || '',
                 phone_number: telpInput?.value?.trim() || null,
@@ -533,10 +534,7 @@ async function handleClassicFormSubmit() {
             showToast('Nomor makam wajib diisi', 'error');
             return;
         }
-        if (!data.date_of_death) {
-            showToast('Tanggal wafat wajib diisi', 'error');
-            return;
-        }
+        // Note: date_of_death (tanggal dimakamkan) is now optional
         if (!data.grave_type) {
             showToast('Tipe makam wajib dipilih', 'error');
             return;
@@ -552,7 +550,10 @@ async function handleClassicFormSubmit() {
             // Update existing
             console.log('Updating grave via classic form:', editId, data);
             
+            const token = window.astanaApp?.getSessionToken?.() || localStorage.getItem('astana_session_token');
+            
             await window.__TAURI__?.core?.invoke('update_grave', {
+                token: token,
                 id: parseInt(editId),
                 grave: {
                     deceased_name: data.deceased_name,
@@ -585,21 +586,39 @@ async function handleClassicFormSubmit() {
         } else {
             // Create new
             console.log('Creating new grave via classic form:', data);
+            console.log('Block ID:', data.block_id, 'Number:', data.number);
             
-            const request = {
-                deceased_name: data.deceased_name,
-                block_id: data.block_id,
-                number: data.number,
-                date_of_death: data.date_of_death,
-                birth_place: data.birth_place,
-                birth_date: data.birth_date,
-                burial_date: null,
-                notes: data.notes,
-                grave_type: data.grave_type,
-                heirs: data.heirs.filter(h => h.full_name)
+            // Check for duplicate before creating (only for 'new' graves, not 'stacked')
+            if (data.grave_type === 'new') {
+                const existingGraves = currentGraves.filter(g => 
+                    g.block_id === data.block_id && g.number === data.number && g.grave_type === 'new'
+                );
+                if (existingGraves.length > 0) {
+                    showToast(`Makam Baru dengan Blok ${data.block_id} Nomor ${data.number} sudah ada! Gunakan tipe Makam Tumpuk jika ingin menambahkan ke lokasi yang sama.`, 'error');
+                    return;
+                }
+            }
+            
+            const token = window.astanaApp?.getSessionToken?.() || localStorage.getItem('astana_session_token');
+            const requestPayload = {
+                grave: {
+                    deceased_name: data.deceased_name,
+                    block_id: data.block_id,
+                    number: data.number,
+                    date_of_death: data.date_of_death,
+                    birth_place: data.birth_place,
+                    birth_date: data.birth_date,
+                    burial_date: data.burial_date,
+                    notes: data.notes,
+                    grave_type: data.grave_type
+                },
+                heirs: data.heirs
             };
-            
-            await window.__TAURI__?.core?.invoke('create_grave', { grave: request });
+            console.log('Request payload:', JSON.stringify(requestPayload, null, 2));
+            await window.__TAURI__?.core?.invoke('create_grave_with_heirs', { 
+                token: token,
+                request: requestPayload 
+            });
             showToast('Data makam berhasil disimpan', 'success');
         }
         
@@ -609,7 +628,12 @@ async function handleClassicFormSubmit() {
         
     } catch (error) {
         console.error('Failed to save via classic form:', error);
-        showToast('Gagal menyimpan data: ' + error, 'error');
+        // Better error message for duplicate constraint
+        let errorMsg = error.toString();
+        if (errorMsg.includes('UNIQUE constraint failed')) {
+            errorMsg = 'Makam dengan Blok dan Nomor tersebut sudah ada di database!';
+        }
+        showToast('Gagal menyimpan data: ' + errorMsg, 'error');
     } finally {
         showLoading(false);
     }
@@ -645,7 +669,7 @@ async function loadBlocks() {
 }
 
 function populateBlockFilter() {
-    const blockSelect = document.querySelector('aside + main select');
+    const blockSelect = document.getElementById('filterBlockSelect');
     if (!blockSelect) return;
     
     const currentValue = blockSelect.value;
@@ -693,12 +717,17 @@ function populateEditBlockSelect(selectedBlockId = null) {
     });
 }
 
-async function loadGraves(search = '') {
+async function loadGraves(search = null) {
     try {
+        // If no search provided, read from current search input
+        if (search === null) {
+            const searchInput = document.querySelector('input[type="text"][placeholder*="Cari"]');
+            search = searchInput ? searchInput.value : '';
+        }
         console.log('Loading graves... Search:', search);
         showLoading(true);
         
-        const blockSelect = document.querySelector('aside + main select');
+        const blockSelect = document.getElementById('filterBlockSelect');
         const blockId = blockSelect && blockSelect.value ? parseInt(blockSelect.value) : null;
         
         const offset = (currentPage - 1) * itemsPerPage;
@@ -953,7 +982,7 @@ async function showDetailModal(graveId) {
         const tempatLahirEl = document.getElementById('detailTempatLahir');
         const tanggalLahirEl = document.getElementById('detailTanggalLahir');
         const tanggalDimakamkanEl = document.getElementById('detailTanggalDimakamkan');
-        const catatanEl = document.getElementById('detailCatatan');
+        const keteranganEl = document.getElementById('detailKeterangan');
         
         if (namaEl) namaEl.textContent = detail.grave.deceased_name || '-';
         if (blokEl) blokEl.textContent = (detail.grave.code || '-') + ' - ' + (detail.grave.number || '-');
@@ -961,7 +990,7 @@ async function showDetailModal(graveId) {
         if (tempatLahirEl) tempatLahirEl.textContent = detail.grave.birth_place || '-';
         if (tanggalLahirEl) tanggalLahirEl.textContent = detail.grave.birth_date ? formatDate(detail.grave.birth_date) : '-';
         if (tanggalDimakamkanEl) tanggalDimakamkanEl.textContent = detail.grave.burial_date ? formatDate(detail.grave.burial_date) : '-';
-        if (catatanEl) catatanEl.textContent = detail.grave.notes || '-';
+        if (keteranganEl) keteranganEl.textContent = detail.grave.notes || '-';
         
         const heirsContainer = document.getElementById('detailAhliWarisContainer');
         if (heirsContainer) {
@@ -1207,10 +1236,7 @@ async function simpanData() {
             showToast('Nomor makam wajib diisi', 'error');
             return;
         }
-        if (!tanggalWafat) {
-            showToast('Tanggal wafat wajib diisi', 'error');
-            return;
-        }
+        // Note: tanggal dimakamkan (date_of_death) is now optional
         if (!tipeMakam) {
             showToast('Tipe makam wajib dipilih', 'error');
             return;
@@ -1230,6 +1256,7 @@ async function simpanData() {
             
             if (namaWaris) {
                 heirs.push({
+                    grave_id: 0,  // Will be set by backend
                     order_number: i + 1,
                     full_name: namaWaris,
                     phone_number: el.querySelector('.heir-telp')?.value?.trim() || null,
@@ -1245,31 +1272,53 @@ async function simpanData() {
             return;
         }
         
-        const request = {
-            deceased_name: nama,
-            block_id: blockId,
-            number: nomor,
-            date_of_death: tanggalWafat,
-            birth_place: tempatLahir,
-            birth_date: tanggalLahir,
-            burial_date: null,
-            notes: null,
-            grave_type: tipeMakam,
-            heirs: heirs
-        };
+        console.log('Saving grave via modal - Block ID:', blockId, 'Number:', nomor, 'Type:', tipeMakam);
         
-        console.log('Saving grave via modal:', request);
+        // Check for duplicate before creating (only for 'new' graves, not 'stacked')
+        if (tipeMakam === 'new') {
+            const existingGraves = currentGraves.filter(g => 
+                g.block_id === blockId && g.number === nomor && g.grave_type === 'new'
+            );
+            if (existingGraves.length > 0) {
+                showToast(`Makam Baru dengan Blok ${blockId} Nomor ${nomor} sudah ada! Gunakan tipe Makam Tumpuk jika ingin menambahkan ke lokasi yang sama.`, 'error');
+                return;
+            }
+        }
         
         showLoading(true);
         
-        await window.__TAURI__?.core?.invoke('create_grave', { grave: request });
+        const token = window.astanaApp?.getSessionToken?.() || localStorage.getItem('astana_session_token');
+        const requestPayload = {
+            grave: {
+                deceased_name: nama,
+                block_id: blockId,
+                number: nomor,
+                date_of_death: tanggalWafat,
+                birth_place: tempatLahir,
+                birth_date: tanggalLahir,
+                burial_date: null,
+                notes: null,
+                grave_type: tipeMakam
+            },
+            heirs: heirs
+        };
+        console.log('Request payload:', JSON.stringify(requestPayload, null, 2));
+        await window.__TAURI__?.core?.invoke('create_grave_with_heirs', { 
+            token: token,
+            request: requestPayload 
+        });
         
         closeModal();
         showToast('Data makam berhasil disimpan', 'success');
         await loadGraves();
     } catch (error) {
         console.error('Failed to save grave:', error);
-        showToast('Gagal menyimpan data: ' + error, 'error');
+        // Better error message for duplicate constraint
+        let errorMsg = error.toString();
+        if (errorMsg.includes('UNIQUE constraint failed')) {
+            errorMsg = 'Makam dengan Blok dan Nomor tersebut sudah ada di database!';
+        }
+        showToast('Gagal menyimpan data: ' + errorMsg, 'error');
     } finally {
         showLoading(false);
     }
@@ -1415,10 +1464,7 @@ async function simpanEdit() {
             showToast('Nomor makam wajib diisi', 'error');
             return;
         }
-        if (!tanggalWafat) {
-            showToast('Tanggal wafat wajib diisi', 'error');
-            return;
-        }
+        // Note: tanggal dimakamkan (date_of_death) is now optional
         if (!tipeMakam) {
             showToast('Tipe makam wajib dipilih', 'error');
             return;
@@ -1438,6 +1484,7 @@ async function simpanEdit() {
             
             if (namaWaris) {
                 heirs.push({
+                    grave_id: currentEditingId,
                     order_number: i + 1,
                     full_name: namaWaris,
                     phone_number: el.querySelector('.heir-telp')?.value?.trim() || null,
@@ -1469,7 +1516,10 @@ async function simpanEdit() {
         
         console.log('Updating grave via modal:', currentEditingId, graveUpdate);
         
+        const token = window.astanaApp?.getSessionToken?.() || localStorage.getItem('astana_session_token');
+        
         await window.__TAURI__?.core?.invoke('update_grave', {
+            token: token,
             id: currentEditingId,
             grave: graveUpdate
         });
@@ -1704,7 +1754,7 @@ async function updateExportDataCount() {
         const searchInput = document.querySelector('input[type="text"][placeholder*="Cari"]');
         const search = searchInput ? searchInput.value : '';
         
-        const blockSelect = document.querySelector('aside + main select');
+        const blockSelect = document.getElementById('filterBlockSelect');
         const blockId = blockSelect && blockSelect.value ? parseInt(blockSelect.value) : null;
         
         const count = await window.__TAURI__?.core?.invoke('count_graves', {
@@ -1734,7 +1784,7 @@ async function exportToExcel(startYear, endYear) {
         const searchInput = document.querySelector('input[type="text"][placeholder*="Cari"]');
         const search = searchInput ? searchInput.value : '';
         
-        const blockSelect = document.querySelector('aside + main select');
+        const blockSelect = document.getElementById('filterBlockSelect');
         const blockId = blockSelect && blockSelect.value ? parseInt(blockSelect.value) : null;
         
         const exportData = await window.__TAURI__?.core?.invoke('get_all_graves_with_heirs', {
@@ -1757,7 +1807,7 @@ async function exportToExcel(startYear, endYear) {
                 'Tempat Lahir': item.birth_place || '-',
                 'Tanggal Lahir': item.birth_date ? formatDate(item.birth_date) : '-',
                 'Tanggal Dimakamkan': item.burial_date ? formatDate(item.burial_date) : '-',
-                'Catatan': item.notes || '-',
+                'Keterangan': item.notes || '-',
             };
             
             for (let i = 0; i < 3; i++) {
