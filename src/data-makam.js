@@ -185,7 +185,43 @@ function setupEventListeners() {
     if (btnTambahData) {
         btnTambahData.addEventListener('click', openModal);
     }
-    
+
+    // Modal Tambah - Ahli Waris buttons
+    const btnTambahWaris = document.getElementById('btnTambahWaris');
+    const btnHapusWaris = document.getElementById('btnHapusWaris');
+    const btnSimpanData = document.getElementById('btnSimpanData');
+
+    if (btnTambahWaris) {
+        btnTambahWaris.addEventListener('click', tambahAhliWaris);
+    }
+    if (btnHapusWaris) {
+        btnHapusWaris.addEventListener('click', hapusAhliWarisTerakhir);
+    }
+    if (btnSimpanData) {
+        btnSimpanData.addEventListener('click', simpanData);
+    }
+
+    // Modal Edit - Ahli Waris buttons
+    const btnTambahWarisEdit = document.getElementById('btnTambahWarisEdit');
+    const btnHapusWarisEdit = document.getElementById('btnHapusWarisEdit');
+    const btnSimpanEdit = document.getElementById('btnSimpanEdit');
+
+    if (btnTambahWarisEdit) {
+        btnTambahWarisEdit.addEventListener('click', tambahAhliWarisEdit);
+    }
+    if (btnHapusWarisEdit) {
+        btnHapusWarisEdit.addEventListener('click', hapusAhliWarisTerakhirEdit);
+    }
+    if (btnSimpanEdit) {
+        btnSimpanEdit.addEventListener('click', simpanEdit);
+    }
+
+    // Delete confirmation button
+    const btnConfirmDelete = document.getElementById('btnConfirmDelete');
+    if (btnConfirmDelete) {
+        btnConfirmDelete.addEventListener('click', confirmDelete);
+    }
+
     // Modal backdrop click to close
     document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
         backdrop.addEventListener('click', (e) => {
@@ -207,7 +243,7 @@ function setupEventListeners() {
             }
         });
     });
-    
+
     // Quick select buttons for export range
     document.querySelectorAll('.quick-select-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -355,18 +391,29 @@ function resetClassicForm() {
         'classicTipeMakam', 
         'classicTempatLahir', 
         'classicTanggalLahir', 
-        'classicKeterangan'
+        'classicKeterangan',
+        'classicInitialFeeAmount',
+        'classicInitialFeePaymentDate',
+        'classicInitialFeePaymentMethod'
     ];
     
     fieldIds.forEach(fieldId => {
         const field = document.getElementById(fieldId);
         if (field) {
             console.log(`Resetting ${fieldId}:`, field.id);
-            field.value = '';
+            if (fieldId === 'classicInitialFeeAmount') {
+                field.value = '0';
+            } else {
+                field.value = '';
+            }
         } else {
             console.warn(`Field ${fieldId} not found`);
         }
     });
+
+    // Reset file input
+    const proofInput = document.getElementById('classicInitialFeePaymentProof');
+    if (proofInput) proofInput.value = '';
     
     // Reset ahli waris fields
     const containers = document.querySelectorAll('#classicAhliWarisContainer > div');
@@ -420,7 +467,10 @@ function populateClassicForm(grave, heirs) {
         'classicTipeMakam': grave.grave_type,
         'classicTempatLahir': grave.birth_place,
         'classicTanggalLahir': grave.birth_date,
-        'classicKeterangan': grave.notes
+        'classicKeterangan': grave.notes,
+        'classicInitialFeeAmount': grave.initial_fee_amount !== undefined && grave.initial_fee_amount !== null ? grave.initial_fee_amount : '0',
+        'classicInitialFeePaymentDate': grave.initial_fee_payment_date,
+        'classicInitialFeePaymentMethod': grave.initial_fee_payment_method
     };
     
     Object.entries(fieldMap).forEach(([fieldId, value]) => {
@@ -478,6 +528,7 @@ function scrollToClassicForm() {
 }
 
 function collectClassicFormData() {
+    const initialFeeAmountRaw = document.getElementById('classicInitialFeeAmount')?.value;
     const data = {
         deceased_name: document.getElementById('classicNama')?.value?.trim(),
         block_id: parseInt(document.getElementById('classicBlockSelect')?.value),
@@ -487,6 +538,10 @@ function collectClassicFormData() {
         birth_place: document.getElementById('classicTempatLahir')?.value?.trim() || null,
         birth_date: document.getElementById('classicTanggalLahir')?.value || null,
         notes: document.getElementById('classicKeterangan')?.value?.trim() || null,
+        initial_fee_amount: initialFeeAmountRaw ? parseInt(initialFeeAmountRaw) : 0,
+        initial_fee_payment_date: document.getElementById('classicInitialFeePaymentDate')?.value || null,
+        initial_fee_payment_method: document.getElementById('classicInitialFeePaymentMethod')?.value || null,
+        initial_fee_payment_proof: null,
         heirs: []
     };
     
@@ -539,12 +594,31 @@ async function handleClassicFormSubmit() {
             showToast('Tipe makam wajib dipilih', 'error');
             return;
         }
+        if (data.initial_fee_amount === null || data.initial_fee_amount === undefined || isNaN(data.initial_fee_amount) || data.initial_fee_amount < 0) {
+            showToast('Jumlah bayar biaya makam awal wajib diisi', 'error');
+            return;
+        }
         if (data.heirs.length === 0 || !data.heirs[0].full_name) {
             showToast('Ahli waris pertama wajib diisi', 'error');
             return;
         }
         
         showLoading(true);
+
+        // Handle payment proof upload
+        const proofInput = document.getElementById('classicInitialFeePaymentProof');
+        let proofPath = null;
+        if (editId) {
+            // Get existing proof path to keep if no new file selected
+            const detail = await window.__TAURI__?.core?.invoke('get_grave_by_id', { id: parseInt(editId) });
+            if (detail && detail.initial_fee_payment_proof && (!proofInput || !proofInput.files || proofInput.files.length === 0)) {
+                proofPath = detail.initial_fee_payment_proof;
+            }
+        }
+        if (proofInput && proofInput.files && proofInput.files.length > 0) {
+            proofPath = await uploadPaymentProofFile(proofInput);
+        }
+        data.initial_fee_payment_proof = proofPath;
         
         if (editId) {
             // Update existing
@@ -564,7 +638,11 @@ async function handleClassicFormSubmit() {
                     birth_date: data.birth_date,
                     burial_date: null,
                     notes: data.notes,
-                    grave_type: data.grave_type
+                    grave_type: data.grave_type,
+                    initial_fee_amount: data.initial_fee_amount,
+                    initial_fee_payment_date: data.initial_fee_payment_date,
+                    initial_fee_payment_method: data.initial_fee_payment_method,
+                    initial_fee_payment_proof: data.initial_fee_payment_proof
                 }
             });
             
@@ -608,9 +686,13 @@ async function handleClassicFormSubmit() {
                     date_of_death: data.date_of_death,
                     birth_place: data.birth_place,
                     birth_date: data.birth_date,
-                    burial_date: data.burial_date,
+                    burial_date: null,
                     notes: data.notes,
-                    grave_type: data.grave_type
+                    grave_type: data.grave_type,
+                    initial_fee_amount: data.initial_fee_amount,
+                    initial_fee_payment_date: data.initial_fee_payment_date,
+                    initial_fee_payment_method: data.initial_fee_payment_method,
+                    initial_fee_payment_proof: data.initial_fee_payment_proof
                 },
                 heirs: data.heirs
             };
@@ -621,7 +703,7 @@ async function handleClassicFormSubmit() {
             });
             showToast('Data makam berhasil disimpan', 'success');
         }
-        
+
         // Reset form and refresh table
         resetClassicForm();
         await loadGraves();
@@ -798,7 +880,7 @@ function renderGravesTable() {
         console.log('No graves to render, showing empty message');
         tbody.innerHTML = `
             <tr>
-                <td colspan="10" class="px-4 py-8 text-center text-gray-500">
+                <td colspan="13" class="px-4 py-8 text-center text-gray-500">
                     Tidak ada data makam
                 </td>
             </tr>
@@ -815,10 +897,13 @@ function renderGravesTable() {
         const burialDate = grave.burial_date ? formatDate(grave.burial_date) : '-';
         const birthDate = grave.birth_date ? formatDate(grave.birth_date) : '-';
         
+        const statusMakam = grave.grave_type === 'new' ? 'Makam Baru' : (grave.grave_type === 'stacked' ? 'Makam Tumpuk' : '-');
+
         row.innerHTML = `
-            <td class="px-4 py-3 text-sm text-gray-500 sticky left-0 bg-white border-r">${(currentPage - 1) * itemsPerPage + index + 1}</td>
+            <td class="px-4 py-3 text-sm text-gray-500 border-r">${(currentPage - 1) * itemsPerPage + index + 1}</td>
             <td class="px-4 py-3 text-sm text-center text-gray-600 border-r">${escapeHtml(grave.code)}-${grave.number}</td>
-            <td class="px-4 py-3 text-sm font-medium text-gray-800 border-r">${escapeHtml(grave.deceased_name)}</td>
+            <td class="px-4 py-3 text-sm text-gray-600 border-r">${statusMakam}</td>
+            <td class="px-4 py-3 text-sm font-medium text-gray-800 sticky left-0 bg-white border-r">${escapeHtml(grave.deceased_name)}</td>
             <td class="px-4 py-3 text-sm text-gray-600 border-r">${escapeHtml(grave.birth_place || '-')}</td>
             <td class="px-4 py-3 text-sm text-gray-600 border-r">${birthDate}</td>
             <td class="px-4 py-3 text-sm text-gray-600 border-r">${burialDate}</td>
@@ -831,6 +916,8 @@ function renderGravesTable() {
             <td class="px-4 py-3 text-sm text-gray-600 border-r">
                 <span class="heir-address-${grave.id}">Memuat...</span>
             </td>
+            <td class="px-4 py-3 text-sm text-gray-600 border-r">${truncateText(grave.notes || '-', 20)}</td>
+            <td class="px-4 py-3 text-sm text-gray-600 border-r">${formatRupiah(grave.initial_fee_amount)}</td>
             <td class="px-4 py-3 text-center">
                 <div class="flex items-center justify-center gap-2">
                     <button data-edit-id="${grave.id}" class="btn-edit-grave p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Edit">
@@ -963,6 +1050,64 @@ function closeDetailModal() {
     }
 }
 
+function openImagePreview(src) {
+    console.log('openImagePreview called');
+    // Create overlay dynamically to guarantee it's on top
+    const overlay = document.createElement('div');
+    overlay.id = 'dynamicImagePreview';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:16px;';
+
+    const container = document.createElement('div');
+    container.style.cssText = 'position:relative;max-width:56rem;max-height:90vh;width:100%;display:flex;flex-direction:column;align-items:center;';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.innerHTML = '<svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>';
+    closeBtn.style.cssText = 'position:absolute;top:-40px;right:0;color:white;background:transparent;border:none;cursor:pointer;';
+    closeBtn.addEventListener('click', (e) => { e.stopPropagation(); removeImagePreview(); });
+
+    const img = document.createElement('img');
+    img.src = src;
+    img.alt = 'Preview';
+    img.style.cssText = 'max-width:100%;max-height:80vh;border-radius:8px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.1);object-fit:contain;';
+
+    const hint = document.createElement('p');
+    hint.textContent = 'Klik di luar gambar untuk menutup';
+    hint.style.cssText = 'color:rgba(255,255,255,0.8);font-size:14px;margin-top:12px;';
+
+    container.appendChild(closeBtn);
+    container.appendChild(img);
+    container.appendChild(hint);
+    overlay.appendChild(container);
+    document.body.appendChild(overlay);
+
+    const backdropClick = (e) => {
+        if (e.target === overlay) {
+            removeImagePreview();
+        }
+    };
+    overlay.addEventListener('click', backdropClick);
+
+    const escapeHandler = (e) => {
+        if (e.key === 'Escape') {
+            removeImagePreview();
+            document.removeEventListener('keydown', escapeHandler);
+        }
+    };
+    document.addEventListener('keydown', escapeHandler);
+}
+
+function removeImagePreview() {
+    const overlay = document.getElementById('dynamicImagePreview');
+    if (overlay) {
+        overlay.remove();
+    }
+}
+
+function closeImagePreview() {
+    removeImagePreview();
+}
+
 async function showDetailModal(graveId) {
     console.log('Showing detail for grave:', graveId);
     try {
@@ -983,7 +1128,11 @@ async function showDetailModal(graveId) {
         const tanggalLahirEl = document.getElementById('detailTanggalLahir');
         const tanggalDimakamkanEl = document.getElementById('detailTanggalDimakamkan');
         const keteranganEl = document.getElementById('detailKeterangan');
-        
+        const initialFeeAmountEl = document.getElementById('detailInitialFeeAmount');
+        const initialFeePaymentDateEl = document.getElementById('detailInitialFeePaymentDate');
+        const initialFeePaymentMethodEl = document.getElementById('detailInitialFeePaymentMethod');
+        const initialFeePaymentProofEl = document.getElementById('detailInitialFeePaymentProof');
+
         if (namaEl) namaEl.textContent = detail.grave.deceased_name || '-';
         if (blokEl) blokEl.textContent = (detail.grave.code || '-') + ' - ' + (detail.grave.number || '-');
         if (tipeEl) tipeEl.textContent = detail.grave.grave_type === 'new' ? 'Makam Baru' : (detail.grave.grave_type === 'stacked' ? 'Makam Tumpuk' : '-');
@@ -991,6 +1140,51 @@ async function showDetailModal(graveId) {
         if (tanggalLahirEl) tanggalLahirEl.textContent = detail.grave.birth_date ? formatDate(detail.grave.birth_date) : '-';
         if (tanggalDimakamkanEl) tanggalDimakamkanEl.textContent = detail.grave.burial_date ? formatDate(detail.grave.burial_date) : '-';
         if (keteranganEl) keteranganEl.textContent = detail.grave.notes || '-';
+
+        if (initialFeeAmountEl) initialFeeAmountEl.textContent = formatRupiah(detail.grave.initial_fee_amount);
+        if (initialFeePaymentDateEl) initialFeePaymentDateEl.textContent = detail.grave.initial_fee_payment_date ? formatDate(detail.grave.initial_fee_payment_date) : '-';
+        if (initialFeePaymentMethodEl) initialFeePaymentMethodEl.textContent = formatPaymentMethod(detail.grave.initial_fee_payment_method);
+
+        if (initialFeePaymentProofEl) {
+            if (detail.grave.initial_fee_payment_proof) {
+                initialFeePaymentProofEl.innerHTML = '<p class="text-sm text-blue-600">Memuat preview...</p>';
+                try {
+                    const dataUrl = await window.__TAURI__?.core?.invoke('get_payment_proof_data', {
+                        path: detail.grave.initial_fee_payment_proof
+                    });
+                    if (dataUrl.startsWith('data:image')) {
+                        initialFeePaymentProofEl.innerHTML = '';
+                        const wrapper = document.createElement('button');
+                        wrapper.type = 'button';
+                        wrapper.className = 'inline-flex flex-col items-start gap-1 cursor-pointer group pointer-events-auto';
+                        const img = document.createElement('img');
+                        img.src = dataUrl;
+                        img.alt = 'Bukti Transfer';
+                        img.className = 'h-12 w-auto max-w-[80px] object-contain rounded border border-gray-200 group-hover:opacity-80 transition-opacity pointer-events-auto';
+                        const caption = document.createElement('span');
+                        caption.className = 'text-xs text-blue-600 group-hover:underline pointer-events-auto';
+                        caption.textContent = 'Klik untuk memperbesar';
+                        wrapper.appendChild(img);
+                        wrapper.appendChild(caption);
+                        wrapper.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('Thumbnail clicked, opening preview');
+                            openImagePreview(dataUrl);
+                        });
+                        initialFeePaymentProofEl.appendChild(wrapper);
+                    } else if (dataUrl.startsWith('data:application/pdf')) {
+                        initialFeePaymentProofEl.innerHTML = '<p class="text-sm text-gray-700">Bukti Transfer (PDF)</p>';
+                    } else {
+                        initialFeePaymentProofEl.innerHTML = '<p class="text-sm text-gray-700">Bukti Transfer Tersedia</p>';
+                    }
+                } catch (e) {
+                    initialFeePaymentProofEl.innerHTML = '<p class="text-sm text-red-500">Gagal memuat bukti transfer</p>';
+                }
+            } else {
+                initialFeePaymentProofEl.innerHTML = '-';
+            }
+        }
         
         const heirsContainer = document.getElementById('detailAhliWarisContainer');
         if (heirsContainer) {
@@ -1100,6 +1294,7 @@ function openModal() {
     const tipeSelect = document.getElementById('tambahTipeMakam');
     const tempatLahirInput = document.getElementById('tambahTempatLahir');
     const tanggalLahirInput = document.getElementById('tambahTanggalLahir');
+    const keteranganInput = document.getElementById('tambahKeterangan');
     
     if (namaInput) namaInput.value = '';
     if (blockSelect) blockSelect.value = '';
@@ -1108,7 +1303,17 @@ function openModal() {
     if (tipeSelect) tipeSelect.value = '';
     if (tempatLahirInput) tempatLahirInput.value = '';
     if (tanggalLahirInput) tanggalLahirInput.value = '';
-    
+    if (keteranganInput) keteranganInput.value = '';
+
+    const initialFeeAmount = document.getElementById('tambahInitialFeeAmount');
+    const initialFeePaymentDate = document.getElementById('tambahInitialFeePaymentDate');
+    const initialFeePaymentMethod = document.getElementById('tambahInitialFeePaymentMethod');
+    const initialFeePaymentProof = document.getElementById('tambahInitialFeePaymentProof');
+    if (initialFeeAmount) initialFeeAmount.value = '0';
+    if (initialFeePaymentDate) initialFeePaymentDate.value = '';
+    if (initialFeePaymentMethod) initialFeePaymentMethod.value = '';
+    if (initialFeePaymentProof) initialFeePaymentProof.value = '';
+
     resetAhliWaris();
 }
 
@@ -1223,7 +1428,12 @@ async function simpanData() {
         const tipeMakam = document.getElementById('tambahTipeMakam')?.value;
         const tempatLahir = document.getElementById('tambahTempatLahir')?.value?.trim() || null;
         const tanggalLahir = document.getElementById('tambahTanggalLahir')?.value || null;
-        
+        const keterangan = document.getElementById('tambahKeterangan')?.value?.trim() || null;
+        const initialFeeAmountRaw = document.getElementById('tambahInitialFeeAmount')?.value;
+        const initialFeeAmount = initialFeeAmountRaw ? parseInt(initialFeeAmountRaw) : 0;
+        const initialFeePaymentDate = document.getElementById('tambahInitialFeePaymentDate')?.value || null;
+        const initialFeePaymentMethod = document.getElementById('tambahInitialFeePaymentMethod')?.value || null;
+
         if (!nama) {
             showToast('Nama almarhum wajib diisi', 'error');
             return;
@@ -1239,6 +1449,10 @@ async function simpanData() {
         // Note: tanggal dimakamkan (date_of_death) is now optional
         if (!tipeMakam) {
             showToast('Tipe makam wajib dipilih', 'error');
+            return;
+        }
+        if (isNaN(initialFeeAmount) || initialFeeAmount < 0) {
+            showToast('Jumlah bayar biaya makam awal wajib diisi', 'error');
             return;
         }
         
@@ -1286,7 +1500,14 @@ async function simpanData() {
         }
         
         showLoading(true);
-        
+
+        // Handle payment proof upload
+        const proofInput = document.getElementById('tambahInitialFeePaymentProof');
+        let proofPath = null;
+        if (proofInput && proofInput.files && proofInput.files.length > 0) {
+            proofPath = await uploadPaymentProofFile(proofInput);
+        }
+
         const token = window.astanaApp?.getSessionToken?.() || localStorage.getItem('astana_session_token');
         const requestPayload = {
             grave: {
@@ -1294,20 +1515,24 @@ async function simpanData() {
                 block_id: blockId,
                 number: nomor,
                 date_of_death: tanggalWafat,
-                birth_place: tempatLahir,
-                birth_date: tanggalLahir,
-                burial_date: null,
-                notes: null,
-                grave_type: tipeMakam
+                    birth_place: tempatLahir,
+                    birth_date: tanggalLahir,
+                    burial_date: null,
+                    notes: keterangan,
+                    grave_type: tipeMakam,
+                    initial_fee_amount: initialFeeAmount,
+                initial_fee_payment_date: initialFeePaymentDate,
+                initial_fee_payment_method: initialFeePaymentMethod,
+                initial_fee_payment_proof: proofPath
             },
             heirs: heirs
         };
         console.log('Request payload:', JSON.stringify(requestPayload, null, 2));
-        await window.__TAURI__?.core?.invoke('create_grave_with_heirs', { 
+        await window.__TAURI__?.core?.invoke('create_grave_with_heirs', {
             token: token,
-            request: requestPayload 
+            request: requestPayload
         });
-        
+
         closeModal();
         showToast('Data makam berhasil disimpan', 'success');
         await loadGraves();
@@ -1345,13 +1570,25 @@ async function openEditModal(graveId) {
         const tempatLahirInput = document.getElementById('editTempatLahir');
         const tanggalLahirInput = document.getElementById('editTanggalLahir');
         
+        const keteranganInput = document.getElementById('editKeterangan');
+
         if (namaInput) namaInput.value = detail.deceased_name || '';
         if (tanggalInput) tanggalInput.value = detail.date_of_death || '';
         if (nomorInput) nomorInput.value = detail.number || '';
         if (tipeSelect) tipeSelect.value = detail.grave_type || '';
         if (tempatLahirInput) tempatLahirInput.value = detail.birth_place || '';
         if (tanggalLahirInput) tanggalLahirInput.value = detail.birth_date || '';
-        
+        if (keteranganInput) keteranganInput.value = detail.notes || '';
+
+        const editInitialFeeAmount = document.getElementById('editInitialFeeAmount');
+        const editInitialFeePaymentDate = document.getElementById('editInitialFeePaymentDate');
+        const editInitialFeePaymentMethod = document.getElementById('editInitialFeePaymentMethod');
+        const editInitialFeePaymentProof = document.getElementById('editInitialFeePaymentProof');
+        if (editInitialFeeAmount) editInitialFeeAmount.value = detail.initial_fee_amount !== undefined && detail.initial_fee_amount !== null ? detail.initial_fee_amount : '0';
+        if (editInitialFeePaymentDate) editInitialFeePaymentDate.value = detail.initial_fee_payment_date || '';
+        if (editInitialFeePaymentMethod) editInitialFeePaymentMethod.value = detail.initial_fee_payment_method || '';
+        if (editInitialFeePaymentProof) editInitialFeePaymentProof.value = '';
+
         populateEditBlockSelect(detail.block_id);
         
         const heirs = await loadHeirsForGrave(graveId);
@@ -1442,7 +1679,7 @@ function updateTombolWarisEdit() {
 
 async function simpanEdit() {
     if (!currentEditingId) return;
-    
+
     try {
         const nama = document.getElementById('editNama')?.value?.trim();
         const blockId = parseInt(document.getElementById('editBlockSelect')?.value);
@@ -1451,7 +1688,12 @@ async function simpanEdit() {
         const tipeMakam = document.getElementById('editTipeMakam')?.value;
         const tempatLahir = document.getElementById('editTempatLahir')?.value?.trim() || null;
         const tanggalLahir = document.getElementById('editTanggalLahir')?.value || null;
-        
+        const keterangan = document.getElementById('editKeterangan')?.value?.trim() || null;
+        const initialFeeAmountRaw = document.getElementById('editInitialFeeAmount')?.value;
+        const initialFeeAmount = initialFeeAmountRaw ? parseInt(initialFeeAmountRaw) : 0;
+        const initialFeePaymentDate = document.getElementById('editInitialFeePaymentDate')?.value || null;
+        const initialFeePaymentMethod = document.getElementById('editInitialFeePaymentMethod')?.value || null;
+
         if (!nama) {
             showToast('Nama almarhum wajib diisi', 'error');
             return;
@@ -1469,19 +1711,23 @@ async function simpanEdit() {
             showToast('Tipe makam wajib dipilih', 'error');
             return;
         }
-        
+        if (isNaN(initialFeeAmount) || initialFeeAmount < 0) {
+            showToast('Jumlah bayar biaya makam awal wajib diisi', 'error');
+            return;
+        }
+
         const heirs = [];
         const heirElements = document.querySelectorAll('#editAhliWarisContainer > div');
-        
+
         for (let i = 0; i < heirElements.length; i++) {
             const el = heirElements[i];
             const namaWaris = el.querySelector('.heir-nama')?.value?.trim();
-            
+
             if (i === 0 && !namaWaris) {
                 showToast('Ahli waris pertama wajib diisi', 'error');
                 return;
             }
-            
+
             if (namaWaris) {
                 heirs.push({
                     grave_id: currentEditingId,
@@ -1494,38 +1740,53 @@ async function simpanEdit() {
                 });
             }
         }
-        
+
         if (heirs.length === 0) {
             showToast('Minimal 1 ahli waris wajib diisi', 'error');
             return;
         }
-        
+
         showLoading(true);
-        
+
+        // Handle payment proof upload
+        const proofInput = document.getElementById('editInitialFeePaymentProof');
+        let proofPath = null;
+        const detail = await window.__TAURI__?.core?.invoke('get_grave_by_id', { id: currentEditingId });
+        if (detail && detail.initial_fee_payment_proof && (!proofInput || !proofInput.files || proofInput.files.length === 0)) {
+            proofPath = detail.initial_fee_payment_proof;
+        }
+        if (proofInput && proofInput.files && proofInput.files.length > 0) {
+            proofPath = await uploadPaymentProofFile(proofInput);
+        }
+
         const graveUpdate = {
             deceased_name: nama,
             block_id: blockId,
             number: nomor,
             date_of_death: tanggalWafat,
-            birth_place: tempatLahir,
-            birth_date: tanggalLahir,
-            burial_date: null,
-            notes: null,
-            grave_type: tipeMakam
+                    birth_place: tempatLahir,
+                    birth_date: tanggalLahir,
+                    burial_date: null,
+                    notes: keterangan,
+                    grave_type: tipeMakam,
+            initial_fee_amount: initialFeeAmount,
+            initial_fee_payment_date: initialFeePaymentDate,
+            initial_fee_payment_method: initialFeePaymentMethod,
+            initial_fee_payment_proof: proofPath
         };
-        
+
         console.log('Updating grave via modal:', currentEditingId, graveUpdate);
-        
+
         const token = window.astanaApp?.getSessionToken?.() || localStorage.getItem('astana_session_token');
-        
+
         await window.__TAURI__?.core?.invoke('update_grave', {
             token: token,
             id: currentEditingId,
             grave: graveUpdate
         });
-        
+
         await window.__TAURI__?.core?.invoke('delete_heirs_by_grave', { graveId: currentEditingId });
-        
+
         for (const heir of heirs) {
             await window.__TAURI__?.core?.invoke('create_heir', {
                 heir: {
@@ -1534,7 +1795,7 @@ async function simpanEdit() {
                 }
             });
         }
-        
+
         closeEditModal();
         showToast('Data makam berhasil diperbarui', 'success');
         await loadGraves();
@@ -1808,6 +2069,9 @@ async function exportToExcel(startYear, endYear) {
                 'Tanggal Lahir': item.birth_date ? formatDate(item.birth_date) : '-',
                 'Tanggal Dimakamkan': item.burial_date ? formatDate(item.burial_date) : '-',
                 'Keterangan': item.notes || '-',
+                'Biaya Makam Awal': item.initial_fee_amount || 0,
+                'Tanggal Bayar Biaya Awal': item.initial_fee_payment_date ? formatDate(item.initial_fee_payment_date) : '-',
+                'Metode Bayar Biaya Awal': formatPaymentMethod(item.initial_fee_payment_method),
             };
             
             for (let i = 0; i < 3; i++) {
@@ -1840,6 +2104,9 @@ async function exportToExcel(startYear, endYear) {
             { wch: 15 },
             { wch: 15 },
             { wch: 18 },
+            { wch: 20 },
+            { wch: 18 },
+            { wch: 20 },
             { wch: 20 },
             { wch: 20 },
             { wch: 15 },
@@ -1921,6 +2188,38 @@ function formatRelationship(relationship) {
         'lainnya': 'Lainnya'
     };
     return map[relationship] || relationship;
+}
+
+function formatPaymentMethod(method) {
+    if (!method) return '-';
+    const map = {
+        'cash': 'Tunai',
+        'transfer': 'Transfer Bank',
+        'qris': 'QRIS'
+    };
+    return map[method] || method;
+}
+
+function formatRupiah(amount) {
+    if (amount === null || amount === undefined || amount === '') return '-';
+    const num = parseInt(amount);
+    if (isNaN(num)) return '-';
+    return 'Rp ' + num.toLocaleString('id-ID');
+}
+
+async function uploadPaymentProofFile(inputElement) {
+    if (!inputElement || !inputElement.files || inputElement.files.length === 0) {
+        return null;
+    }
+    const file = inputElement.files[0];
+    const arrayBuffer = await file.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    const fileData = Array.from(uint8Array);
+    const proofPath = await window.__TAURI__?.core?.invoke('upload_payment_proof', {
+        fileData: fileData,
+        fileName: file.name
+    });
+    return proofPath;
 }
 
 // ==================== TABLE ACTION LISTENERS ====================
@@ -2009,6 +2308,8 @@ window.closeSuksesModal = closeSuksesModal;
 window.showDetailModal = showDetailModal;
 window.closeDetailModal = closeDetailModal;
 window.openDetailModal = openDetailModal;
+window.openImagePreview = openImagePreview;
+window.closeImagePreview = closeImagePreview;
 window.loadGraves = loadGraves;
 window.toggleViewMode = toggleViewMode;
 window.resetClassicForm = resetClassicForm;

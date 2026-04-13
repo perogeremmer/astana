@@ -1468,12 +1468,12 @@ async fn upload_logo(
         .path()
         .app_data_dir()
         .map_err(|e| format!("Failed to get app data dir: {:?}", e))?;
-    
+
     // Create images folder if not exists
     let images_dir = app_data_dir.join("images");
     std::fs::create_dir_all(&images_dir)
         .map_err(|e| format!("Failed to create images directory: {}", e))?;
-    
+
     // Generate unique filename
     let timestamp = chrono::Local::now().timestamp();
     let ext = std::path::Path::new(&file_name)
@@ -1482,13 +1482,93 @@ async fn upload_logo(
         .unwrap_or("png");
     let new_filename = format!("logo_{}. {}", timestamp, ext);
     let file_path = images_dir.join(&new_filename);
-    
+
     // Write file
     std::fs::write(&file_path, file_data)
         .map_err(|e| format!("Failed to write logo file: {}", e))?;
-    
+
     // Return relative path
     Ok(format!("images/{}", new_filename))
+}
+
+/// Upload payment proof file and save to app_data_dir/images folder
+#[tauri::command]
+async fn upload_payment_proof(
+    app_handle: tauri::AppHandle,
+    file_data: Vec<u8>,
+    file_name: String,
+) -> Result<String, String> {
+    // Get app data directory
+    let app_data_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("Failed to get app data dir: {:?}", e))?;
+
+    // Create images folder if not exists
+    let images_dir = app_data_dir.join("images");
+    std::fs::create_dir_all(&images_dir)
+        .map_err(|e| format!("Failed to create images directory: {}", e))?;
+
+    // Generate unique filename
+    let timestamp = chrono::Local::now().timestamp();
+    let ext = std::path::Path::new(&file_name)
+        .extension()
+        .and_then(|e: &std::ffi::OsStr| e.to_str())
+        .unwrap_or("png");
+    let new_filename = format!("proof_{}. {}", timestamp, ext);
+    let file_path = images_dir.join(&new_filename);
+
+    // Write file
+    std::fs::write(&file_path, file_data)
+        .map_err(|e| format!("Failed to write payment proof file: {}", e))?;
+
+    // Return relative path
+    Ok(format!("images/{}", new_filename))
+}
+
+/// Get payment proof file data as base64
+#[tauri::command]
+async fn get_payment_proof_data(
+    app_handle: tauri::AppHandle,
+    path: String,
+) -> Result<String, String> {
+    // Get app data directory
+    let app_data_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("Failed to get app data dir: {:?}", e))?;
+
+    let file_path = app_data_dir.join(&path);
+
+    // Security check: ensure the resolved path is within app_data_dir
+    let canonical_file = std::fs::canonicalize(&file_path)
+        .map_err(|e| format!("Failed to canonicalize file path: {}", e))?;
+    let canonical_base = std::fs::canonicalize(&app_data_dir)
+        .map_err(|e| format!("Failed to canonicalize app data dir: {}", e))?;
+
+    if !canonical_file.starts_with(&canonical_base) {
+        return Err("Invalid file path: path traversal detected".to_string());
+    }
+
+    let file_data = std::fs::read(&canonical_file)
+        .map_err(|e| format!("Failed to read payment proof file: {}", e))?;
+
+    let base64_data = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &file_data);
+
+    // Determine mime type from extension
+    let ext = std::path::Path::new(&path)
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("png");
+    let mime_type = match ext.to_lowercase().as_str() {
+        "jpg" | "jpeg" => "image/jpeg",
+        "png" => "image/png",
+        "gif" => "image/gif",
+        "pdf" => "application/pdf",
+        _ => "image/png",
+    };
+
+    Ok(format!("data:{};base64,{}", mime_type, base64_data))
 }
 
 // ==================== AUTHENTICATION COMMANDS ====================
@@ -2246,6 +2326,8 @@ pub fn run() {
             update_last_backup,
             upload_logo,
             get_logo_data,
+            upload_payment_proof,
+            get_payment_proof_data,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

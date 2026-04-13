@@ -22,6 +22,7 @@ const MIGRATION_SQL_V2: &str = include_str!("../migrations/002_auth.sql");
 const MIGRATION_SQL_V3: &str = include_str!("../migrations/003_grave_type.sql");
 const MIGRATION_SQL_V4: &str = include_str!("../migrations/004_birth_fields.sql");
 const MIGRATION_SQL_V5: &str = include_str!("../migrations/005_remove_grave_unique_constraint.sql");
+const MIGRATION_SQL_V6: &str = include_str!("../migrations/006_grave_initial_fee.sql");
 
 /// Database management structure
 pub struct Database {
@@ -176,6 +177,24 @@ impl Database {
                     } else {
                         log::warn!("⚠️ V5 migration warning (non-critical): {}", e);
                     }
+                }
+            }
+        }
+
+        // Run V6 migration (grave initial fee) - handle case where column already exists
+        match self.conn.execute_batch(MIGRATION_SQL_V6) {
+            Ok(_) => {
+                log::info!("✅ V6 migration (grave_initial_fee) applied successfully");
+            }
+            Err(e) => {
+                let error_msg = e.to_string();
+                // Check if error is because column already exists
+                if error_msg.contains("duplicate column name")
+                    || error_msg.contains("already exists")
+                {
+                    log::info!("ℹ️ V6 migration skipped: initial fee fields already exist");
+                } else {
+                    log::warn!("⚠️ V6 migration warning (non-critical): {}", e);
                 }
             }
         }
@@ -455,7 +474,7 @@ impl Database {
         sort_order: Option<String>,
     ) -> Result<Vec<GraveWithBlock>, String> {
         let mut query = String::from(
-            "SELECT g.id, g.deceased_name, g.block_id, g.number, g.birth_place, g.birth_date, g.date_of_death, g.burial_date, g.notes, g.grave_type, g.created_at, g.updated_at,
+            "SELECT g.id, g.deceased_name, g.block_id, g.number, g.birth_place, g.birth_date, g.date_of_death, g.burial_date, g.notes, g.grave_type, g.initial_fee_amount, g.initial_fee_payment_date, g.initial_fee_payment_method, g.initial_fee_payment_proof, g.created_at, g.updated_at,
                     b.code, b.annual_fee
                     FROM graves g
                     JOIN blocks b ON g.block_id = b.id
@@ -518,10 +537,14 @@ impl Database {
                     burial_date: row.get(7)?,
                     notes: row.get(8)?,
                     grave_type: row.get(9)?,
-                    created_at: row.get(10)?,
-                    updated_at: row.get(11)?,
-                    code: row.get(12)?,
-                    annual_fee: row.get(13)?,
+                    initial_fee_amount: row.get(10)?,
+                    initial_fee_payment_date: row.get(11)?,
+                    initial_fee_payment_method: row.get(12)?,
+                    initial_fee_payment_proof: row.get(13)?,
+                    created_at: row.get(14)?,
+                    updated_at: row.get(15)?,
+                    code: row.get(16)?,
+                    annual_fee: row.get(17)?,
                 })
             })
             .map_err(|e| format!("Failed to query graves: {}", e))?
@@ -535,7 +558,7 @@ impl Database {
     pub fn create_grave(&self, grave: &CreateGraveRequest) -> Result<i64, String> {
         self.conn
             .execute(
-                "INSERT INTO graves (deceased_name, block_id, number, birth_place, birth_date, date_of_death, burial_date, notes, grave_type) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                "INSERT INTO graves (deceased_name, block_id, number, birth_place, birth_date, date_of_death, burial_date, notes, grave_type, initial_fee_amount, initial_fee_payment_date, initial_fee_payment_method, initial_fee_payment_proof) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
                 [
                     &grave.deceased_name as &dyn rusqlite::ToSql,
                     &grave.block_id as &dyn rusqlite::ToSql,
@@ -546,6 +569,10 @@ impl Database {
                     &grave.burial_date.as_deref().unwrap_or("") as &dyn rusqlite::ToSql,
                     &grave.notes.as_deref().unwrap_or("") as &dyn rusqlite::ToSql,
                     &grave.grave_type as &dyn rusqlite::ToSql,
+                    &grave.initial_fee_amount as &dyn rusqlite::ToSql,
+                    &grave.initial_fee_payment_date.as_deref().unwrap_or("") as &dyn rusqlite::ToSql,
+                    &grave.initial_fee_payment_method.as_deref().unwrap_or("") as &dyn rusqlite::ToSql,
+                    &grave.initial_fee_payment_proof.as_deref().unwrap_or("") as &dyn rusqlite::ToSql,
                 ],
             )
             .map_err(|e| format!("Failed to create grave: {}", e))?;
@@ -557,7 +584,7 @@ impl Database {
     pub fn get_grave_by_id(&self, id: i64) -> Result<Option<GraveWithBlock>, String> {
         let grave = self.conn
             .query_row(
-                "SELECT g.id, g.deceased_name, g.block_id, g.number, g.birth_place, g.birth_date, g.date_of_death, g.burial_date, g.notes, g.grave_type, g.created_at, g.updated_at,
+                "SELECT g.id, g.deceased_name, g.block_id, g.number, g.birth_place, g.birth_date, g.date_of_death, g.burial_date, g.notes, g.grave_type, g.initial_fee_amount, g.initial_fee_payment_date, g.initial_fee_payment_method, g.initial_fee_payment_proof, g.created_at, g.updated_at,
                         b.code, b.annual_fee
                  FROM graves g
                  JOIN blocks b ON g.block_id = b.id
@@ -575,10 +602,14 @@ impl Database {
                         burial_date: row.get(7)?,
                         notes: row.get(8)?,
                         grave_type: row.get(9)?,
-                        created_at: row.get(10)?,
-                        updated_at: row.get(11)?,
-                        code: row.get(12)?,
-                        annual_fee: row.get(13)?,
+                        initial_fee_amount: row.get(10)?,
+                        initial_fee_payment_date: row.get(11)?,
+                        initial_fee_payment_method: row.get(12)?,
+                        initial_fee_payment_proof: row.get(13)?,
+                        created_at: row.get(14)?,
+                        updated_at: row.get(15)?,
+                        code: row.get(16)?,
+                        annual_fee: row.get(17)?,
                     })
                 },
             )
@@ -601,8 +632,12 @@ impl Database {
                     date_of_death = COALESCE(?6, date_of_death),
                     burial_date = COALESCE(?7, burial_date),
                     notes = COALESCE(?8, notes),
-                    grave_type = COALESCE(?9, grave_type)
-                 WHERE id = ?10",
+                    grave_type = COALESCE(?9, grave_type),
+                    initial_fee_amount = COALESCE(?10, initial_fee_amount),
+                    initial_fee_payment_date = COALESCE(?11, initial_fee_payment_date),
+                    initial_fee_payment_method = COALESCE(?12, initial_fee_payment_method),
+                    initial_fee_payment_proof = COALESCE(?13, initial_fee_payment_proof)
+                 WHERE id = ?14",
                 [
                     &grave.deceased_name as &dyn rusqlite::ToSql,
                     &grave.block_id.map(|v| v.to_string()) as &dyn rusqlite::ToSql,
@@ -613,6 +648,10 @@ impl Database {
                     &grave.burial_date as &dyn rusqlite::ToSql,
                     &grave.notes as &dyn rusqlite::ToSql,
                     &grave.grave_type as &dyn rusqlite::ToSql,
+                    &grave.initial_fee_amount.map(|v| v.to_string()) as &dyn rusqlite::ToSql,
+                    &grave.initial_fee_payment_date as &dyn rusqlite::ToSql,
+                    &grave.initial_fee_payment_method as &dyn rusqlite::ToSql,
+                    &grave.initial_fee_payment_proof as &dyn rusqlite::ToSql,
                     &id as &dyn rusqlite::ToSql,
                 ],
             )
@@ -670,7 +709,7 @@ impl Database {
     ) -> Result<Vec<GraveExportData>, String> {
         // Build query for graves
         let mut query = String::from(
-            "SELECT g.id, g.deceased_name, g.block_id, g.number, g.birth_place, g.birth_date, g.date_of_death, g.burial_date, g.notes, g.grave_type, g.created_at, g.updated_at,
+            "SELECT g.id, g.deceased_name, g.block_id, g.number, g.birth_place, g.birth_date, g.date_of_death, g.burial_date, g.notes, g.grave_type, g.initial_fee_amount, g.initial_fee_payment_date, g.initial_fee_payment_method, g.initial_fee_payment_proof, g.created_at, g.updated_at,
                     b.code, b.annual_fee
                     FROM graves g
                     JOIN blocks b ON g.block_id = b.id
@@ -713,10 +752,14 @@ impl Database {
                     burial_date: row.get(7)?,
                     notes: row.get(8)?,
                     grave_type: row.get(9)?,
-                    created_at: row.get(10)?,
-                    updated_at: row.get(11)?,
-                    code: row.get(12)?,
-                    annual_fee: row.get(13)?,
+                    initial_fee_amount: row.get(10)?,
+                    initial_fee_payment_date: row.get(11)?,
+                    initial_fee_payment_method: row.get(12)?,
+                    initial_fee_payment_proof: row.get(13)?,
+                    created_at: row.get(14)?,
+                    updated_at: row.get(15)?,
+                    code: row.get(16)?,
+                    annual_fee: row.get(17)?,
                 })
             })
             .map_err(|e| format!("Failed to query graves: {}", e))?
@@ -739,6 +782,10 @@ impl Database {
                 burial_date: grave.burial_date,
                 notes: grave.notes,
                 grave_type: grave.grave_type,
+                initial_fee_amount: grave.initial_fee_amount,
+                initial_fee_payment_date: grave.initial_fee_payment_date,
+                initial_fee_payment_method: grave.initial_fee_payment_method,
+                initial_fee_payment_proof: grave.initial_fee_payment_proof,
                 annual_fee: grave.annual_fee,
                 heirs,
                 payments,
@@ -1652,6 +1699,10 @@ pub struct Grave {
     pub birth_date: Option<String>,
     pub notes: Option<String>,
     pub grave_type: Option<String>,
+    pub initial_fee_amount: i64,
+    pub initial_fee_payment_date: Option<String>,
+    pub initial_fee_payment_method: Option<String>,
+    pub initial_fee_payment_proof: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -1668,6 +1719,10 @@ pub struct GraveWithBlock {
     pub birth_date: Option<String>,
     pub notes: Option<String>,
     pub grave_type: Option<String>,
+    pub initial_fee_amount: i64,
+    pub initial_fee_payment_date: Option<String>,
+    pub initial_fee_payment_method: Option<String>,
+    pub initial_fee_payment_proof: Option<String>,
     pub created_at: String,
     pub updated_at: String,
     pub code: String,
@@ -1685,6 +1740,10 @@ pub struct CreateGraveRequest {
     pub birth_date: Option<String>,
     pub notes: Option<String>,
     pub grave_type: String,
+    pub initial_fee_amount: i64,
+    pub initial_fee_payment_date: Option<String>,
+    pub initial_fee_payment_method: Option<String>,
+    pub initial_fee_payment_proof: Option<String>,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -1698,6 +1757,10 @@ pub struct UpdateGraveRequest {
     pub birth_date: Option<String>,
     pub notes: Option<String>,
     pub grave_type: Option<String>,
+    pub initial_fee_amount: Option<i64>,
+    pub initial_fee_payment_date: Option<String>,
+    pub initial_fee_payment_method: Option<String>,
+    pub initial_fee_payment_proof: Option<String>,
 }
 
 /// Grave export data structure (includes heirs and payments)
@@ -1713,6 +1776,10 @@ pub struct GraveExportData {
     pub birth_date: Option<String>,
     pub notes: Option<String>,
     pub grave_type: Option<String>,
+    pub initial_fee_amount: i64,
+    pub initial_fee_payment_date: Option<String>,
+    pub initial_fee_payment_method: Option<String>,
+    pub initial_fee_payment_proof: Option<String>,
     pub annual_fee: i64,
     pub heirs: Vec<Heir>,
     pub payments: Vec<Payment>,
