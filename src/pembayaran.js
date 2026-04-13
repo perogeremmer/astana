@@ -1,17 +1,15 @@
 // Pembayaran - Payment Management JavaScript
-// Integrates with Tauri backend
-
-
+// Integrates with Tauri backend - Updated version with multi-year payment
 
 // Global state
 let currentPayments = [];
 let currentBlocks = [];
-let currentGraves = [];
 let currentYear = new Date().getFullYear();
 let currentPage = 1;
 let totalPages = 1;
 const itemsPerPage = 10;
-let currentPaymentData = null;
+let currentGraveData = null;
+let currentUserFullName = '';
 
 // ==================== INITIALIZATION ====================
 
@@ -25,11 +23,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize year picker
     initYearPicker();
     
+    // Load current user info
+    await loadCurrentUser();
+    
     await loadBlocks();
     await loadPayments();
     setupEventListeners();
     updateActiveYearDisplay();
 });
+
+// Load current user info for default received_by
+async function loadCurrentUser() {
+    try {
+        const token = window.astanaApp.getSessionToken();
+        const user = await window.__TAURI__?.core?.invoke('get_current_user', { token });
+        if (user) {
+            currentUserFullName = user.full_name || user.username;
+        }
+    } catch (error) {
+        console.error('Failed to load current user:', error);
+        currentUserFullName = 'Admin';
+    }
+}
 
 // ==================== YEAR PICKER ====================
 
@@ -222,30 +237,6 @@ function setupEventListeners() {
         });
     }
 
-    // Year picker is initialized in initYearPicker() and handles its own events
-    
-    // Export modal year selectors
-    const startYearSelect = document.getElementById('exportStartYear');
-    const endYearSelect = document.getElementById('exportEndYear');
-    
-    if (startYearSelect) {
-        startYearSelect.addEventListener('change', updateYearPreview);
-    }
-    
-    if (endYearSelect) {
-        endYearSelect.addEventListener('change', updateYearPreview);
-    }
-    
-    // Logout button
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
-            if (window.astanaApp && window.astanaApp.logout) {
-                window.astanaApp.logout();
-            }
-        });
-    }
-    
     // Export Excel button
     const exportExcelBtn = document.getElementById('exportExcelBtn');
     if (exportExcelBtn) {
@@ -288,10 +279,16 @@ function setupEventListeners() {
         });
     });
     
-    // Detail modal - close button
+    // Detail modal - close buttons
     const closeDetailModalBtn = document.getElementById('closeDetailModalBtn');
+    const btnCloseModal = document.getElementById('btnCloseModal');
+    
     if (closeDetailModalBtn) {
         closeDetailModalBtn.addEventListener('click', closeDetailModal);
+    }
+    
+    if (btnCloseModal) {
+        btnCloseModal.addEventListener('click', closeDetailModal);
     }
     
     // Detail modal - backdrop click
@@ -318,35 +315,41 @@ function setupEventListeners() {
         confirmDeletePaymentBtn.addEventListener('click', confirmDeletePayment);
     }
     
-    // Setup event delegation for dynamically created buttons
-    setupDynamicEventListeners();
+    // Logout button
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            if (window.astanaApp && window.astanaApp.logout) {
+                window.astanaApp.logout();
+            }
+        });
+    }
+    
+    // Process payment button
+    const btnProcessPayment = document.getElementById('btnProcessPayment');
+    if (btnProcessPayment) {
+        btnProcessPayment.addEventListener('click', processMultiYearPayment);
+    }
+    
+    // Combined receipt button
+    const btnCombinedReceipt = document.getElementById('btnCombinedReceipt');
+    if (btnCombinedReceipt) {
+        btnCombinedReceipt.addEventListener('click', downloadCombinedReceipt);
+    }
+    
+    // Setup event delegation for table row clicks and receipt buttons
+    setupTableEventDelegation();
 }
 
-function setupDynamicEventListeners() {
-    // Event delegation for table buttons (payment buttons with openPaymentModal)
-    const tbody = document.querySelector('tbody');
+function setupTableEventDelegation() {
+    // Event delegation for table rows
+    const tbody = document.getElementById('paymentsTableBody');
     if (tbody) {
         tbody.addEventListener('click', (e) => {
-            // Handle demo buttons
-            const demoBtn = e.target.closest('button[data-demo-trigger]');
-            if (demoBtn) {
-                const args = demoBtn.dataset.demoArgs.split(', ');
-                // Parse arguments: name, year, status, hasBukti
-                const nama = args[0].replace(/'/g, '');
-                const tahun = args[1].replace(/'/g, '');
-                const status = args[2].replace(/'/g, '');
-                const hasBukti = args[3] === 'true';
-                openDetailModal(nama, tahun, status, hasBukti);
-                return;
-            }
-            
-            // Handle real data buttons
-            const btn = e.target.closest('button[data-grave-id]');
-            if (btn) {
-                const graveId = parseInt(btn.dataset.graveId);
-                const year = parseInt(btn.dataset.year);
-                const isPaid = btn.dataset.isPaid === 'true';
-                openPaymentModal(graveId, year, isPaid);
+            const row = e.target.closest('tr[data-grave-id]');
+            if (row) {
+                const graveId = parseInt(row.dataset.graveId);
+                openGravePaymentModal(graveId);
             }
         });
     }
@@ -359,66 +362,6 @@ function setupDynamicEventListeners() {
             if (btn) {
                 const page = parseInt(btn.dataset.page);
                 goToPage(page);
-            }
-        });
-    }
-    
-    // Event delegation for modal footer buttons (processPayment, deleteCurrentPayment, etc.)
-    const modalFooter = document.getElementById('modalFooter');
-    if (modalFooter) {
-        modalFooter.addEventListener('click', (e) => {
-            const btn = e.target.closest('button[data-action]');
-            if (btn) {
-                const action = btn.dataset.action;
-                switch(action) {
-                    case 'close':
-                        closeDetailModal();
-                        break;
-                    case 'process':
-                        processPayment();
-                        break;
-                    case 'delete':
-                        deleteCurrentPayment();
-                        break;
-                    case 'switch-to-add-bukti':
-                        switchToAddBuktiMode();
-                        break;
-                    case 'upload-bukti':
-                        prosesUploadBukti();
-                        break;
-                    case 'switch-bukti':
-                        switchToAddBuktiMode();
-                        break;
-                    case 'proses-bayar':
-                        prosesBayar();
-                        break;
-                }
-            }
-        });
-    }
-    
-    // Event delegation for dynamic content (file upload, etc.)
-    const dynamicContent = document.getElementById('dynamicContent');
-    if (dynamicContent) {
-        dynamicContent.addEventListener('click', (e) => {
-            // File upload trigger
-            const uploadTrigger = e.target.closest('[data-trigger-upload]');
-            if (uploadTrigger) {
-                const fileInput = document.getElementById('inputFile');
-                if (fileInput) fileInput.click();
-            }
-            
-            // Clear file button
-            const clearFileBtn = e.target.closest('[data-clear-file]');
-            if (clearFileBtn) {
-                clearFile();
-            }
-        });
-        
-        dynamicContent.addEventListener('change', (e) => {
-            // File input change
-            if (e.target.id === 'inputFile') {
-                handleFileSelect(e.target);
             }
         });
     }
@@ -455,7 +398,7 @@ async function loadBlocks() {
 }
 
 function populateBlockFilter() {
-    const blockSelect = document.querySelector('select');
+    const blockSelect = document.getElementById('blockFilter');
     if (!blockSelect) return;
     
     // Save current selection
@@ -511,7 +454,7 @@ async function loadPayments() {
         currentPayments = payments;
         totalPages = Math.ceil(totalCount / itemsPerPage) || 1;
         
-        renderPaymentsTable(status);
+        renderPaymentsTable();
         updatePagination(totalCount);
     } catch (error) {
         console.error('Failed to load payments:', error);
@@ -527,23 +470,16 @@ function renderTableHeader() {
     const thead = document.getElementById('paymentsTableHead');
     if (!thead) return;
     
-    // Generate year columns (current year and 4 years back, in descending order)
-    let yearHeaders = '';
-    for (let i = 0; i < 5; i++) {
-        const year = currentYear - i;
-        const isLast = i === 4;
-        yearHeaders += `
-            <th class="px-3 py-3 text-center text-xs font-semibold text-emerald-600 uppercase tracking-wider ${isLast ? '' : 'border-r'} w-32">${year}</th>
-        `;
-    }
-    
     thead.innerHTML = `
         <tr>
             <th class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10 border-r">No</th>
             <th class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sticky left-10 bg-gray-50 z-10 border-r">Nama Almarhum</th>
             <th class="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider border-r">Blok</th>
-            <th class="px-3 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider border-r">Iuran/Tahun</th>
-            ${yearHeaders}
+            <th class="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider border-r">Nomor</th>
+            <th class="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider border-r">Tipe</th>
+            <th class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-r">Ahli Waris</th>
+            <th class="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider border-r">Status ${currentYear}</th>
+            <th class="px-3 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Bayar</th>
         </tr>
     `;
 }
@@ -560,15 +496,9 @@ function renderPaymentsTable() {
     if (currentPayments.length === 0) {
         let emptyMessage = 'Tidak ada data pembayaran';
         
-        if (statusFilter === 'lunas') {
-            emptyMessage = 'Belum ada data makam yang melakukan pelunasan';
-        } else if (statusFilter === 'belum') {
-            emptyMessage = 'Semua makam sudah melakukan pelunasan';
-        }
-        
         tbody.innerHTML = `
             <tr>
-                <td colspan="9" class="px-3 py-8 text-center text-gray-500">
+                <td colspan="8" class="px-3 py-8 text-center text-gray-500">
                     ${emptyMessage}
                 </td>
             </tr>
@@ -578,47 +508,28 @@ function renderPaymentsTable() {
     
     currentPayments.forEach((item, index) => {
         const row = document.createElement('tr');
-        row.className = 'hover:bg-gray-50';
+        row.className = 'hover:bg-gray-50 cursor-pointer transition-colors';
+        row.dataset.graveId = item.grave_id;
         
-        // Generate year columns (5 years) - already in descending order from backend
-        let yearCells = '';
-        item.recent_payments.forEach((payment, idx) => {
-            const isPaid = payment.is_paid;
-            // Convert amount to number and handle null/undefined
-            const amount = parseInt(payment.amount) || 0;
-            const btnClass = isPaid 
-                ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-800' 
-                : 'bg-red-100 hover:bg-red-200 text-red-700';
-            // Jika lunas tapi amount 0/null, tampilkan "Lunas"
-            // Jika lunas dan ada amount, tampilkan angka
-            const btnText = isPaid 
-                ? (amount > 0 ? formatRupiahShort(amount) : 'Lunas')
-                : 'Bayar';
-            
-            // Last column doesn't have border-r
-            const isLast = idx === item.recent_payments.length - 1;
-            
-            yearCells += `
-                <td class="px-2 py-2 text-center ${isLast ? '' : 'border-r'}">
-                    <button data-grave-id="${item.grave_id}" data-year="${payment.year}" data-is-paid="${isPaid ? 'true' : 'false'}"
-                        class="w-full px-2 py-1.5 ${btnClass} text-xs font-semibold rounded-lg transition-colors">
-                        ${btnText}
-                    </button>
-                </td>
-            `;
-        });
+        // Status badge
+        const statusBadge = item.current_year_paid 
+            ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">Lunas</span>'
+            : '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Belum</span>';
         
-        // Cari nominal pembayaran yang sudah dibayar untuk ditampilkan di kolom Nominal Iuran
-        // Jika annual_fee 0, gunakan amount dari pembayaran yang sudah ada
-        const paidPayment = item.recent_payments.find(p => p.is_paid && (parseInt(p.amount) > 0));
-        const displayFee = item.annual_fee > 0 ? item.annual_fee : (paidPayment ? parseInt(paidPayment.amount) : 0);
+        // Format grave type
+        const graveType = item.grave_type 
+            ? (item.grave_type === 'new' ? 'Baru' : item.grave_type === 'stacked' ? 'Tumpuk' : item.grave_type)
+            : '-';
         
         row.innerHTML = `
             <td class="px-3 py-3 text-sm text-gray-500 sticky left-0 bg-white border-r">${(currentPage - 1) * itemsPerPage + index + 1}</td>
             <td class="px-3 py-3 text-sm font-medium text-gray-800 sticky left-10 bg-white border-r">${escapeHtml(item.deceased_name)}</td>
-            <td class="px-3 py-3 text-sm text-center text-gray-600 border-r">${item.block_code}-${item.number}</td>
-            <td class="px-3 py-3 text-sm text-right text-gray-600 border-r">${displayFee > 0 ? formatRupiah(displayFee) : '-'}</td>
-            ${yearCells}
+            <td class="px-3 py-3 text-sm text-center text-gray-600 border-r">${item.block_code}</td>
+            <td class="px-3 py-3 text-sm text-center text-gray-600 border-r">${item.number}</td>
+            <td class="px-3 py-3 text-sm text-center text-gray-600 border-r">${graveType}</td>
+            <td class="px-3 py-3 text-sm text-gray-600 border-r">${escapeHtml(item.primary_heir_name || '-')}</td>
+            <td class="px-3 py-3 text-center border-r">${statusBadge}</td>
+            <td class="px-3 py-3 text-sm text-right text-emerald-600 font-medium">${formatRupiah(item.total_paid_amount)}</td>
         `;
         
         tbody.appendChild(row);
@@ -626,7 +537,6 @@ function renderPaymentsTable() {
 }
 
 function formatRupiahShort(amount) {
-    // Format with dots as thousand separators
     return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
@@ -698,184 +608,222 @@ async function goToPage(page) {
 
 // ==================== PAYMENT MODAL ====================
 
-async function openPaymentModal(graveId, year, isPaid) {
+async function openGravePaymentModal(graveId) {
     try {
         showLoading(true);
         
-        // Get grave detail
-        const graveDetail = await window.__TAURI__?.core?.invoke('get_grave_detail', { id: graveId });
-        if (!graveDetail) {
+        // Get grave payment detail
+        const detail = await window.__TAURI__?.core?.invoke('get_grave_payment_detail', { graveId });
+        
+        if (!detail) {
             showToast('Data makam tidak ditemukan', 'error');
             return;
         }
         
-        // Get existing payment for this year
-        const existingPayment = await window.__TAURI__?.core?.invoke('get_payment_by_grave_and_year', { 
-            graveId: graveId, 
-            year: year 
-        });
+        currentGraveData = detail;
         
-        currentPaymentData = {
-            graveId: graveId,
-            year: year,
-            grave: graveDetail.grave,
-            heirs: graveDetail.heirs,
-            existingPayment: existingPayment
-        };
+        // Populate info section
+        document.getElementById('infoDeceasedName').textContent = detail.grave.deceased_name;
+        document.getElementById('infoGraveType').textContent = detail.grave.grave_type 
+            ? (detail.grave.grave_type === 'new' ? 'Baru' : detail.grave.grave_type === 'stacked' ? 'Tumpuk' : detail.grave.grave_type)
+            : '-';
+        document.getElementById('infoBlockNumber').textContent = `${detail.grave.block_code} - ${detail.grave.grave_number}`;
         
-        renderPaymentModal(isPaid);
+        // Calculate total paid
+        const totalPaid = detail.payments.reduce((sum, p) => sum + p.amount, 0);
+        document.getElementById('infoTotalPaid').textContent = formatRupiah(totalPaid);
         
+        // Heir info
+        document.getElementById('infoHeirName').textContent = detail.grave.heir_name || '-';
+        document.getElementById('infoHeirAddress').textContent = detail.grave.heir_address || '-';
+        
+        // Notes/Keterangan
+        document.getElementById('infoNotes').textContent = detail.grave.notes || '-';
+        
+        // Annual fee
+        document.getElementById('infoAnnualFee').textContent = formatRupiah(detail.grave.annual_fee);
+        
+        // Set default received_by
+        document.getElementById('inputReceivedBy').value = currentUserFullName;
+        
+        // Render unpaid years checkboxes
+        renderUnpaidYears(detail);
+        
+        // Render payment history
+        renderPaymentHistory(detail.payments);
+        
+        // Show modal
         const modal = document.getElementById('modalDetail');
         modal.classList.remove('hidden');
         
-        // Scroll to top of modal content
+        // Scroll to top
         const modalContent = modal.querySelector('.overflow-y-auto');
         if (modalContent) {
             modalContent.scrollTop = 0;
         }
     } catch (error) {
-        console.error('Failed to load payment data:', error);
-        showToast('Gagal memuat data pembayaran', 'error');
+        console.error('Failed to load grave payment detail:', error);
+        showToast('Gagal memuat detail pembayaran', 'error');
     } finally {
         showLoading(false);
     }
 }
 
-function renderPaymentModal(isPaid) {
-    const data = currentPaymentData;
-    const grave = data.grave;
-    const year = data.year;
-    const annualFee = grave.annual_fee;
+function renderUnpaidYears(detail) {
+    const container = document.getElementById('unpaidYearsContainer');
+    if (!container) return;
     
-    document.getElementById('detailNama').textContent = grave.deceased_name;
-    document.getElementById('detailTahun').textContent = year;
-    // Jika sudah bayar dan ada amount pembayaran, tampilkan amount tersebut
-    // Jika belum bayar, tampilkan annual_fee dari blok
-    const displayNominal = (isPaid && data.existingPayment && data.existingPayment.amount > 0) 
-        ? data.existingPayment.amount 
-        : annualFee;
-    document.getElementById('detailNominal').textContent = formatRupiah(displayNominal);
+    container.innerHTML = '';
     
-    const dynamicContent = document.getElementById('dynamicContent');
-    const modalFooter = document.getElementById('modalFooter');
-    const modalTitle = document.getElementById('modalTitle');
+    // Get paid years
+    const paidYears = new Set(detail.payments.map(p => p.year));
     
-    if (!isPaid) {
-        // Mode: Input Pembayaran Baru
-        modalTitle.textContent = 'Pembayaran Iuran';
-        dynamicContent.innerHTML = `
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Tanggal Pembayaran</label>
-                    <input type="date" id="inputTanggal" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" value="${new Date().toISOString().split('T')[0]}">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Jumlah Bayar</label>
-                    <input type="number" id="inputJumlah" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" value="${annualFee}">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Metode Pembayaran</label>
-                    <select id="inputMetode" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" style="background-color: white !important; color: #1f2937 !important;">
-                        <option value="cash">Tunai</option>
-                        <option value="transfer">Transfer Bank</option>
-                        <option value="qris">QRIS</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Dibayar Oleh</label>
-                    <input type="text" id="inputPaidBy" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Nama pembayar">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Keterangan (Opsional)</label>
-                    <textarea id="inputKeterangan" rows="2" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Contoh: Pembayaran iuran tahun ${year}"></textarea>
-                </div>
-            </div>
-        `;
-        modalFooter.innerHTML = `
-            <button data-action="close" class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors">Batal</button>
-            <button data-action="process" class="flex-1 px-4 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors">Bayar Sekarang</button>
-        `;
-    } else {
-        // Mode: Lihat Detail Pembayaran
-        const payment = data.existingPayment;
-        modalTitle.textContent = 'Detail Pembayaran';
-        dynamicContent.innerHTML = `
-            <div class="space-y-4">
-                <div class="flex items-center gap-2 text-emerald-600 bg-emerald-50 rounded-lg p-3">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+    // Generate years from currentYear-9 to currentYear
+    const years = [];
+    for (let y = currentYear; y >= currentYear - 9; y--) {
+        years.push(y);
+    }
+    
+    // Create checkboxes for unpaid years
+    years.forEach(year => {
+        const isPaid = paidYears.has(year);
+        
+        const label = document.createElement('label');
+        label.className = `inline-flex items-center px-3 py-1.5 rounded-lg border text-sm cursor-pointer transition-colors ${
+            isPaid 
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-700 cursor-not-allowed' 
+                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+        }`;
+        
+        if (!isPaid) {
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = year;
+            checkbox.className = 'mr-2 rounded text-emerald-600 focus:ring-emerald-500';
+            checkbox.addEventListener('change', updateTotalToPay);
+            label.appendChild(checkbox);
+        }
+        
+        const text = document.createElement('span');
+        text.textContent = isPaid ? `${year} (Lunas)` : year;
+        label.appendChild(text);
+        
+        container.appendChild(label);
+    });
+    
+    // Update total to pay
+    updateTotalToPay();
+}
+
+function updateTotalToPay() {
+    const container = document.getElementById('unpaidYearsContainer');
+    const totalDisplay = document.getElementById('infoTotalToPay');
+    
+    if (!container || !totalDisplay || !currentGraveData) return;
+    
+    const checkboxes = container.querySelectorAll('input[type="checkbox"]:checked');
+    const selectedCount = checkboxes.length;
+    const total = selectedCount * currentGraveData.grave.annual_fee;
+    
+    totalDisplay.textContent = formatRupiah(total);
+}
+
+function renderPaymentHistory(payments) {
+    const tbody = document.getElementById('paymentHistoryBody');
+    const emptyDiv = document.getElementById('paymentHistoryEmpty');
+    
+    if (!tbody || !emptyDiv) return;
+    
+    tbody.innerHTML = '';
+    
+    if (payments.length === 0) {
+        emptyDiv.classList.remove('hidden');
+        tbody.parentElement.classList.add('hidden');
+        return;
+    }
+    
+    emptyDiv.classList.add('hidden');
+    tbody.parentElement.classList.remove('hidden');
+    
+    // Sort by year descending
+    const sortedPayments = [...payments].sort((a, b) => b.year - a.year);
+    
+    sortedPayments.forEach((payment, index) => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-50';
+
+        const receiverName = payment.receiver_name || payment.received_by || '-';
+
+        row.innerHTML = `
+            <td class="px-3 py-2 text-sm text-gray-500">${index + 1}</td>
+            <td class="px-3 py-2 text-sm font-medium text-gray-800">${payment.year}</td>
+            <td class="px-3 py-2 text-sm text-gray-600">${formatDate(payment.payment_date)}</td>
+            <td class="px-3 py-2 text-sm text-right font-medium text-gray-800">${formatRupiah(payment.amount)}</td>
+            <td class="px-3 py-2 text-sm text-gray-600">${escapeHtml(payment.paid_by || '-')}</td>
+            <td class="px-3 py-2 text-sm text-gray-600">${escapeHtml(receiverName)}</td>
+            <td class="px-3 py-2 text-center">
+                <button class="btn-single-receipt p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors" data-payment-id="${payment.id}" title="Download Kwitansi">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
                     </svg>
-                    <span class="font-medium">${payment?.amount > 0 ? 'Pembayaran Lunas - ' + formatRupiah(payment.amount) : 'Pembayaran Lunas'}</span>
-                </div>
-                <div class="bg-gray-50 rounded-lg p-3 text-sm text-gray-600 space-y-2">
-                    <p><strong>Tanggal Bayar:</strong> ${payment ? formatDate(payment.payment_date) : '-'}</p>
-                    <p><strong>Metode:</strong> ${payment?.payment_method || 'Tunai'}</p>
-                    <p><strong>Dibayar Oleh:</strong> ${payment?.paid_by || '-'}</p>
-                    <p><strong>Keterangan:</strong> ${payment?.notes || '-'}</p>
-                </div>
-            </div>
+                </button>
+            </td>
         `;
-        modalFooter.innerHTML = `
-            <button data-action="close" class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors">Tutup</button>
-            <button data-action="delete" class="flex-1 px-4 py-2.5 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors">Hapus Pembayaran</button>
-        `;
-    }
+
+        // Add click event for receipt button
+        const receiptBtn = row.querySelector('.btn-single-receipt');
+        if (receiptBtn) {
+            receiptBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const paymentId = parseInt(receiptBtn.dataset.paymentId);
+                downloadSingleReceipt(paymentId);
+            });
+        }
+
+        tbody.appendChild(row);
+    });
 }
 
-function closeDetailModal() {
-    const modal = document.getElementById('modalDetail');
-    if (modal) {
-        modal.classList.add('hidden');
-    }
-    currentPaymentData = null;
-    
-    // Re-enable body scroll
-    document.body.style.overflow = '';
-}
-
-async function processPayment() {
-    if (!currentPaymentData) return;
+async function processMultiYearPayment() {
+    if (!currentGraveData) return;
     
     try {
-        const tanggal = document.getElementById('inputTanggal').value;
-        const jumlah = parseInt(document.getElementById('inputJumlah').value);
-        const metode = document.getElementById('inputMetode').value;
-        const paidBy = document.getElementById('inputPaidBy').value;
-        const keterangan = document.getElementById('inputKeterangan').value;
+        // Get selected years
+        const container = document.getElementById('unpaidYearsContainer');
+        const checkboxes = container.querySelectorAll('input[type="checkbox"]:checked');
+        const years = Array.from(checkboxes).map(cb => parseInt(cb.value));
         
-        if (!tanggal) {
-            showToast('Tanggal pembayaran wajib diisi', 'error');
+        if (years.length === 0) {
+            showToast('Pilih minimal satu tahun untuk dibayar', 'error');
             return;
         }
         
-        if (!jumlah || jumlah <= 0) {
-            showToast('Jumlah pembayaran tidak valid', 'error');
+        const paidBy = document.getElementById('inputPaidBy').value.trim();
+        const receivedBy = document.getElementById('inputReceivedBy').value.trim();
+        
+        if (!receivedBy) {
+            showToast('Nama penerima wajib diisi', 'error');
             return;
         }
         
         showLoading(true);
         
-        // Get expected_fee from block's annual_fee (snapshot at time of payment)
-        const expectedFee = currentPaymentData.grave?.annual_fee || jumlah;
-        
         const token = window.astanaApp.getSessionToken();
-        await window.__TAURI__?.core?.invoke('create_payment', {
+        
+        await window.__TAURI__?.core?.invoke('create_multi_year_payments', {
             token,
-            payment: {
-                grave_id: currentPaymentData.graveId,
-                year: currentPaymentData.year,
-                payment_date: tanggal,
-                amount: jumlah,
-                expected_fee: expectedFee,
-                payment_method: metode,
-                payment_proof: null,
+            request: {
+                grave_id: currentGraveData.grave.grave_id,
+                years,
+                payment_date: new Date().toISOString().split('T')[0],
+                amount_per_year: currentGraveData.grave.annual_fee,
                 paid_by: paidBy || null,
-                notes: keterangan || null
+                received_by: receivedBy
             }
         });
         
         closeDetailModal();
-        showToast('Pembayaran berhasil dicatat', 'success');
+        showToast(`Pembayaran ${years.length} tahun berhasil dicatat`, 'success');
         await loadPayments();
     } catch (error) {
         console.error('Failed to process payment:', error);
@@ -885,15 +833,25 @@ async function processPayment() {
     }
 }
 
+function closeDetailModal() {
+    const modal = document.getElementById('modalDetail');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+    currentGraveData = null;
+    document.body.style.overflow = '';
+}
+
 // Store payment ID to delete
 let paymentIdToDelete = null;
 
 // Open delete confirmation modal
 function openDeletePaymentModal() {
-    if (!currentPaymentData || !currentPaymentData.existingPayment) return;
+    if (!currentGraveData) return;
     
-    paymentIdToDelete = currentPaymentData.existingPayment.id;
-    document.getElementById('deletePaymentConfirmModal').classList.remove('hidden');
+    // For now, disable delete from modal
+    // You can add this functionality later
+    showToast('Fitur hapus dari modal belum tersedia', 'info');
 }
 
 // Close delete confirmation modal
@@ -917,7 +875,6 @@ async function confirmDeletePayment() {
             id: paymentIdToDelete
         });
         
-        closeDetailModal();
         showToast('Pembayaran berhasil dihapus', 'success');
         await loadPayments();
     } catch (error) {
@@ -926,10 +883,6 @@ async function confirmDeletePayment() {
     } finally {
         showLoading(false);
     }
-}
-
-async function deleteCurrentPayment() {
-    openDeletePaymentModal();
 }
 
 // ==================== EXPORT EXCEL ====================
@@ -1267,6 +1220,105 @@ function showLoading(show) {
     }
 }
 
+async function downloadSingleReceipt(paymentId) {
+    try {
+        showLoading(true);
+        const token = window.astanaApp.getSessionToken();
+        
+        const pdfBytes = await window.__TAURI__?.core?.invoke('generate_single_receipt', {
+            token,
+            paymentId
+        });
+        
+        if (!pdfBytes) {
+            showToast('Gagal generate kwitansi', 'error');
+            return;
+        }
+        
+        // Get payment info for filename
+        const payment = currentGraveData?.payments?.find(p => p.id === paymentId);
+        const year = payment ? payment.year : '';
+        const deceasedName = currentGraveData?.grave?.deceased_name || 'Almarhum';
+        const filename = `Kwitansi_${deceasedName.replace(/\s+/g, '_')}_${year}.pdf`;
+        
+        await downloadPdfBytes(pdfBytes, filename);
+        showToast('Kwitansi berhasil diunduh', 'success');
+    } catch (error) {
+        console.error('Failed to download single receipt:', error);
+        showToast('Gagal mengunduh kwitansi: ' + error, 'error');
+    } finally {
+        showLoading(false);
+    }
+}
+
+async function downloadCombinedReceipt() {
+    if (!currentGraveData) return;
+    
+    try {
+        showLoading(true);
+        const token = window.astanaApp.getSessionToken();
+        
+        const pdfBytes = await window.__TAURI__?.core?.invoke('generate_combined_receipt', {
+            token,
+            graveId: currentGraveData.grave.grave_id
+        });
+        
+        if (!pdfBytes) {
+            showToast('Gagal generate kwitansi', 'error');
+            return;
+        }
+        
+        const deceasedName = currentGraveData?.grave?.deceased_name || 'Almarhum';
+        const filename = `Kwitansi_All_${deceasedName.replace(/\s+/g, '_')}.pdf`;
+        
+        await downloadPdfBytes(pdfBytes, filename);
+        showToast('Kwitansi keseluruhan berhasil diunduh', 'success');
+    } catch (error) {
+        console.error('Failed to download combined receipt:', error);
+        showToast('Gagal mengunduh kwitansi: ' + error, 'error');
+    } finally {
+        showLoading(false);
+    }
+}
+
+async function downloadPdfBytes(pdfBytes, filename) {
+    const blob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
+    
+    if (window.__TAURI__) {
+        try {
+            // Convert blob to array for Tauri
+            const arrayBuffer = await blob.arrayBuffer();
+            const uint8Array = new Uint8Array(arrayBuffer);
+            const fileData = Array.from(uint8Array);
+            
+            const savedPath = await window.__TAURI__?.core?.invoke('save_excel_file', {
+                fileData,
+                defaultName: filename
+            });
+            
+            if (!savedPath) {
+                // User cancelled, do nothing
+            }
+        } catch (tauriError) {
+            console.error('Tauri save failed:', tauriError);
+            fallbackPdfDownload(blob, filename);
+        }
+    } else {
+        fallbackPdfDownload(blob, filename);
+    }
+}
+
+function fallbackPdfDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
 function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     const bgColor = type === 'success' ? 'bg-emerald-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
@@ -1284,27 +1336,6 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
 
-// ==================== FILE HANDLING ====================
-
-function handleFileSelect(input) {
-    if (input.files && input.files.length > 0) {
-        const fileName = input.files[0].name;
-        const previewFile = document.getElementById('previewFile');
-        const previewFileName = document.getElementById('previewFileName');
-        if (previewFile && previewFileName) {
-            previewFileName.textContent = fileName;
-            previewFile.classList.remove('hidden');
-        }
-    }
-}
-
-function clearFile() {
-    const inputFile = document.getElementById('inputFile');
-    const previewFile = document.getElementById('previewFile');
-    if (inputFile) inputFile.value = '';
-    if (previewFile) previewFile.classList.add('hidden');
-}
-
 // ==================== SUCCESS MODAL ====================
 
 function closeSuksesModal() {
@@ -1313,296 +1344,3 @@ function closeSuksesModal() {
         modalSukses.classList.add('hidden');
     }
 }
-
-// ==================== LEGACY FUNCTIONS (for backward compatibility) ====================
-
-function prosesBayar() {
-    // Legacy function for demo mode - calls processPayment for real data
-    if (currentPaymentData) {
-        processPayment();
-    } else {
-        // Demo mode fallback
-        closeDetailModal();
-        setTimeout(() => {
-            const suksesMessage = document.getElementById('suksesMessage');
-            const modalSukses = document.getElementById('modalSukses');
-            if (suksesMessage) suksesMessage.textContent = 'Pembayaran iuran berhasil dicatat.';
-            if (modalSukses) modalSukses.classList.remove('hidden');
-        }, 300);
-    }
-}
-
-function prosesUploadBukti() {
-    // Demo mode function
-    closeDetailModal();
-    setTimeout(() => {
-        const suksesMessage = document.getElementById('suksesMessage');
-        const modalSukses = document.getElementById('modalSukses');
-        if (suksesMessage) suksesMessage.textContent = 'Bukti bayar berhasil ditambahkan.';
-        if (modalSukses) modalSukses.classList.remove('hidden');
-    }, 300);
-}
-
-function switchToAddBuktiMode() {
-    // Demo mode function
-    const { nama, tahun } = currentData || {};
-    closeDetailModal();
-    setTimeout(() => {
-        // Remove bukti from dataBukti so we can add it again
-        if (dataBukti[nama] && dataBukti[nama][tahun]) {
-            delete dataBukti[nama][tahun];
-        }
-        // Reopen modal in "lunas tanpa bukti" mode
-        openDetailModal(nama, tahun, 'lunas', false);
-    }, 300);
-}
-
-// ==================== DEMO MODE DATA & FUNCTIONS ====================
-
-// Demo data - for static/demo table
-const dataBukti = {
-    'Ahmad Sudirman': { '2022': true, '2023': true, '2024': true },
-    'Siti Aminah': { '2022': true, '2023': true },
-    'H. Muhammad Ridwan': { '2022': true, '2023': true, '2024': true },
-    'Dewi Kusuma': { '2022': true, '2023': true, '2024': true, '2025': true },
-    'Abdul Rahman': { '2022': true, '2023': true, '2024': true, '2025': true, '2026': true },
-    'Bambang Sutrisno': {}
-};
-
-const dataNominal = {
-    'Ahmad Sudirman': 100000,
-    'Siti Aminah': 100000,
-    'H. Muhammad Ridwan': 150000,
-    'Dewi Kusuma': 100000,
-    'Abdul Rahman': 200000,
-    'Bambang Sutrisno': 100000
-};
-
-let currentData = {};
-
-function formatRupiahLocal(angka) {
-    return 'Rp ' + angka.toLocaleString('id-ID');
-}
-
-function formatRupiahNoPrefixLocal(angka) {
-    return angka.toLocaleString('id-ID');
-}
-
-function openDetailModal(nama, tahun, status, hasBukti) {
-    currentData = { nama, tahun, status };
-    const nominal = dataNominal[nama] || 100000;
-    
-    document.getElementById('detailNama').textContent = nama;
-    document.getElementById('detailTahun').textContent = tahun;
-    document.getElementById('detailNominal').textContent = formatRupiahLocal(nominal);
-    
-    const dynamicContent = document.getElementById('dynamicContent');
-    const modalFooter = document.getElementById('modalFooter');
-    const modalTitle = document.getElementById('modalTitle');
-
-    if (status === 'bayar') {
-        // Mode: Input Pembayaran Baru
-        modalTitle.textContent = 'Pembayaran Iuran';
-        dynamicContent.innerHTML = `
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Tanggal Pembayaran</label>
-                    <input type="date" id="inputTanggal" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" value="${new Date().toISOString().split('T')[0]}">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Metode Pembayaran</label>
-                    <select id="inputMetode" class="w-full px-3 py-2.5 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer" style="background-image: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 fill=%22none%22 viewBox=%220 0 24 24%22 stroke=%22%236b7280%22><path stroke-linecap=%22round%22 stroke-linejoin=%22round%22 stroke-width=%222%22 d=%22M19 9l-7 7-7-7%22/></svg>'); background-position: right 0.75rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em; padding-right: 2.5rem;">
-                        <option value="tunai">Tunai</option>
-                        <option value="transfer">Transfer Bank</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Upload Bukti Bayar <span class="text-gray-400 font-normal">(Opsional)</span></label>
-                    <div class="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:bg-gray-50 transition-colors cursor-pointer" id="uploadTrigger">
-                        <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                            </svg>
-                        </div>
-                        <p class="text-xs text-gray-500">Klik untuk upload foto/struk</p>
-                        <input type="file" id="inputFile" class="hidden" accept=".jpg,.jpeg,.png,.pdf">
-                    </div>
-                    <div id="previewFile" class="hidden mt-2 bg-blue-50 rounded-lg p-2 flex items-center gap-2">
-                        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                        </svg>
-                        <span class="text-xs text-gray-700 flex-1 truncate" id="previewFileName"></span>
-                        <button class="text-red-500 hover:text-red-700" id="clearFileBtn">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Keterangan (Opsional)</label>
-                    <textarea id="inputKeterangan" rows="2" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Contoh: Dibayar oleh anak pertama"></textarea>
-                </div>
-            </div>
-        `;
-        modalFooter.innerHTML = `
-            <button data-action="close" class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors">Batal</button>
-            <button data-action="proses-bayar" class="flex-1 px-4 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors">Bayar Sekarang</button>
-        `;
-        
-        // Attach event listeners for dynamically created elements
-        setupDemoModalListeners();
-    } else {
-        // Status lunas - cek apakah sudah ada bukti
-        const sudahAdaBukti = dataBukti[nama] && dataBukti[nama][tahun];
-        
-        if (sudahAdaBukti) {
-            // Mode: Lihat Bukti yang Sudah Ada
-            modalTitle.textContent = 'Detail Bukti Bayar';
-            dynamicContent.innerHTML = `
-                <div class="space-y-4">
-                    <div class="flex items-center gap-2 text-emerald-600 bg-emerald-50 rounded-lg p-3">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                        <span class="font-medium">Pembayaran Lunas - Rp ${formatRupiahNoPrefixLocal(nominal)}</span>
-                    </div>
-                    <div class="bg-gray-100 rounded-xl p-4">
-                        <p class="text-xs text-gray-500 mb-2">Bukti Pembayaran:</p>
-                        <div class="bg-white rounded-lg p-3 border border-gray-200">
-                            <div class="flex items-center gap-3">
-                                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                    </svg>
-                                </div>
-                                <div class="flex-1">
-                                    <p class="text-sm font-medium text-gray-800">Bukti_Pembayaran_${tahun}.jpg</p>
-                                    <p class="text-xs text-gray-500">Diupload: 15 Jan 2024</p>
-                                </div>
-                                <button class="text-blue-600 hover:text-blue-800 text-sm font-medium">Lihat</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bg-gray-50 rounded-lg p-3 text-sm text-gray-600 space-y-1">
-                        <p><strong>Tanggal Bayar:</strong> 15 Januari 2024</p>
-                        <p><strong>Metode:</strong> Transfer Bank</p>
-                        <p><strong>Keterangan:</strong> Dibayar oleh anak pertama</p>
-                    </div>
-                </div>
-            `;
-            modalFooter.innerHTML = `
-                <button data-action="close" class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors">Tutup</button>
-                <button data-action="switch-bukti" class="flex-1 px-4 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors">Ganti Bukti</button>
-            `;
-        } else {
-            // Mode: Tambah Bukti Bayar (Lunas tapi belum ada bukti)
-            modalTitle.textContent = 'Tambah Bukti Bayar';
-            dynamicContent.innerHTML = `
-                <div class="space-y-4">
-                    <div class="flex items-center gap-2 text-amber-600 bg-amber-50 rounded-lg p-3">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                        </svg>
-                        <span class="text-sm font-medium">Pembayaran lunas tapi belum ada bukti</span>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Upload Bukti Bayar</label>
-                        <div class="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:bg-gray-50 transition-colors cursor-pointer" id="uploadTrigger">
-                            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                </svg>
-                            </div>
-                            <p class="text-xs text-gray-500">Klik untuk upload foto/struk</p>
-                            <input type="file" id="inputFile" class="hidden" accept=".jpg,.jpeg,.png,.pdf">
-                        </div>
-                        <div id="previewFile" class="hidden mt-2 bg-blue-50 rounded-lg p-2 flex items-center gap-2">
-                            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                            </svg>
-                            <span class="text-xs text-gray-700 flex-1 truncate" id="previewFileName"></span>
-                            <button class="text-red-500 hover:text-red-700" id="clearFileBtn">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Keterangan (Opsional)</label>
-                        <textarea id="inputKeterangan" rows="2" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Contoh: Transfer dari BCA"></textarea>
-                    </div>
-                </div>
-            `;
-            modalFooter.innerHTML = `
-                <button data-action="close" class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors">Batal</button>
-                <button data-action="upload-bukti" class="flex-1 px-4 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors">Simpan Bukti</button>
-            `;
-        }
-        
-        // Attach event listeners for dynamically created elements
-        setupDemoModalListeners();
-    }
-
-    const modal = document.getElementById('modalDetail');
-    modal.classList.remove('hidden');
-    
-    // Scroll to top of modal content
-    const modalContent = modal.querySelector('.overflow-y-auto');
-    if (modalContent) {
-        modalContent.scrollTop = 0;
-    }
-    
-    // Scroll backdrop to top for mobile
-    const backdrop = modal.querySelector('.overflow-y-auto');
-    if (backdrop) {
-        backdrop.scrollTop = 0;
-    }
-}
-
-function setupDemoModalListeners() {
-    // Upload trigger click
-    const uploadTrigger = document.getElementById('uploadTrigger');
-    if (uploadTrigger) {
-        uploadTrigger.addEventListener('click', () => {
-            const fileInput = document.getElementById('inputFile');
-            if (fileInput) fileInput.click();
-        });
-    }
-    
-    // File input change
-    const inputFile = document.getElementById('inputFile');
-    if (inputFile) {
-        inputFile.addEventListener('change', (e) => {
-            handleFileSelect(e.target);
-        });
-    }
-    
-    // Clear file button
-    const clearFileBtn = document.getElementById('clearFileBtn');
-    if (clearFileBtn) {
-        clearFileBtn.addEventListener('click', clearFile);
-    }
-}
-
-// Expose functions to global scope
-window.openPaymentModal = openPaymentModal;
-window.closeDetailModal = closeDetailModal;
-window.processPayment = processPayment;
-window.deleteCurrentPayment = deleteCurrentPayment;
-window.closeDeletePaymentConfirmModal = closeDeletePaymentConfirmModal;
-window.confirmDeletePayment = confirmDeletePayment;
-window.goToPage = goToPage;
-window.openExportExcelModal = openExportExcelModal;
-window.closeExportExcelModal = closeExportExcelModal;
-window.setExportRange = setExportRange;
-window.updateYearPreview = updateYearPreview;
-window.confirmExportExcel = confirmExportExcel;
-window.exportToExcel = exportToExcel;
-window.closeSuksesModal = closeSuksesModal;
-window.handleFileSelect = handleFileSelect;
-window.clearFile = clearFile;
-window.prosesBayar = prosesBayar;
-window.prosesUploadBukti = prosesUploadBukti;
-window.switchToAddBuktiMode = switchToAddBuktiMode;

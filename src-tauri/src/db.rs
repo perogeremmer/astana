@@ -23,6 +23,7 @@ const MIGRATION_SQL_V3: &str = include_str!("../migrations/003_grave_type.sql");
 const MIGRATION_SQL_V4: &str = include_str!("../migrations/004_birth_fields.sql");
 const MIGRATION_SQL_V5: &str = include_str!("../migrations/005_remove_grave_unique_constraint.sql");
 const MIGRATION_SQL_V6: &str = include_str!("../migrations/006_grave_initial_fee.sql");
+const MIGRATION_SQL_V7: &str = include_str!("../migrations/007_payment_enhancement.sql");
 
 /// Database management structure
 pub struct Database {
@@ -195,6 +196,25 @@ impl Database {
                     log::info!("ℹ️ V6 migration skipped: initial fee fields already exist");
                 } else {
                     log::warn!("⚠️ V6 migration warning (non-critical): {}", e);
+                }
+            }
+        }
+
+        // Run V7 migration (payment enhancement) - handle case where columns already exist
+        match self.conn.execute_batch(MIGRATION_SQL_V7) {
+            Ok(_) => {
+                log::info!("✅ V7 migration (payment_enhancement) applied successfully");
+            }
+            Err(e) => {
+                let error_msg = e.to_string();
+                if error_msg.contains("duplicate column name")
+                    || error_msg.contains("already exists")
+                {
+                    log::info!(
+                        "ℹ️ V7 migration skipped: payment enhancement columns already exist"
+                    );
+                } else {
+                    log::warn!("⚠️ V7 migration warning (non-critical): {}", e);
                 }
             }
         }
@@ -923,7 +943,7 @@ impl Database {
     /// Get payments by grave ID
     pub fn get_payments_by_grave(&self, grave_id: i64) -> Result<Vec<Payment>, String> {
         let mut stmt = self.conn
-            .prepare("SELECT id, grave_id, year, payment_date, amount, expected_fee, payment_method, payment_proof, paid_by, notes, created_at, updated_at FROM payments WHERE grave_id = ?1 ORDER BY year DESC")
+            .prepare("SELECT id, grave_id, year, payment_date, amount, expected_fee, payment_method, payment_proof, paid_by, notes, inputted_by, received_by, created_at, updated_at FROM payments WHERE grave_id = ?1 ORDER BY year DESC")
             .map_err(|e| format!("Failed to prepare query: {}", e))?;
 
         let payments = stmt
@@ -939,8 +959,10 @@ impl Database {
                     payment_proof: row.get(7)?,
                     paid_by: row.get(8)?,
                     notes: row.get(9)?,
-                    created_at: row.get(10)?,
-                    updated_at: row.get(11)?,
+                    inputted_by: row.get(10)?,
+                    received_by: row.get(11)?,
+                    created_at: row.get(12)?,
+                    updated_at: row.get(13)?,
                 })
             })
             .map_err(|e| format!("Failed to query payments: {}", e))?
@@ -948,6 +970,37 @@ impl Database {
             .map_err(|e| format!("Failed to collect payments: {}", e))?;
 
         Ok(payments)
+    }
+
+    /// Get payment by ID
+    pub fn get_payment_by_id(&self, payment_id: i64) -> Result<Option<Payment>, String> {
+        let payment = self.conn
+            .query_row(
+                "SELECT id, grave_id, year, payment_date, amount, expected_fee, payment_method, payment_proof, paid_by, notes, inputted_by, received_by, created_at, updated_at FROM payments WHERE id = ?1",
+                [payment_id],
+                |row| {
+                    Ok(Payment {
+                        id: row.get(0)?,
+                        grave_id: row.get(1)?,
+                        year: row.get(2)?,
+                        payment_date: row.get(3)?,
+                        amount: row.get(4)?,
+                        expected_fee: row.get(5)?,
+                        payment_method: row.get(6)?,
+                        payment_proof: row.get(7)?,
+                        paid_by: row.get(8)?,
+                        notes: row.get(9)?,
+                        inputted_by: row.get(10)?,
+                        received_by: row.get(11)?,
+                        created_at: row.get(12)?,
+                        updated_at: row.get(13)?,
+                    })
+                },
+            )
+            .optional()
+            .map_err(|e| format!("Failed to get payment: {}", e))?;
+
+        Ok(payment)
     }
 
     /// Check if payment exists for grave and year
@@ -958,7 +1011,7 @@ impl Database {
     ) -> Result<Option<Payment>, String> {
         let payment = self.conn
             .query_row(
-                "SELECT id, grave_id, year, payment_date, amount, expected_fee, payment_method, payment_proof, paid_by, notes, created_at, updated_at FROM payments WHERE grave_id = ?1 AND year = ?2",
+                "SELECT id, grave_id, year, payment_date, amount, expected_fee, payment_method, payment_proof, paid_by, notes, inputted_by, received_by, created_at, updated_at FROM payments WHERE grave_id = ?1 AND year = ?2",
                 [grave_id.to_string(), year.to_string()],
                 |row| {
                     Ok(Payment {
@@ -972,8 +1025,10 @@ impl Database {
                         payment_proof: row.get(7)?,
                         paid_by: row.get(8)?,
                         notes: row.get(9)?,
-                        created_at: row.get(10)?,
-                        updated_at: row.get(11)?,
+                        inputted_by: row.get(10)?,
+                        received_by: row.get(11)?,
+                        created_at: row.get(12)?,
+                        updated_at: row.get(13)?,
                     })
                 },
             )
@@ -1000,7 +1055,7 @@ impl Database {
 
         self.conn
             .execute(
-                "INSERT INTO payments (grave_id, year, payment_date, amount, expected_fee, payment_method, payment_proof, paid_by, notes) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                "INSERT INTO payments (grave_id, year, payment_date, amount, expected_fee, payment_method, payment_proof, paid_by, notes, inputted_by, received_by) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
                 [
                     &payment.grave_id as &dyn rusqlite::ToSql,
                     &payment.year as &dyn rusqlite::ToSql,
@@ -1011,11 +1066,28 @@ impl Database {
                     &payment.payment_proof.as_deref().unwrap_or("") as &dyn rusqlite::ToSql,
                     &payment.paid_by.as_deref().unwrap_or("") as &dyn rusqlite::ToSql,
                     &payment.notes.as_deref().unwrap_or("") as &dyn rusqlite::ToSql,
+                    &payment.inputted_by as &dyn rusqlite::ToSql,
+                    &payment.received_by.as_deref().unwrap_or("") as &dyn rusqlite::ToSql,
                 ],
             )
             .map_err(|e| format!("Failed to create payment: {}", e))?;
 
         Ok(self.conn.last_insert_rowid())
+    }
+
+    /// Create multiple payments at once (for multi-year payment)
+    pub fn create_multi_payments(
+        &self,
+        payments: &[CreatePaymentRequest],
+    ) -> Result<Vec<i64>, String> {
+        let mut results = Vec::new();
+
+        for payment in payments {
+            let id = self.create_payment(payment)?;
+            results.push(id);
+        }
+
+        Ok(results)
     }
 
     /// Delete payment
@@ -1496,6 +1568,53 @@ impl Database {
         Ok(years)
     }
 
+    /// Get grave payment detail with primary heir info for payment modal
+    pub fn get_grave_payment_detail(
+        &self,
+        grave_id: i64,
+    ) -> Result<Option<GravePaymentDetailWithHeir>, String> {
+        let mut stmt = self
+            .conn
+            .prepare(
+                "SELECT 
+                    g.id,
+                    g.deceased_name,
+                    g.grave_type,
+                    g.number,
+                    b.code as block_code,
+                    b.annual_fee,
+                    h.full_name as heir_name,
+                    h.address as heir_address,
+                    g.notes
+                 FROM graves g
+                 JOIN blocks b ON g.block_id = b.id
+                 LEFT JOIN heirs h ON g.id = h.grave_id AND h.order_number = 1
+                 WHERE g.id = ?1",
+            )
+            .map_err(|e| format!("Failed to prepare grave payment detail query: {}", e))?;
+
+        let result = stmt
+            .query_map([grave_id], |row| {
+                Ok(GravePaymentDetailWithHeir {
+                    grave_id: row.get(0)?,
+                    deceased_name: row.get(1)?,
+                    grave_type: row.get(2)?,
+                    grave_number: row.get(3)?,
+                    block_code: row.get(4)?,
+                    annual_fee: row.get(5)?,
+                    heir_name: row.get(6)?,
+                    heir_address: row.get(7)?,
+                    notes: row.get(8)?,
+                })
+            })
+            .map_err(|e| format!("Failed to query grave payment detail: {}", e))?
+            .next()
+            .transpose()
+            .map_err(|e| format!("Failed to collect grave payment detail: {}", e))?;
+
+        Ok(result)
+    }
+
     /// Get detailed grave payment data for PDF report
     pub fn get_graves_payment_detail(&self, year: i32) -> Result<Vec<GravePaymentDetail>, String> {
         let mut stmt = self
@@ -1686,6 +1805,20 @@ pub struct GravePaymentDetail {
     pub payment_date: Option<String>,
 }
 
+/// Grave payment detail with primary heir info for payment modal
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct GravePaymentDetailWithHeir {
+    pub grave_id: i64,
+    pub deceased_name: String,
+    pub grave_type: Option<String>,
+    pub grave_number: String,
+    pub block_code: String,
+    pub annual_fee: i64,
+    pub heir_name: Option<String>,
+    pub heir_address: Option<String>,
+    pub notes: Option<String>,
+}
+
 /// Grave data structure
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Grave {
@@ -1833,6 +1966,8 @@ pub struct Payment {
     pub payment_proof: Option<String>,
     pub paid_by: Option<String>,
     pub notes: Option<String>,
+    pub inputted_by: Option<i64>,
+    pub received_by: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -1848,6 +1983,8 @@ pub struct CreatePaymentRequest {
     pub payment_proof: Option<String>,
     pub paid_by: Option<String>,
     pub notes: Option<String>,
+    pub inputted_by: Option<i64>,
+    pub received_by: Option<String>,
 }
 
 /// Settings data structure
@@ -1943,6 +2080,7 @@ pub fn backup_database_command(app_handle: AppHandle, backup_path: String) -> Re
 pub struct User {
     pub id: i64,
     pub username: String,
+    pub full_name: Option<String>,
     pub role: String,
     pub is_active: bool,
     pub is_password_changed: bool,
@@ -1956,6 +2094,7 @@ pub struct UserWithHash {
     pub id: i64,
     pub username: String,
     pub password_hash: String,
+    pub full_name: Option<String>,
     pub role: String,
     pub is_active: bool,
     pub is_password_changed: bool,
@@ -2095,19 +2234,20 @@ impl Database {
     pub fn get_user_by_id(&self, id: i64) -> Result<Option<User>, String> {
         let user = self.conn
             .query_row(
-                "SELECT id, username, role, is_active, is_password_changed, created_by, created_at, updated_at 
+                "SELECT id, username, full_name, role, is_active, is_password_changed, created_by, created_at, updated_at 
                  FROM users WHERE id = ?1",
                 [id],
                 |row| {
                     Ok(User {
                         id: row.get(0)?,
                         username: row.get(1)?,
-                        role: row.get(2)?,
-                        is_active: row.get(3)?,
-                        is_password_changed: row.get(4)?,
-                        created_by: row.get(5)?,
-                        created_at: row.get(6)?,
-                        updated_at: row.get(7)?,
+                        full_name: row.get(2)?,
+                        role: row.get(3)?,
+                        is_active: row.get(4)?,
+                        is_password_changed: row.get(5)?,
+                        created_by: row.get(6)?,
+                        created_at: row.get(7)?,
+                        updated_at: row.get(8)?,
                     })
                 },
             )
@@ -2121,19 +2261,20 @@ impl Database {
     pub fn get_user_by_username(&self, username: &str) -> Result<Option<User>, String> {
         let user = self.conn
             .query_row(
-                "SELECT id, username, role, is_active, is_password_changed, created_by, created_at, updated_at 
+                "SELECT id, username, full_name, role, is_active, is_password_changed, created_by, created_at, updated_at 
                  FROM users WHERE LOWER(username) = LOWER(?1)",
                 [username],
                 |row| {
                     Ok(User {
                         id: row.get(0)?,
                         username: row.get(1)?,
-                        role: row.get(2)?,
-                        is_active: row.get(3)?,
-                        is_password_changed: row.get(4)?,
-                        created_by: row.get(5)?,
-                        created_at: row.get(6)?,
-                        updated_at: row.get(7)?,
+                        full_name: row.get(2)?,
+                        role: row.get(3)?,
+                        is_active: row.get(4)?,
+                        is_password_changed: row.get(5)?,
+                        created_by: row.get(6)?,
+                        created_at: row.get(7)?,
+                        updated_at: row.get(8)?,
                     })
                 },
             )
@@ -2150,7 +2291,7 @@ impl Database {
     ) -> Result<Option<UserWithHash>, String> {
         let user = self.conn
             .query_row(
-                "SELECT id, username, password_hash, role, is_active, is_password_changed, created_by, created_at, updated_at 
+                "SELECT id, username, password_hash, full_name, role, is_active, is_password_changed, created_by, created_at, updated_at 
                  FROM users WHERE LOWER(username) = LOWER(?1)",
                 [username],
                 |row| {
@@ -2158,12 +2299,13 @@ impl Database {
                         id: row.get(0)?,
                         username: row.get(1)?,
                         password_hash: row.get(2)?,
-                        role: row.get(3)?,
-                        is_active: row.get(4)?,
-                        is_password_changed: row.get(5)?,
-                        created_by: row.get(6)?,
-                        created_at: row.get(7)?,
-                        updated_at: row.get(8)?,
+                        full_name: row.get(3)?,
+                        role: row.get(4)?,
+                        is_active: row.get(5)?,
+                        is_password_changed: row.get(6)?,
+                        created_by: row.get(7)?,
+                        created_at: row.get(8)?,
+                        updated_at: row.get(9)?,
                     })
                 },
             )
@@ -2237,6 +2379,7 @@ impl Database {
         let user = User {
             id: user_with_hash.id,
             username: user_with_hash.username,
+            full_name: user_with_hash.full_name.clone(),
             role: user_with_hash.role,
             is_active: user_with_hash.is_active,
             is_password_changed: user_with_hash.is_password_changed,
@@ -2345,7 +2488,7 @@ impl Database {
     pub fn get_all_users(&self) -> Result<Vec<User>, String> {
         let mut stmt = self.conn
             .prepare(
-                "SELECT id, username, role, is_active, is_password_changed, created_by, created_at, updated_at 
+                "SELECT id, username, full_name, role, is_active, is_password_changed, created_by, created_at, updated_at 
                  FROM users ORDER BY created_at DESC"
             )
             .map_err(|e| format!("Failed to prepare users query: {}", e))?;
@@ -2355,12 +2498,13 @@ impl Database {
                 Ok(User {
                     id: row.get(0)?,
                     username: row.get(1)?,
-                    role: row.get(2)?,
-                    is_active: row.get(3)?,
-                    is_password_changed: row.get(4)?,
-                    created_by: row.get(5)?,
-                    created_at: row.get(6)?,
-                    updated_at: row.get(7)?,
+                    full_name: row.get(2)?,
+                    role: row.get(3)?,
+                    is_active: row.get(4)?,
+                    is_password_changed: row.get(5)?,
+                    created_by: row.get(6)?,
+                    created_at: row.get(7)?,
+                    updated_at: row.get(8)?,
                 })
             })
             .map_err(|e| format!("Failed to query users: {}", e))?

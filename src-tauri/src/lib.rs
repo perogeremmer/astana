@@ -13,6 +13,8 @@ use uuid::Uuid;
 
 // Modul database
 pub mod db;
+pub mod utils;
+pub mod pdf_receipt;
 
 // Helper function to format number with dots as thousand separators
 fn format_number(num: i64) -> String {
@@ -886,6 +888,221 @@ async fn delete_payment(
     Ok(())
 }
 
+/// Generate single year receipt PDF (for one payment)
+#[tauri::command]
+async fn generate_single_receipt(
+    app_handle: tauri::AppHandle,
+    sessions: State<'_, SessionStore>,
+    token: String,
+    payment_id: i64,
+) -> Result<Vec<u8>, String> {
+    // Validate session
+    if !sessions.is_valid(&token) {
+        return Err("Sesi tidak valid".to_string());
+    }
+
+    let db = db::Database::init(&app_handle)?;
+
+    // Get payment by ID
+    let payment = match db.get_payment_by_id(payment_id)? {
+        Some(p) => p,
+        None => return Err("Pembayaran tidak ditemukan".to_string()),
+    };
+
+    // Get grave detail with heir info
+    let grave = match db.get_grave_payment_detail(payment.grave_id)? {
+        Some(g) => g,
+        None => return Err("Data makam tidak ditemukan".to_string()),
+    };
+
+    // Get receiver name (from user or received_by field)
+    let receiver_name = if let Some(user_id) = payment.inputted_by {
+        db.get_user_by_id(user_id)?
+            .map(|u| u.full_name.unwrap_or(u.username))
+            .unwrap_or_else(|| payment.received_by.clone().unwrap_or_else(|| "Admin".to_string()))
+    } else {
+        payment.received_by.clone().unwrap_or_else(|| "Admin".to_string())
+    };
+
+    // Get settings for foundation name and logo
+    let settings = db.get_settings()?;
+    let foundation_name = settings.foundation_name;
+
+    // Get logo data if available
+    let logo_data = if let Some(logo_path) = settings.logo_path {
+        let app_data_dir = app_handle
+            .path()
+            .app_data_dir()
+            .map_err(|e| format!("Failed to get app data dir: {:?}", e))?;
+        let full_path = app_data_dir.join(&logo_path);
+        if full_path.exists() {
+            std::fs::read(&full_path).ok()
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    // Generate receipt number: YYYYMMDD + payment_id
+    let today = chrono::Local::now();
+    let receipt_number = format!(
+        "{:04}{:02}{:02}{}",
+        today.year(),
+        today.month(),
+        today.day(),
+        payment.id
+    );
+
+    // Format payment date
+    let payment_date = format_date_indonesian(&payment.payment_date);
+
+    // Format grave number (remove any non-numeric prefix if needed)
+    let grave_number = grave.grave_number.clone();
+
+    // Create receipt data
+    let receipt_data = pdf_receipt::SingleReceiptData {
+        receipt_number,
+        payment_date,
+        received_from: payment.paid_by.clone().unwrap_or_else(|| grave.heir_name.clone().unwrap_or_else(|| "-".to_string())),
+        address: grave.heir_address.clone().unwrap_or_else(|| "-".to_string()),
+        amount: payment.amount,
+        year: payment.year,
+        grave_number,
+        block_code: grave.block_code,
+        deceased_name: grave.deceased_name,
+        receiver_name,
+        foundation_name,
+    };
+
+    // Generate PDF
+    match pdf_receipt::generate_single_receipt_pdf(receipt_data, logo_data) {
+        Ok(pdf_bytes) => Ok(pdf_bytes),
+        Err(e) => Err(format!("Gagal generate PDF: {}", e)),
+    }
+}
+
+/// Generate combined receipt PDF (for all payments of a grave)
+#[tauri::command]
+async fn generate_combined_receipt(
+    app_handle: tauri::AppHandle,
+    sessions: State<'_, SessionStore>,
+    token: String,
+    grave_id: i64,
+) -> Result<Vec<u8>, String> {
+    // Validate session
+    if !sessions.is_valid(&token) {
+        return Err("Sesi tidak valid".to_string());
+    }
+
+    let db = db::Database::init(&app_handle)?;
+
+    // Get grave detail with heir info
+    let grave = match db.get_grave_payment_detail(grave_id)? {
+        Some(g) => g,
+        None => return Err("Data makam tidak ditemukan".to_string()),
+    };
+
+    // Get all payments for this grave
+    let payments = db.get_payments_by_grave(grave_id)?;
+    
+    if payments.is_empty() {
+        return Err("Belum ada pembayaran untuk makam ini".to_string());
+    }
+
+    // Get receiver name (use the latest payment's receiver)
+    let latest_payment = payments.iter().max_by_key(|p| p.year).unwrap();
+    let receiver_name = if let Some(user_id) = latest_payment.inputted_by {
+        db.get_user_by_id(user_id)?
+            .map(|u| u.full_name.unwrap_or(u.username))
+            .unwrap_or_else(|| latest_payment.received_by.clone().unwrap_or_else(|| "Admin".to_string()))
+    } else {
+        latest_payment.received_by.clone().unwrap_or_else(|| "Admin".to_string())
+    };
+
+    // Get settings for foundation name and logo
+    let settings = db.get_settings()?;
+    let foundation_name = settings.foundation_name;
+
+    // Get logo data if available
+    let logo_data = if let Some(logo_path) = settings.logo_path {
+        let app_data_dir = app_handle
+            .path()
+            .app_data_dir()
+            .map_err(|e| format!("Failed to get app data dir: {:?}", e))?;
+        let full_path = app_data_dir.join(&logo_path);
+        if full_path.exists() {
+            std::fs::read(&full_path).ok()
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    // Generate receipt number: YYYYMMDD + grave_id
+    let today = chrono::Local::now();
+    let receipt_number = format!(
+        "{:04}{:02}{:02}{}",
+        today.year(),
+        today.month(),
+        today.day(),
+        grave_id
+    );
+
+    // Create items list
+    let items: Vec<pdf_receipt::CombinedReceiptItem> = payments
+        .iter()
+        .map(|p| pdf_receipt::CombinedReceiptItem {
+            year: p.year,
+            payment_date: format_date_indonesian(&p.payment_date),
+            amount: p.amount,
+        })
+        .collect();
+
+    let total_amount = items.iter().map(|i| i.amount).sum();
+
+    // Create receipt data
+    let receipt_data = pdf_receipt::CombinedReceiptData {
+        receipt_number,
+        block_code: grave.block_code,
+        grave_number: grave.grave_number.clone(),
+        deceased_name: grave.deceased_name,
+        heir_name: grave.heir_name.clone().unwrap_or_else(|| "-".to_string()),
+        address: grave.heir_address.clone().unwrap_or_else(|| "-".to_string()),
+        items,
+        total_amount,
+        receiver_name,
+        foundation_name,
+    };
+
+    // Generate PDF
+    match pdf_receipt::generate_combined_receipt_pdf(receipt_data, logo_data) {
+        Ok(pdf_bytes) => Ok(pdf_bytes),
+        Err(e) => Err(format!("Gagal generate PDF: {}", e)),
+    }
+}
+
+/// Helper function to format date to Indonesian format
+fn format_date_indonesian(date_str: &str) -> String {
+    let months = [
+        "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+        "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+    ];
+    
+    // Try to parse date (expecting YYYY-MM-DD format)
+    if let Ok(date) = chrono::NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
+        format!(
+            "{:02} {} {:04}",
+            date.day(),
+            months[(date.month() - 1) as usize],
+            date.year()
+        )
+    } else {
+        date_str.to_string()
+    }
+}
+
 /// Get graves with payment summary for payment page
 #[tauri::command]
 async fn get_graves_with_payment_summary(
@@ -898,19 +1115,18 @@ async fn get_graves_with_payment_summary(
     offset: i64,
 ) -> Result<Vec<GravePaymentSummary>, String> {
     let db = db::Database::init(&app_handle)?;
-    
+
     // Get all graves first (we'll filter by payment status later)
     let graves = db.get_graves(search.clone(), block_id, 10000, 0, None, None)?;
-    
+
     let mut result = Vec::new();
     for grave in graves {
         // Get payments for this grave
         let payments = db.get_payments_by_grave(grave.id)?;
-        
+
         // Check if paid for requested year
-        let payment_for_year = payments.iter().find(|p| p.year == year).cloned();
-        let is_paid_for_year = payment_for_year.is_some();
-        
+        let is_paid_for_year = payments.iter().any(|p| p.year == year);
+
         // Apply status filter
         if let Some(ref status_filter) = status {
             match status_filter.as_str() {
@@ -919,38 +1135,46 @@ async fn get_graves_with_payment_summary(
                 _ => {}
             }
         }
-        
-        // Get last 5 years payment status (descending order: current year first)
-        let current_year = year;
-        let mut recent_payments = Vec::new();
-        for y in ((current_year - 4)..=current_year).rev() {
-            let p = payments.iter().find(|p| p.year == y);
-            recent_payments.push(YearPaymentStatus {
-                year: y,
-                is_paid: p.is_some(),
-                amount: p.map(|pay| pay.amount),
-            });
+
+        // Get unpaid years (from current year back to current year - 9)
+        let mut unpaid_years = Vec::new();
+        for y in ((year - 9)..=year).rev() {
+            if !payments.iter().any(|p| p.year == y) {
+                unpaid_years.push(y);
+            }
         }
-        
+
+        // Get total paid amount
+        let total_paid_amount: i64 = payments.iter().map(|p| p.amount).sum();
+
+        // Get primary heir name
+        let primary_heir_name = db
+            .get_heirs_by_grave(grave.id)?
+            .into_iter()
+            .find(|h| h.order_number == 1)
+            .map(|h| h.full_name);
+
         result.push(GravePaymentSummary {
             grave_id: grave.id,
             deceased_name: grave.deceased_name,
             block_code: grave.code,
             number: grave.number,
+            grave_type: grave.grave_type,
             annual_fee: grave.annual_fee,
-            current_year_payment: payment_for_year,
-            recent_payments,
+            primary_heir_name,
+            current_year_paid: is_paid_for_year,
+            unpaid_years,
+            total_paid_amount,
         });
     }
-    
+
     // Apply pagination
-    let _total = result.len() as i64;
     let paginated_result: Vec<GravePaymentSummary> = result
         .into_iter()
         .skip(offset as usize)
         .take(limit as usize)
         .collect();
-    
+
     Ok(paginated_result)
 }
 
@@ -999,6 +1223,165 @@ pub struct YearPaymentStatus {
     pub amount: Option<i64>,
 }
 
+/// Grave payment detail response with history
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct GravePaymentDetailResponse {
+    pub grave: db::GravePaymentDetailWithHeir,
+    pub payments: Vec<PaymentWithReceiver>,
+}
+
+/// Payment with receiver full name
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct PaymentWithReceiver {
+    pub id: i64,
+    pub grave_id: i64,
+    pub year: i32,
+    pub payment_date: String,
+    pub amount: i64,
+    pub expected_fee: i64,
+    pub payment_method: Option<String>,
+    pub payment_proof: Option<String>,
+    pub paid_by: Option<String>,
+    pub notes: Option<String>,
+    pub received_by: Option<String>,
+    pub receiver_name: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// Get grave payment detail with history
+#[tauri::command]
+async fn get_grave_payment_detail(
+    app_handle: tauri::AppHandle,
+    grave_id: i64,
+) -> Result<Option<GravePaymentDetailResponse>, String> {
+    let db = db::Database::init(&app_handle)?;
+
+    let grave = match db.get_grave_payment_detail(grave_id)? {
+        Some(g) => g,
+        None => return Ok(None),
+    };
+
+    // Get payments with receiver names
+    let payments = db.get_payments_by_grave(grave_id)?;
+    let mut payments_with_receiver = Vec::new();
+
+    for payment in payments {
+        let receiver_name = if let Some(inputted_by) = payment.inputted_by {
+            db.get_user_by_id(inputted_by)?.map(|u| u.full_name.unwrap_or(u.username))
+        } else {
+            None
+        };
+
+        payments_with_receiver.push(PaymentWithReceiver {
+            id: payment.id,
+            grave_id: payment.grave_id,
+            year: payment.year,
+            payment_date: payment.payment_date,
+            amount: payment.amount,
+            expected_fee: payment.expected_fee,
+            payment_method: payment.payment_method,
+            payment_proof: payment.payment_proof,
+            paid_by: payment.paid_by,
+            notes: payment.notes,
+            received_by: payment.received_by.clone(),
+            receiver_name: receiver_name.or_else(|| payment.received_by.clone()),
+            created_at: payment.created_at,
+            updated_at: payment.updated_at,
+        });
+    }
+
+    Ok(Some(GravePaymentDetailResponse {
+        grave,
+        payments: payments_with_receiver,
+    }))
+}
+
+/// Request for creating multi-year payments
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct CreateMultiYearPaymentRequest {
+    pub grave_id: i64,
+    pub years: Vec<i32>,
+    pub payment_date: String,
+    pub amount_per_year: i64,
+    pub paid_by: Option<String>,
+    pub received_by: String,
+}
+
+/// Create multiple year payments at once
+#[tauri::command]
+async fn create_multi_year_payments(
+    app_handle: tauri::AppHandle,
+    sessions: State<'_, SessionStore>,
+    token: String,
+    request: CreateMultiYearPaymentRequest,
+) -> Result<Vec<i64>, String> {
+    let db = db::Database::init(&app_handle)?;
+
+    // Validate session
+    if !sessions.is_valid(&token) {
+        return Err("Sesi tidak valid".to_string());
+    }
+
+    let session = sessions.get_session(&token).unwrap();
+
+    if request.years.is_empty() {
+        return Err("Tahun pembayaran tidak boleh kosong".to_string());
+    }
+
+    // Get grave info for audit
+    let grave = db.get_grave_by_id(request.grave_id)?;
+    let grave_name = grave.as_ref().map(|g| g.deceased_name.clone()).unwrap_or_default();
+
+    // Get expected fee from block
+    let expected_fee = if let Some(g) = grave {
+        g.annual_fee
+    } else {
+        request.amount_per_year
+    };
+
+    let mut payments = Vec::new();
+    for year in &request.years {
+        payments.push(db::CreatePaymentRequest {
+            grave_id: request.grave_id,
+            year: *year,
+            payment_date: request.payment_date.clone(),
+            amount: request.amount_per_year,
+            expected_fee,
+            payment_method: Some("cash".to_string()),
+            payment_proof: None,
+            paid_by: request.paid_by.clone(),
+            notes: None,
+            inputted_by: Some(session.user_id),
+            received_by: Some(request.received_by.clone()),
+        });
+    }
+
+    let payment_ids = db.create_multi_payments(&payments)?;
+
+    // Log audit
+    let years_str = request.years.iter().map(|y| y.to_string()).collect::<Vec<_>>().join(", ");
+    let details = format!(
+        "Membuat pembayaran multi-tahun: {} untuk makam {} (ID: {}) tahun {}",
+        format_rupiah(request.amount_per_year),
+        grave_name,
+        request.grave_id,
+        years_str
+    );
+    db.log_audit(
+        Some(session.user_id),
+        Some(&session.username),
+        "CREATE",
+        "payment",
+        Some(payment_ids.first().copied().unwrap_or(0)),
+        None,
+        Some(&serde_json::to_string(&request).unwrap_or_default()),
+        Some(&details),
+    )?;
+
+    Ok(payment_ids)
+}
+
 /// Grave payment summary for payment page
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct GravePaymentSummary {
@@ -1006,9 +1389,12 @@ pub struct GravePaymentSummary {
     pub deceased_name: String,
     pub block_code: String,
     pub number: String,
+    pub grave_type: Option<String>,
     pub annual_fee: i64,
-    pub current_year_payment: Option<db::Payment>,
-    pub recent_payments: Vec<YearPaymentStatus>,
+    pub primary_heir_name: Option<String>,
+    pub current_year_paid: bool,
+    pub unpaid_years: Vec<i32>,
+    pub total_paid_amount: i64,
 }
 
 // ==================== DASHBOARD COMMANDS ====================
@@ -2310,6 +2696,8 @@ pub fn run() {
             delete_payment,
             get_graves_with_payment_summary,
             count_graves_with_payment_status,
+            get_grave_payment_detail,
+            create_multi_year_payments,
             // Dashboard
             get_dashboard_stats,
             get_recent_payments,
@@ -2320,6 +2708,8 @@ pub fn run() {
             get_yearly_report,
             get_available_years,
             generate_pdf_report,
+            generate_single_receipt,
+            generate_combined_receipt,
             // Settings
             get_settings,
             update_settings,
