@@ -35,6 +35,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupEventListeners();
     setupTableActionListeners();
     setupClassicFormListeners();
+    
+    // Setup MutationObserver to watch for corruption of classicTipeMakam options
+    const classicTipeMakam = document.getElementById('classicTipeMakam');
+    if (classicTipeMakam) {
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'childList') {
+                    const options = Array.from(classicTipeMakam.options);
+                    const hasNewOption = options.some(opt => opt.value === 'new');
+                    const hasStackedOption = options.some(opt => opt.value === 'stacked');
+                    
+                    if (!hasNewOption || !hasStackedOption) {
+                        console.error('MutationObserver: classicTipeMakam corrupted! Resetting options...');
+                        classicTipeMakam.innerHTML = `
+                            <option value="">Pilih Tipe</option>
+                            <option value="new">Makam Baru</option>
+                            <option value="stacked">Makam Tumpuk</option>
+                        `;
+                    }
+                }
+            });
+        });
+        
+        observer.observe(classicTipeMakam, { childList: true });
+        console.log('MutationObserver setup for classicTipeMakam');
+    }
 });
 
 function initViewMode() {
@@ -256,9 +282,26 @@ function debounce(func, wait) {
 // ==================== CLASSIC FORM FUNCTIONS ====================
 
 function populateClassicBlockSelect() {
+    // STRICT CHECK: Only populate classicBlockSelect, NEVER touch classicTipeMakam
     const blockSelect = document.getElementById('classicBlockSelect');
-    if (!blockSelect) return;
     
+    console.log('=== populateClassicBlockSelect ===');
+    console.log('blockSelect found:', !!blockSelect);
+    
+    if (!blockSelect) {
+        console.error('ERROR: classicBlockSelect not found!');
+        return;
+    }
+    
+    // Verify we have the correct element by ID
+    if (blockSelect.id !== 'classicBlockSelect') {
+        console.error('ERROR: Wrong element! Expected classicBlockSelect, got:', blockSelect.id);
+        return;
+    }
+    
+    console.log('Populating classicBlockSelect with', currentBlocks.length, 'blocks');
+    
+    // Clear and populate ONLY the blockSelect
     blockSelect.innerHTML = '<option value="">Pilih Blok</option>';
     currentBlocks.forEach(block => {
         const option = document.createElement('option');
@@ -266,6 +309,26 @@ function populateClassicBlockSelect() {
         option.textContent = `Blok ${block.code}`;
         blockSelect.appendChild(option);
     });
+    
+    console.log('SUCCESS: classicBlockSelect populated');
+    
+    // Schedule a check after a short delay to catch any async corruption
+    setTimeout(() => {
+        const tipeSelect = document.getElementById('classicTipeMakam');
+        if (tipeSelect) {
+            const hasNewOption = Array.from(tipeSelect.options).some(opt => opt.value === 'new');
+            const hasStackedOption = Array.from(tipeSelect.options).some(opt => opt.value === 'stacked');
+            
+            if (!hasNewOption || !hasStackedOption) {
+                console.error('DELAYED CHECK: tipeSelect corrupted! Fixing...');
+                tipeSelect.innerHTML = `
+                    <option value="">Pilih Tipe</option>
+                    <option value="new">Makam Baru</option>
+                    <option value="stacked">Makam Tumpuk</option>
+                `;
+            }
+        }
+    }, 100);
 }
 
 function resetClassicForm() {
@@ -283,13 +346,26 @@ function resetClassicForm() {
     const btnSimpan = document.getElementById('btnClassicSimpan');
     if (btnSimpan) btnSimpan.textContent = 'Simpan Data';
     
-    // Reset fields
-    const fields = ['classicNama', 'classicBlockSelect', 'classicNomor', 'classicTanggal', 
-                    'classicTipeMakam', 'classicTempatLahir', 'classicTanggalLahir', 'classicCatatan'];
+    // Reset fields - STRICT ID CHECK
+    const fieldIds = [
+        'classicNama', 
+        'classicBlockSelect', 
+        'classicNomor', 
+        'classicTanggal', 
+        'classicTipeMakam', 
+        'classicTempatLahir', 
+        'classicTanggalLahir', 
+        'classicCatatan'
+    ];
     
-    fields.forEach(fieldId => {
+    fieldIds.forEach(fieldId => {
         const field = document.getElementById(fieldId);
-        if (field) field.value = '';
+        if (field) {
+            console.log(`Resetting ${fieldId}:`, field.id);
+            field.value = '';
+        } else {
+            console.warn(`Field ${fieldId} not found`);
+        }
     });
     
     // Reset ahli waris fields
@@ -305,6 +381,17 @@ function resetClassicForm() {
         if (hubunganSelect) hubunganSelect.value = '';
         if (alamatTextarea) alamatTextarea.value = '';
     });
+    
+    // Force restore tipe makam options in case they got corrupted
+    const tipeSelect = document.getElementById('classicTipeMakam');
+    if (tipeSelect) {
+        console.log('Force restoring tipe makam options');
+        tipeSelect.innerHTML = `
+            <option value="">Pilih Tipe</option>
+            <option value="new">Makam Baru</option>
+            <option value="stacked">Makam Tumpuk</option>
+        `;
+    }
     
     currentEditingId = null;
 }
@@ -324,24 +411,43 @@ function populateClassicForm(grave, heirs) {
     const btnSimpan = document.getElementById('btnClassicSimpan');
     if (btnSimpan) btnSimpan.textContent = 'Update Data';
     
-    // Populate fields
-    const namaField = document.getElementById('classicNama');
-    const blockSelect = document.getElementById('classicBlockSelect');
-    const nomorField = document.getElementById('classicNomor');
-    const tanggalField = document.getElementById('classicTanggal');
-    const tipeSelect = document.getElementById('classicTipeMakam');
-    const tempatLahirField = document.getElementById('classicTempatLahir');
-    const tanggalLahirField = document.getElementById('classicTanggalLahir');
-    const catatanField = document.getElementById('classicCatatan');
+    // Populate fields with strict ID verification
+    const fieldMap = {
+        'classicNama': grave.deceased_name,
+        'classicBlockSelect': grave.block_id,
+        'classicNomor': grave.number,
+        'classicTanggal': grave.date_of_death,
+        'classicTipeMakam': grave.grave_type,
+        'classicTempatLahir': grave.birth_place,
+        'classicTanggalLahir': grave.birth_date,
+        'classicCatatan': grave.notes
+    };
     
-    if (namaField) namaField.value = grave.deceased_name || '';
-    if (blockSelect) blockSelect.value = grave.block_id || '';
-    if (nomorField) nomorField.value = grave.number || '';
-    if (tanggalField) tanggalField.value = grave.date_of_death || '';
-    if (tipeSelect) tipeSelect.value = grave.grave_type || '';
-    if (tempatLahirField) tempatLahirField.value = grave.birth_place || '';
-    if (tanggalLahirField) tanggalLahirField.value = grave.birth_date || '';
-    if (catatanField) catatanField.value = grave.notes || '';
+    Object.entries(fieldMap).forEach(([fieldId, value]) => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            console.log(`Setting ${fieldId} = ${value}`);
+            field.value = value || '';
+        }
+    });
+    
+    // Verify tipe makam still has correct options
+    const tipeSelect = document.getElementById('classicTipeMakam');
+    if (tipeSelect) {
+        const hasNewOption = Array.from(tipeSelect.options).some(opt => opt.value === 'new');
+        const hasStackedOption = Array.from(tipeSelect.options).some(opt => opt.value === 'stacked');
+        
+        if (!hasNewOption || !hasStackedOption) {
+            console.error('ERROR: Tipe Makam options corrupted! Restoring...');
+            tipeSelect.innerHTML = `
+                <option value="">Pilih Tipe</option>
+                <option value="new">Makam Baru</option>
+                <option value="stacked">Makam Tumpuk</option>
+            `;
+            // Re-set the value
+            tipeSelect.value = grave.grave_type || '';
+        }
+    }
     
     // Populate ahli waris
     if (heirs && heirs.length > 0) {
@@ -1630,9 +1736,6 @@ async function exportToExcel(startYear, endYear) {
         
         const blockSelect = document.querySelector('aside + main select');
         const blockId = blockSelect && blockSelect.value ? parseInt(blockSelect.value) : null;
-        
-        const allBtn = document.querySelector('button[data-range="all"]');
-        const isAll = allBtn && allBtn.classList.contains('active');
         
         const exportData = await window.__TAURI__?.core?.invoke('get_all_graves_with_heirs', {
             search: search || null,

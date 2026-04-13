@@ -509,6 +509,36 @@ async function openDatabaseFolder() {
     }
 }
 
+// Clear cache and reload
+function clearCacheAndReload() {
+    console.log('=== CLEAR CACHE & RELOAD ===');
+    
+    // Show confirmation
+    const confirmed = confirm('Aplikasi akan dimuat ulang tanpa cache. Lanjutkan?');
+    if (!confirmed) return;
+    
+    // Clear localStorage (except settingsUpdated)
+    const settingsUpdated = localStorage.getItem('settingsUpdated');
+    localStorage.clear();
+    if (settingsUpdated) {
+        localStorage.setItem('settingsUpdated', settingsUpdated);
+    }
+    
+    // Clear sessionStorage
+    sessionStorage.clear();
+    
+    // Show notification
+    showNotification('Membersihkan cache dan memuat ulang...', 'info');
+    
+    // Reload page with cache-busting
+    setTimeout(() => {
+        // Add timestamp to force reload without cache
+        const currentUrl = window.location.href;
+        const separator = currentUrl.indexOf('?') > -1 ? '&' : '?';
+        window.location.href = currentUrl + separator + '_reload=' + Date.now();
+    }, 500);
+}
+
 // Make functions available globally
 window.saveSettings = saveSettings;
 window.copyPath = copyPath;
@@ -517,6 +547,7 @@ window.exportDatabase = exportDatabase;
 window.restoreDatabase = restoreDatabase;
 window.closeBackupModal = closeBackupModal;
 window.openDatabaseFolder = openDatabaseFolder;
+window.clearCacheAndReload = clearCacheAndReload;
 
 // ==================== EVENT LISTENERS ====================
 
@@ -574,6 +605,12 @@ function setupEventListeners() {
     const btnRestoreDatabase = document.getElementById('btnRestoreDatabase');
     if (btnRestoreDatabase) {
         btnRestoreDatabase.addEventListener('click', restoreDatabase);
+    }
+
+    // Clear cache button
+    const btnClearCache = document.getElementById('btnClearCache');
+    if (btnClearCache) {
+        btnClearCache.addEventListener('click', clearCacheAndReload);
     }
 
     // Close backup modal

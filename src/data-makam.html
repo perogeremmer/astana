@@ -898,5 +898,26 @@
         </div>
     </div>
 
+    <!-- FINAL FIX SCRIPT - Runs at the very end -->
+    <script>
+        (function() {
+            console.log('=== FINAL FIX: At end of body ===');
+            var tipeSelect = document.getElementById('classicTipeMakam');
+            var blockSelect = document.getElementById('classicBlockSelect');
+            
+            if (tipeSelect && blockSelect) {
+                // Check if tipeSelect has been corrupted with block data
+                var firstOption = tipeSelect.options[1];
+                if (firstOption && (firstOption.textContent.includes('Blok') || firstOption.value === '1')) {
+                    console.log('FINAL FIX: Detected corruption! Resetting tipe makam...');
+                    tipeSelect.innerHTML = '<option value="">Pilih Tipe</option><option value="new">Makam Baru</option><option value="stacked">Makam Tumpuk</option>';
+                    console.log('FINAL FIX: Reset complete');
+                } else {
+                    console.log('FINAL FIX: Tipe makam is correct');
+                }
+            }
+        })();
+    </script>
+
 </body>
 </html>
