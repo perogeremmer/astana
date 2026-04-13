@@ -696,6 +696,16 @@ async fn delete_heir(
     db.delete_heir(id)
 }
 
+/// Delete all heirs by grave ID
+#[tauri::command]
+async fn delete_heirs_by_grave(
+    app_handle: tauri::AppHandle,
+    grave_id: i64,
+) -> Result<(), String> {
+    let db = db::Database::init(&app_handle)?;
+    db.delete_heirs_by_grave(grave_id)
+}
+
 /// Update heirs for a grave (bulk update - delete all and recreate)
 #[tauri::command]
 async fn update_grave_heirs(
@@ -1565,26 +1575,58 @@ async fn get_initial_password(first_run_state: State<'_, FirstRunState>) -> Resu
 #[tauri::command]
 async fn import_database(app_handle: tauri::AppHandle) -> Result<serde_json::Value, String> {
     use tauri_plugin_dialog::DialogExt;
-    
+
     // Open file dialog to select database file
     let file_path = app_handle.dialog()
         .file()
         .add_filter("Database", &["db"])
         .blocking_pick_file();
-    
+
     match file_path {
         Some(path) => {
             let source_path = path.as_path().unwrap();
             let target_path = db::Database::get_database_path(&app_handle)?;
-            
+
             // Copy the selected database to the app data directory
             match std::fs::copy(&source_path, &target_path) {
                 Ok(_) => {
                     log::info!("Database imported successfully from {:?}", source_path);
-                    Ok(serde_json::json!({
-                        "success": true,
-                        "message": "Database berhasil diimport"
-                    }))
+
+                    // Run migrations on the imported database to ensure schema is up to date
+                    match db::initialize_database(&app_handle) {
+                        Ok(database) => {
+                            match database.verify() {
+                                Ok(true) => {
+                                    log::info!("✅ Database imported and migrations applied successfully");
+                                    Ok(serde_json::json!({
+                                        "success": true,
+                                        "message": "Database berhasil diimport dan schema diperbarui"
+                                    }))
+                                }
+                                Ok(false) => {
+                                    log::warn!("⚠️ Database imported but schema verification failed");
+                                    Ok(serde_json::json!({
+                                        "success": true,
+                                        "message": "Database berhasil diimport tapi schema mungkin tidak lengkap"
+                                    }))
+                                }
+                                Err(e) => {
+                                    log::error!("❌ Failed to verify imported database: {}", e);
+                                    Ok(serde_json::json!({
+                                        "success": true,
+                                        "message": "Database berhasil diimport tapi verifikasi gagal"
+                                    }))
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            log::error!("❌ Failed to run migrations on imported database: {}", e);
+                            Ok(serde_json::json!({
+                                "success": false,
+                                "error": format!("Database diimport tapi gagal menjalankan migrasi: {}", e)
+                            }))
+                        }
+                    }
                 }
                 Err(e) => {
                     log::error!("Failed to import database: {}", e);
@@ -2178,6 +2220,7 @@ pub fn run() {
             create_heir,
             update_heir,
             delete_heir,
+            delete_heirs_by_grave,
             update_grave_heirs,
             // Payments
             get_payments_by_grave,

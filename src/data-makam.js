@@ -1,8 +1,6 @@
 // Data Makam - CRUD JavaScript for Graves and Heirs
 // Integrates with Tauri backend
 
-
-
 // Global state
 let currentGraves = [];
 let currentBlocks = [];
@@ -20,13 +18,94 @@ const maxAhliWaris = 3;
 // Variables for Edit Modal
 let jumlahAhliWarisEdit = 1;
 
+// View Mode State
+const STORAGE_KEY_VIEW_MODE = 'astana_view_mode';
+let currentViewMode = 'classic'; // 'classic' or 'modern'
+
 // ==================== INITIALIZATION ====================
 
 document.addEventListener('DOMContentLoaded', async () => {
+    console.log('DOM loaded, initializing...');
+    
+    // Initialize view mode first
+    initViewMode();
+    
     await loadBlocks();
     await loadGraves();
     setupEventListeners();
+    setupTableActionListeners();
+    setupClassicFormListeners();
+    
+    // Setup MutationObserver to watch for corruption of classicTipeMakam options
+    const classicTipeMakam = document.getElementById('classicTipeMakam');
+    if (classicTipeMakam) {
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'childList') {
+                    const options = Array.from(classicTipeMakam.options);
+                    const hasNewOption = options.some(opt => opt.value === 'new');
+                    const hasStackedOption = options.some(opt => opt.value === 'stacked');
+                    
+                    if (!hasNewOption || !hasStackedOption) {
+                        console.error('MutationObserver: classicTipeMakam corrupted! Resetting options...');
+                        classicTipeMakam.innerHTML = `
+                            <option value="">Pilih Tipe</option>
+                            <option value="new">Makam Baru</option>
+                            <option value="stacked">Makam Tumpuk</option>
+                        `;
+                    }
+                }
+            });
+        });
+        
+        observer.observe(classicTipeMakam, { childList: true });
+        console.log('MutationObserver setup for classicTipeMakam');
+    }
 });
+
+function initViewMode() {
+    // Load from localStorage, default to 'classic'
+    const savedMode = localStorage.getItem(STORAGE_KEY_VIEW_MODE);
+    currentViewMode = savedMode === 'modern' ? 'modern' : 'classic';
+    console.log('View mode initialized:', currentViewMode);
+    applyViewMode();
+}
+
+function applyViewMode() {
+    const classicContainer = document.getElementById('classicFormContainer');
+    const btnTambahData = document.getElementById('btnTambahData');
+    const iconClassic = document.getElementById('iconClassic');
+    const iconModern = document.getElementById('iconModern');
+    const labelToggle = document.getElementById('labelToggleView');
+    
+    if (currentViewMode === 'classic') {
+        // Show classic form, hide tambah data button
+        if (classicContainer) classicContainer.classList.remove('hidden');
+        if (btnTambahData) btnTambahData.classList.add('hidden');
+        if (iconClassic) iconClassic.classList.remove('hidden');
+        if (iconModern) iconModern.classList.add('hidden');
+        if (labelToggle) labelToggle.textContent = 'Mode Klasik';
+    } else {
+        // Hide classic form, show tambah data button
+        if (classicContainer) classicContainer.classList.add('hidden');
+        if (btnTambahData) btnTambahData.classList.remove('hidden');
+        if (iconClassic) iconClassic.classList.add('hidden');
+        if (iconModern) iconModern.classList.remove('hidden');
+        if (labelToggle) labelToggle.textContent = 'Mode Modern';
+    }
+}
+
+function toggleViewMode() {
+    currentViewMode = currentViewMode === 'classic' ? 'modern' : 'classic';
+    localStorage.setItem(STORAGE_KEY_VIEW_MODE, currentViewMode);
+    console.log('View mode toggled to:', currentViewMode);
+    applyViewMode();
+    
+    // If switching to classic mode, reset the form
+    if (currentViewMode === 'classic') {
+        resetClassicForm();
+    }
+}
 
 function setupEventListeners() {
     // Search input
@@ -39,7 +118,7 @@ function setupEventListeners() {
     }
 
     // Block filter
-    const blockSelect = document.querySelector('aside + main select');
+    const blockSelect = document.getElementById('filterBlockSelect');
     if (blockSelect) {
         blockSelect.addEventListener('change', async () => {
             currentPage = 1;
@@ -80,144 +159,112 @@ function setupEventListeners() {
     // Logout button
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
-            if (window.astanaApp && window.astanaApp.logout) {
-                window.astanaApp.logout();
-            }
-        });
+        logoutBtn.addEventListener('click', handleLogout);
     }
-
-    // Add data button
+    
+    // Export button
+    const exportBtn = document.getElementById('btnExportExcel');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', openExportExcelModal);
+    }
+    
+    // Import button
+    const importBtn = document.getElementById('importBtn');
+    if (importBtn) {
+        importBtn.addEventListener('click', handleImport);
+    }
+    
+    // Toggle View Mode button
+    const btnToggleView = document.getElementById('btnToggleView');
+    if (btnToggleView) {
+        btnToggleView.addEventListener('click', toggleViewMode);
+    }
+    
+    // Tambah Data button (only for modern mode)
     const btnTambahData = document.getElementById('btnTambahData');
     if (btnTambahData) {
         btnTambahData.addEventListener('click', openModal);
     }
-
-    // Export Excel button
-    const btnExportExcel = document.getElementById('btnExportExcel');
-    if (btnExportExcel) {
-        btnExportExcel.addEventListener('click', openExportExcelModal);
-    }
-
-    // Modal backdrops - close when clicking outside
+    
+    // Modal backdrop click to close
     document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
         backdrop.addEventListener('click', (e) => {
-            const modalId = e.target.dataset.modal;
-            if (modalId) {
-                switch(modalId) {
-                    case 'inputModal':
-                        closeModal();
-                        break;
-                    case 'editModal':
-                        closeEditModal();
-                        break;
-                    case 'deleteModal':
-                        closeDeleteModal();
-                        break;
-                    case 'exportExcelModal':
-                        closeExportExcelModal();
-                        break;
-                    case 'modalSukses':
-                        closeSuksesModal();
-                        break;
+            if (e.target === backdrop) {
+                const modalId = backdrop.dataset.modal;
+                if (modalId) {
+                    closeModalById(modalId);
                 }
             }
         });
     });
-
+    
     // Close modal buttons
     document.querySelectorAll('.btn-close-modal').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const modalId = e.target.closest('.btn-close-modal').dataset.modal;
+        btn.addEventListener('click', () => {
+            const modalId = btn.dataset.modal;
             if (modalId) {
-                switch(modalId) {
-                    case 'inputModal':
-                        closeModal();
-                        break;
-                    case 'editModal':
-                        closeEditModal();
-                        break;
-                    case 'deleteModal':
-                        closeDeleteModal();
-                        break;
-                    case 'exportExcelModal':
-                        closeExportExcelModal();
-                        break;
-                }
+                closeModalById(modalId);
             }
         });
     });
-
-    // Ahli Waris buttons - Add Modal
-    const btnTambahWaris = document.getElementById('btnTambahWaris');
-    if (btnTambahWaris) {
-        btnTambahWaris.addEventListener('click', tambahAhliWaris);
-    }
-
-    const btnHapusWaris = document.getElementById('btnHapusWaris');
-    if (btnHapusWaris) {
-        btnHapusWaris.addEventListener('click', hapusAhliWarisTerakhir);
-    }
-
-    // Save data button - Add Modal
-    const btnSimpanData = document.getElementById('btnSimpanData');
-    if (btnSimpanData) {
-        btnSimpanData.addEventListener('click', simpanData);
-    }
-
-    // Ahli Waris buttons - Edit Modal
-    const btnTambahWarisEdit = document.getElementById('btnTambahWarisEdit');
-    if (btnTambahWarisEdit) {
-        btnTambahWarisEdit.addEventListener('click', tambahAhliWarisEdit);
-    }
-
-    const btnHapusWarisEdit = document.getElementById('btnHapusWarisEdit');
-    if (btnHapusWarisEdit) {
-        btnHapusWarisEdit.addEventListener('click', hapusAhliWarisTerakhirEdit);
-    }
-
-    // Save data button - Edit Modal
-    const btnSimpanEdit = document.getElementById('btnSimpanEdit');
-    if (btnSimpanEdit) {
-        btnSimpanEdit.addEventListener('click', simpanEdit);
-    }
-
-    // Confirm delete button
-    const btnConfirmDelete = document.getElementById('btnConfirmDelete');
-    if (btnConfirmDelete) {
-        btnConfirmDelete.addEventListener('click', confirmDelete);
-    }
-
+    
     // Quick select buttons for export range
-    const quickSelectButtons = document.getElementById('quickSelectButtons');
-    if (quickSelectButtons) {
-        quickSelectButtons.addEventListener('click', (e) => {
-            const btn = e.target.closest('button[data-range]');
-            if (btn) {
-                const range = btn.dataset.range;
-                if (range === 'all') {
-                    setExportRange('all');
-                } else {
-                    setExportRange(parseInt(range));
-                }
-            }
+    document.querySelectorAll('.quick-select-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const range = btn.dataset.range;
+            setExportRange(range);
         });
-    }
-
+    });
+    
     // Confirm export button
-    const btnConfirmExportExcel = document.getElementById('btnConfirmExportExcel');
-    if (btnConfirmExportExcel) {
-        btnConfirmExportExcel.addEventListener('click', confirmExportExcel);
+    const btnConfirmExport = document.getElementById('btnConfirmExportExcel');
+    if (btnConfirmExport) {
+        btnConfirmExport.addEventListener('click', confirmExportExcel);
     }
-
-    // Close success modal button
-    const btnCloseSuksesModal = document.getElementById('btnCloseSuksesModal');
-    if (btnCloseSuksesModal) {
-        btnCloseSuksesModal.addEventListener('click', closeSuksesModal);
+    
+    // Close success modal
+    const btnCloseSukses = document.getElementById('btnCloseSuksesModal');
+    if (btnCloseSukses) {
+        btnCloseSukses.addEventListener('click', closeSuksesModal);
     }
+}
 
-    // Setup table action buttons (edit/delete) via event delegation
-    setupTableActionListeners();
+function setupClassicFormListeners() {
+    // Classic form buttons
+    const btnClassicSimpan = document.getElementById('btnClassicSimpan');
+    const btnClassicReset = document.getElementById('btnClassicReset');
+    
+    if (btnClassicSimpan) {
+        btnClassicSimpan.addEventListener('click', handleClassicFormSubmit);
+    }
+    
+    if (btnClassicReset) {
+        btnClassicReset.addEventListener('click', resetClassicForm);
+    }
+}
+
+function closeModalById(modalId) {
+    console.log('Closing modal:', modalId);
+    switch(modalId) {
+        case 'inputModal':
+            closeModal();
+            break;
+        case 'editModal':
+            closeEditModal();
+            break;
+        case 'deleteModal':
+            closeDeleteModal();
+            break;
+        case 'detailModal':
+            closeDetailModal();
+            break;
+        case 'exportExcelModal':
+            closeExportExcelModal();
+            break;
+        case 'modalSukses':
+            closeSuksesModal();
+            break;
+    }
 }
 
 function debounce(func, wait) {
@@ -232,14 +279,389 @@ function debounce(func, wait) {
     };
 }
 
-// ==================== LOAD DATA ====================
+// ==================== CLASSIC FORM FUNCTIONS ====================
+
+function populateClassicBlockSelect() {
+    // STRICT CHECK: Only populate classicBlockSelect, NEVER touch classicTipeMakam
+    const blockSelect = document.getElementById('classicBlockSelect');
+    
+    console.log('=== populateClassicBlockSelect ===');
+    console.log('blockSelect found:', !!blockSelect);
+    
+    if (!blockSelect) {
+        console.error('ERROR: classicBlockSelect not found!');
+        return;
+    }
+    
+    // Verify we have the correct element by ID
+    if (blockSelect.id !== 'classicBlockSelect') {
+        console.error('ERROR: Wrong element! Expected classicBlockSelect, got:', blockSelect.id);
+        return;
+    }
+    
+    console.log('Populating classicBlockSelect with', currentBlocks.length, 'blocks');
+    
+    // Clear and populate ONLY the blockSelect
+    blockSelect.innerHTML = '<option value="">Pilih Blok</option>';
+    currentBlocks.forEach(block => {
+        const option = document.createElement('option');
+        option.value = block.id;
+        option.textContent = `Blok ${block.code}`;
+        blockSelect.appendChild(option);
+    });
+    
+    console.log('SUCCESS: classicBlockSelect populated');
+    
+    // Schedule a check after a short delay to catch any async corruption
+    setTimeout(() => {
+        const tipeSelect = document.getElementById('classicTipeMakam');
+        if (tipeSelect) {
+            const hasNewOption = Array.from(tipeSelect.options).some(opt => opt.value === 'new');
+            const hasStackedOption = Array.from(tipeSelect.options).some(opt => opt.value === 'stacked');
+            
+            if (!hasNewOption || !hasStackedOption) {
+                console.error('DELAYED CHECK: tipeSelect corrupted! Fixing...');
+                tipeSelect.innerHTML = `
+                    <option value="">Pilih Tipe</option>
+                    <option value="new">Makam Baru</option>
+                    <option value="stacked">Makam Tumpuk</option>
+                `;
+            }
+        }
+    }, 100);
+}
+
+function resetClassicForm() {
+    console.log('Resetting classic form...');
+    
+    // Reset hidden edit ID
+    const editIdInput = document.getElementById('classicEditId');
+    if (editIdInput) editIdInput.value = '';
+    
+    // Reset form title
+    const formTitle = document.getElementById('classicFormTitle');
+    if (formTitle) formTitle.textContent = 'Tambah Data Makam';
+    
+    // Reset tombol simpan
+    const btnSimpan = document.getElementById('btnClassicSimpan');
+    if (btnSimpan) btnSimpan.textContent = 'Simpan Data';
+    
+    // Reset fields - STRICT ID CHECK
+    const fieldIds = [
+        'classicNama', 
+        'classicBlockSelect', 
+        'classicNomor', 
+        'classicTanggal', 
+        'classicTipeMakam', 
+        'classicTempatLahir', 
+        'classicTanggalLahir', 
+        'classicKeterangan'
+    ];
+    
+    fieldIds.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            console.log(`Resetting ${fieldId}:`, field.id);
+            field.value = '';
+        } else {
+            console.warn(`Field ${fieldId} not found`);
+        }
+    });
+    
+    // Reset ahli waris fields
+    const containers = document.querySelectorAll('#classicAhliWarisContainer > div');
+    containers.forEach((container, index) => {
+        const namaInput = container.querySelector('.classic-heir-nama');
+        const telpInput = container.querySelector('.classic-heir-telp');
+        const hubunganSelect = container.querySelector('.classic-heir-hubungan');
+        const alamatTextarea = container.querySelector('.classic-heir-alamat');
+        
+        if (namaInput) namaInput.value = '';
+        if (telpInput) telpInput.value = '';
+        if (hubunganSelect) hubunganSelect.value = '';
+        if (alamatTextarea) alamatTextarea.value = '';
+    });
+    
+    // Force restore tipe makam options in case they got corrupted
+    const tipeSelect = document.getElementById('classicTipeMakam');
+    if (tipeSelect) {
+        console.log('Force restoring tipe makam options');
+        tipeSelect.innerHTML = `
+            <option value="">Pilih Tipe</option>
+            <option value="new">Makam Baru</option>
+            <option value="stacked">Makam Tumpuk</option>
+        `;
+    }
+    
+    currentEditingId = null;
+}
+
+function populateClassicForm(grave, heirs) {
+    console.log('Populating classic form with:', grave, heirs);
+    
+    // Set edit ID
+    const editIdInput = document.getElementById('classicEditId');
+    if (editIdInput) editIdInput.value = grave.id;
+    
+    // Update form title
+    const formTitle = document.getElementById('classicFormTitle');
+    if (formTitle) formTitle.textContent = 'Edit Data Makam';
+    
+    // Update tombol simpan
+    const btnSimpan = document.getElementById('btnClassicSimpan');
+    if (btnSimpan) btnSimpan.textContent = 'Update Data';
+    
+    // Populate fields with strict ID verification
+    const fieldMap = {
+        'classicNama': grave.deceased_name,
+        'classicBlockSelect': grave.block_id,
+        'classicNomor': grave.number,
+        'classicTanggal': grave.date_of_death,
+        'classicTipeMakam': grave.grave_type,
+        'classicTempatLahir': grave.birth_place,
+        'classicTanggalLahir': grave.birth_date,
+        'classicKeterangan': grave.notes
+    };
+    
+    Object.entries(fieldMap).forEach(([fieldId, value]) => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            console.log(`Setting ${fieldId} = ${value}`);
+            field.value = value || '';
+        }
+    });
+    
+    // Verify tipe makam still has correct options
+    const tipeSelect = document.getElementById('classicTipeMakam');
+    if (tipeSelect) {
+        const hasNewOption = Array.from(tipeSelect.options).some(opt => opt.value === 'new');
+        const hasStackedOption = Array.from(tipeSelect.options).some(opt => opt.value === 'stacked');
+        
+        if (!hasNewOption || !hasStackedOption) {
+            console.error('ERROR: Tipe Makam options corrupted! Restoring...');
+            tipeSelect.innerHTML = `
+                <option value="">Pilih Tipe</option>
+                <option value="new">Makam Baru</option>
+                <option value="stacked">Makam Tumpuk</option>
+            `;
+            // Re-set the value
+            tipeSelect.value = grave.grave_type || '';
+        }
+    }
+    
+    // Populate ahli waris
+    if (heirs && heirs.length > 0) {
+        const containers = document.querySelectorAll('#classicAhliWarisContainer > div');
+        
+        heirs.forEach((heir, index) => {
+            if (index < containers.length) {
+                const container = containers[index];
+                const namaInput = container.querySelector('.classic-heir-nama');
+                const telpInput = container.querySelector('.classic-heir-telp');
+                const hubunganSelect = container.querySelector('.classic-heir-hubungan');
+                const alamatTextarea = container.querySelector('.classic-heir-alamat');
+                
+                if (namaInput) namaInput.value = heir.full_name || '';
+                if (telpInput) telpInput.value = heir.phone_number || '';
+                if (hubunganSelect) hubunganSelect.value = heir.relationship || '';
+                if (alamatTextarea) alamatTextarea.value = heir.address || '';
+            }
+        });
+    }
+}
+
+function scrollToClassicForm() {
+    const classicContainer = document.getElementById('classicFormContainer');
+    if (classicContainer) {
+        classicContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+function collectClassicFormData() {
+    const data = {
+        deceased_name: document.getElementById('classicNama')?.value?.trim(),
+        block_id: parseInt(document.getElementById('classicBlockSelect')?.value),
+        number: document.getElementById('classicNomor')?.value?.trim(),
+        date_of_death: document.getElementById('classicTanggal')?.value,
+        grave_type: document.getElementById('classicTipeMakam')?.value,
+        birth_place: document.getElementById('classicTempatLahir')?.value?.trim() || null,
+        birth_date: document.getElementById('classicTanggalLahir')?.value || null,
+        notes: document.getElementById('classicKeterangan')?.value?.trim() || null,
+        heirs: []
+    };
+    
+    // Collect ahli waris
+    const containers = document.querySelectorAll('#classicAhliWarisContainer > div');
+    containers.forEach((container, index) => {
+        const namaInput = container.querySelector('.classic-heir-nama');
+        const telpInput = container.querySelector('.classic-heir-telp');
+        const hubunganSelect = container.querySelector('.classic-heir-hubungan');
+        const alamatTextarea = container.querySelector('.classic-heir-alamat');
+        
+        const nama = namaInput?.value?.trim();
+        
+        if (nama || index === 0) { // Include if has name or is first (required)
+            data.heirs.push({
+                grave_id: 0,  // Will be set by backend
+                order_number: index + 1,
+                full_name: nama || '',
+                phone_number: telpInput?.value?.trim() || null,
+                relationship: hubunganSelect?.value || null,
+                address: alamatTextarea?.value?.trim() || null,
+                is_primary: index === 0
+            });
+        }
+    });
+    
+    return data;
+}
+
+async function handleClassicFormSubmit() {
+    try {
+        const data = collectClassicFormData();
+        const editId = document.getElementById('classicEditId')?.value;
+        
+        // Validation
+        if (!data.deceased_name) {
+            showToast('Nama almarhum wajib diisi', 'error');
+            return;
+        }
+        if (!data.block_id) {
+            showToast('Blok makam wajib dipilih', 'error');
+            return;
+        }
+        if (!data.number) {
+            showToast('Nomor makam wajib diisi', 'error');
+            return;
+        }
+        // Note: date_of_death (tanggal dimakamkan) is now optional
+        if (!data.grave_type) {
+            showToast('Tipe makam wajib dipilih', 'error');
+            return;
+        }
+        if (data.heirs.length === 0 || !data.heirs[0].full_name) {
+            showToast('Ahli waris pertama wajib diisi', 'error');
+            return;
+        }
+        
+        showLoading(true);
+        
+        if (editId) {
+            // Update existing
+            console.log('Updating grave via classic form:', editId, data);
+            
+            const token = window.astanaApp?.getSessionToken?.() || localStorage.getItem('astana_session_token');
+            
+            await window.__TAURI__?.core?.invoke('update_grave', {
+                token: token,
+                id: parseInt(editId),
+                grave: {
+                    deceased_name: data.deceased_name,
+                    block_id: data.block_id,
+                    number: data.number,
+                    date_of_death: data.date_of_death,
+                    birth_place: data.birth_place,
+                    birth_date: data.birth_date,
+                    burial_date: null,
+                    notes: data.notes,
+                    grave_type: data.grave_type
+                }
+            });
+            
+            // Delete existing heirs and create new ones
+            await window.__TAURI__?.core?.invoke('delete_heirs_by_grave', { graveId: parseInt(editId) });
+            
+            for (const heir of data.heirs) {
+                if (heir.full_name) {
+                    await window.__TAURI__?.core?.invoke('create_heir', {
+                        heir: {
+                            ...heir,
+                            grave_id: parseInt(editId)
+                        }
+                    });
+                }
+            }
+            
+            showToast('Data makam berhasil diperbarui', 'success');
+        } else {
+            // Create new
+            console.log('Creating new grave via classic form:', data);
+            console.log('Block ID:', data.block_id, 'Number:', data.number);
+            
+            // Check for duplicate before creating (only for 'new' graves, not 'stacked')
+            if (data.grave_type === 'new') {
+                const existingGraves = currentGraves.filter(g => 
+                    g.block_id === data.block_id && g.number === data.number && g.grave_type === 'new'
+                );
+                if (existingGraves.length > 0) {
+                    showToast(`Makam Baru dengan Blok ${data.block_id} Nomor ${data.number} sudah ada! Gunakan tipe Makam Tumpuk jika ingin menambahkan ke lokasi yang sama.`, 'error');
+                    return;
+                }
+            }
+            
+            const token = window.astanaApp?.getSessionToken?.() || localStorage.getItem('astana_session_token');
+            const requestPayload = {
+                grave: {
+                    deceased_name: data.deceased_name,
+                    block_id: data.block_id,
+                    number: data.number,
+                    date_of_death: data.date_of_death,
+                    birth_place: data.birth_place,
+                    birth_date: data.birth_date,
+                    burial_date: data.burial_date,
+                    notes: data.notes,
+                    grave_type: data.grave_type
+                },
+                heirs: data.heirs
+            };
+            console.log('Request payload:', JSON.stringify(requestPayload, null, 2));
+            await window.__TAURI__?.core?.invoke('create_grave_with_heirs', { 
+                token: token,
+                request: requestPayload 
+            });
+            showToast('Data makam berhasil disimpan', 'success');
+        }
+        
+        // Reset form and refresh table
+        resetClassicForm();
+        await loadGraves();
+        
+    } catch (error) {
+        console.error('Failed to save via classic form:', error);
+        // Better error message for duplicate constraint
+        let errorMsg = error.toString();
+        if (errorMsg.includes('UNIQUE constraint failed')) {
+            errorMsg = 'Makam dengan Blok dan Nomor tersebut sudah ada di database!';
+        }
+        showToast('Gagal menyimpan data: ' + errorMsg, 'error');
+    } finally {
+        showLoading(false);
+    }
+}
+
+// ==================== DATA LOADING ====================
+
+async function handleLogout() {
+    try {
+        if (window.__TAURI__) {
+            await window.__TAURI__.core.invoke('logout');
+        }
+        window.location.href = '/login.html';
+    } catch (error) {
+        console.error('Logout failed:', error);
+        window.location.href = '/login.html';
+    }
+}
 
 async function loadBlocks() {
     try {
+        console.log('Loading blocks...');
         currentBlocks = await window.__TAURI__?.core?.invoke('get_blocks');
+        console.log('Blocks loaded:', currentBlocks.length);
         populateBlockFilter();
         populateTambahBlockSelect();
         populateEditBlockSelect();
+        populateClassicBlockSelect(); // Also populate classic form
     } catch (error) {
         console.error('Failed to load blocks:', error);
         showToast('Gagal memuat data blok', 'error');
@@ -247,18 +669,15 @@ async function loadBlocks() {
 }
 
 function populateBlockFilter() {
-    const blockSelect = document.querySelector('aside + main select');
+    const blockSelect = document.getElementById('filterBlockSelect');
     if (!blockSelect) return;
     
-    // Save current selection
     const currentValue = blockSelect.value;
     
-    // Clear existing options except first
     while (blockSelect.options.length > 1) {
         blockSelect.remove(1);
     }
     
-    // Add block options
     currentBlocks.forEach(block => {
         const option = document.createElement('option');
         option.value = block.id;
@@ -298,18 +717,25 @@ function populateEditBlockSelect(selectedBlockId = null) {
     });
 }
 
-async function loadGraves(search = '') {
+async function loadGraves(search = null) {
     try {
+        // If no search provided, read from current search input
+        if (search === null) {
+            const searchInput = document.querySelector('input[type="text"][placeholder*="Cari"]');
+            search = searchInput ? searchInput.value : '';
+        }
+        console.log('Loading graves... Search:', search);
         showLoading(true);
         
-        const blockSelect = document.querySelector('aside + main select');
+        const blockSelect = document.getElementById('filterBlockSelect');
         const blockId = blockSelect && blockSelect.value ? parseInt(blockSelect.value) : null;
         
         const offset = (currentPage - 1) * itemsPerPage;
         
-        // Get sort parameters
         const sortField = document.getElementById('sortField')?.value || 'nama';
         const sortOrder = document.getElementById('sortOrder')?.value || 'asc';
+        
+        console.log('Fetching graves with params:', { search, blockId, limit: itemsPerPage, offset, sortField, sortOrder });
         
         const graves = await window.__TAURI__?.core?.invoke('get_graves', {
             search: search || null,
@@ -320,14 +746,19 @@ async function loadGraves(search = '') {
             sortOrder: sortOrder
         });
         
+        console.log('Graves loaded:', graves.length, graves);
+        
         const totalCount = await window.__TAURI__?.core?.invoke('count_graves', {
             search: search || null,
             blockId: blockId
         });
         
+        console.log('Total count:', totalCount);
+        
         currentGraves = graves;
         totalPages = Math.ceil(totalCount / itemsPerPage) || 1;
         
+        console.log('Rendering table with', currentGraves.length, 'graves');
         renderGravesTable();
         updatePagination(totalCount);
     } catch (error) {
@@ -340,7 +771,10 @@ async function loadGraves(search = '') {
 
 async function loadHeirsForGrave(graveId) {
     try {
-        return await window.__TAURI__?.core?.invoke('get_heirs_by_grave', { graveId });
+        console.log('Loading heirs for grave:', graveId);
+        const heirs = await window.__TAURI__?.core?.invoke('get_heirs_by_grave', { graveId });
+        console.log('Heirs loaded:', heirs.length);
+        return heirs;
     } catch (error) {
         console.error('Failed to load heirs:', error);
         return [];
@@ -350,15 +784,21 @@ async function loadHeirsForGrave(graveId) {
 // ==================== RENDER TABLE ====================
 
 function renderGravesTable() {
-    const tbody = document.querySelector('tbody');
-    if (!tbody) return;
+    console.log('renderGravesTable called. Current graves:', currentGraves.length);
+    
+    const tbody = document.getElementById('gravesTableBody');
+    if (!tbody) {
+        console.error('tbody with id gravesTableBody not found!');
+        return;
+    }
     
     tbody.innerHTML = '';
     
     if (currentGraves.length === 0) {
+        console.log('No graves to render, showing empty message');
         tbody.innerHTML = `
             <tr>
-                <td colspan="8" class="px-4 py-8 text-center text-gray-500">
+                <td colspan="10" class="px-4 py-8 text-center text-gray-500">
                     Tidak ada data makam
                 </td>
             </tr>
@@ -367,24 +807,30 @@ function renderGravesTable() {
     }
     
     currentGraves.forEach((grave, index) => {
+        console.log('Rendering grave:', grave.id, grave.deceased_name);
         const row = document.createElement('tr');
-        row.className = 'hover:bg-gray-50';
+        row.className = 'hover:bg-gray-50 cursor-pointer transition-colors';
+        row.dataset.graveId = grave.id;
         
-        // Format dates
-        const dateOfDeath = formatDate(grave.date_of_death);
-        
-        // Create heirs cells (3 columns)
-        let heirsHtml = '';
-        for (let i = 0; i < 3; i++) {
-            heirsHtml += `<td class="px-4 py-3 border-r"><span class="text-sm text-gray-400">-</span></td>`;
-        }
+        const burialDate = grave.burial_date ? formatDate(grave.burial_date) : '-';
+        const birthDate = grave.birth_date ? formatDate(grave.birth_date) : '-';
         
         row.innerHTML = `
             <td class="px-4 py-3 text-sm text-gray-500 sticky left-0 bg-white border-r">${(currentPage - 1) * itemsPerPage + index + 1}</td>
-            <td class="px-4 py-3 text-sm font-medium text-gray-800 sticky left-12 bg-white border-r">${escapeHtml(grave.deceased_name)}</td>
-            <td class="px-4 py-3 text-sm text-center text-gray-600 border-r">${grave.code}-${grave.number}</td>
-            <td class="px-4 py-3 text-sm text-gray-600 border-r">${dateOfDeath}</td>
-            ${heirsHtml}
+            <td class="px-4 py-3 text-sm text-center text-gray-600 border-r">${escapeHtml(grave.code)}-${grave.number}</td>
+            <td class="px-4 py-3 text-sm font-medium text-gray-800 border-r">${escapeHtml(grave.deceased_name)}</td>
+            <td class="px-4 py-3 text-sm text-gray-600 border-r">${escapeHtml(grave.birth_place || '-')}</td>
+            <td class="px-4 py-3 text-sm text-gray-600 border-r">${birthDate}</td>
+            <td class="px-4 py-3 text-sm text-gray-600 border-r">${burialDate}</td>
+            <td class="px-4 py-3 text-sm text-gray-800 border-r">
+                <span class="heir-name-${grave.id}">Memuat...</span>
+            </td>
+            <td class="px-4 py-3 text-sm text-gray-600 border-r">
+                <span class="heir-phone-${grave.id}">Memuat...</span>
+            </td>
+            <td class="px-4 py-3 text-sm text-gray-600 border-r">
+                <span class="heir-address-${grave.id}">Memuat...</span>
+            </td>
             <td class="px-4 py-3 text-center">
                 <div class="flex items-center justify-center gap-2">
                     <button data-edit-id="${grave.id}" class="btn-edit-grave p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Edit">
@@ -401,27 +847,43 @@ function renderGravesTable() {
             </td>
         `;
         
+        row.addEventListener('click', (e) => {
+            if (e.target.closest('.btn-edit-grave') || e.target.closest('.btn-delete-grave')) {
+                return;
+            }
+            showDetailModal(grave.id);
+        });
+        
         tbody.appendChild(row);
         
-        // Load heirs for this row
         loadAndRenderHeirsForRow(grave.id, row);
     });
+    
+    console.log('Table rendering complete');
 }
 
 async function loadAndRenderHeirsForRow(graveId, row) {
+    console.log('Loading heirs for row:', graveId);
     const heirs = await loadHeirsForGrave(graveId);
-    const heirCells = row.querySelectorAll('td:nth-child(5), td:nth-child(6), td:nth-child(7)');
+    const nameCell = row.querySelector(`.heir-name-${graveId}`);
+    const phoneCell = row.querySelector(`.heir-phone-${graveId}`);
+    const addressCell = row.querySelector(`.heir-address-${graveId}`);
     
-    heirs.forEach((heir, index) => {
-        if (index < 3 && heirCells[index]) {
-            heirCells[index].innerHTML = `
-                <div class="text-sm">
-                    <p class="font-medium text-gray-800">${escapeHtml(heir.full_name)}</p>
-                    <p class="text-xs text-gray-500">${heir.phone_number || '-'}</p>
-                </div>
-            `;
-        }
-    });
+    if (heirs && heirs.length > 0) {
+        const firstHeir = heirs[0];
+        if (nameCell) nameCell.textContent = escapeHtml(firstHeir.full_name);
+        if (phoneCell) phoneCell.textContent = escapeHtml(firstHeir.phone_number || '-');
+        if (addressCell) addressCell.textContent = truncateText(firstHeir.address || '-', 30);
+    } else {
+        if (nameCell) nameCell.textContent = '-';
+        if (phoneCell) phoneCell.textContent = '-';
+        if (addressCell) addressCell.textContent = '-';
+    }
+}
+
+function truncateText(text, maxLength) {
+    if (!text || text.length <= maxLength) return text || '-';
+    return text.substring(0, maxLength) + '...';
 }
 
 function updatePagination(totalCount) {
@@ -433,7 +895,6 @@ function updatePagination(totalCount) {
         paginationInfo.textContent = `Menampilkan ${start}-${end} dari ${totalCount} data`;
     }
     
-    // Update pagination buttons
     const paginationContainer = document.querySelector('.border-t.border-gray-200 .flex.gap-2');
     if (paginationContainer) {
         renderPaginationButtons(paginationContainer);
@@ -443,10 +904,8 @@ function updatePagination(totalCount) {
 function renderPaginationButtons(container) {
     let html = '';
     
-    // Previous button
     html += `<button data-page="${currentPage - 1}" class="pagination-btn px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50" ${currentPage === 1 ? 'disabled' : ''}>Sebelumnya</button>`;
     
-    // Page numbers
     const maxVisiblePages = 5;
     let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
     let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
@@ -474,7 +933,6 @@ function renderPaginationButtons(container) {
         html += `<button data-page="${totalPages}" class="pagination-btn px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">${totalPages}</button>`;
     }
     
-    // Next button
     html += `<button data-page="${currentPage + 1}" class="pagination-btn px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50" ${currentPage === totalPages ? 'disabled' : ''}>Selanjutnya</button>`;
     
     container.innerHTML = html;
@@ -487,25 +945,178 @@ async function goToPage(page) {
     await loadGraves(searchInput ? searchInput.value : '');
 }
 
-// ==================== ADD MODAL ====================
+// ==================== DETAIL MODAL ====================
+
+function openDetailModal() {
+    const modal = document.getElementById('detailModal');
+    if (!modal) {
+        console.error('detailModal not found!');
+        return;
+    }
+    modal.classList.remove('hidden');
+}
+
+function closeDetailModal() {
+    const modal = document.getElementById('detailModal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+async function showDetailModal(graveId) {
+    console.log('Showing detail for grave:', graveId);
+    try {
+        showLoading(true);
+        
+        const detail = await window.__TAURI__?.core?.invoke('get_grave_detail', { id: graveId });
+        if (!detail) {
+            showToast('Data makam tidak ditemukan', 'error');
+            return;
+        }
+        
+        console.log('Detail loaded:', detail);
+        
+        const namaEl = document.getElementById('detailNamaAlmarhum');
+        const blokEl = document.getElementById('detailBlokNomor');
+        const tipeEl = document.getElementById('detailTipeMakam');
+        const tempatLahirEl = document.getElementById('detailTempatLahir');
+        const tanggalLahirEl = document.getElementById('detailTanggalLahir');
+        const tanggalDimakamkanEl = document.getElementById('detailTanggalDimakamkan');
+        const keteranganEl = document.getElementById('detailKeterangan');
+        
+        if (namaEl) namaEl.textContent = detail.grave.deceased_name || '-';
+        if (blokEl) blokEl.textContent = (detail.grave.code || '-') + ' - ' + (detail.grave.number || '-');
+        if (tipeEl) tipeEl.textContent = detail.grave.grave_type === 'new' ? 'Makam Baru' : (detail.grave.grave_type === 'stacked' ? 'Makam Tumpuk' : '-');
+        if (tempatLahirEl) tempatLahirEl.textContent = detail.grave.birth_place || '-';
+        if (tanggalLahirEl) tanggalLahirEl.textContent = detail.grave.birth_date ? formatDate(detail.grave.birth_date) : '-';
+        if (tanggalDimakamkanEl) tanggalDimakamkanEl.textContent = detail.grave.burial_date ? formatDate(detail.grave.burial_date) : '-';
+        if (keteranganEl) keteranganEl.textContent = detail.grave.notes || '-';
+        
+        const heirsContainer = document.getElementById('detailAhliWarisContainer');
+        if (heirsContainer) {
+            heirsContainer.innerHTML = '';
+            
+            if (detail.heirs && detail.heirs.length > 0) {
+                detail.heirs.forEach((heir, index) => {
+                    const heirCard = document.createElement('div');
+                    heirCard.className = 'p-4 bg-gray-50 rounded-lg border border-gray-200';
+                    heirCard.innerHTML = `
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-semibold text-gray-800">Ahli Waris #${index + 1}</span>
+                            <span class="text-xs ${index === 0 ? 'bg-blue-200 text-blue-800' : 'bg-gray-200 text-gray-600'} px-2 py-0.5 rounded">${index === 0 ? 'Utama' : 'Opsional'}</span>
+                        </div>
+                        <div class="space-y-2 text-sm">
+                            <div>
+                                <span class="text-gray-500">Nama:</span>
+                                <span class="font-medium text-gray-800">${escapeHtml(heir.full_name)}</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-500">Telepon:</span>
+                                <span class="text-gray-800">${escapeHtml(heir.phone_number || '-')}</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-500">Hubungan:</span>
+                                <span class="text-gray-800">${formatRelationship(heir.relationship)}</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-500">Alamat:</span>
+                                <span class="text-gray-800">${escapeHtml(heir.address || '-')}</span>
+                            </div>
+                        </div>
+                    `;
+                    heirsContainer.appendChild(heirCard);
+                });
+            } else {
+                heirsContainer.innerHTML = '<p class="text-gray-500 text-sm">Tidak ada data ahli waris</p>';
+            }
+        }
+        
+        const btnEdit = document.getElementById('btnEditFromDetail');
+        const btnDelete = document.getElementById('btnDeleteFromDetail');
+        
+        if (btnEdit) {
+            btnEdit.onclick = () => {
+                closeDetailModal();
+                handleEditFromDetail(graveId);
+            };
+        }
+        
+        if (btnDelete) {
+            btnDelete.onclick = () => {
+                closeDetailModal();
+                openDeleteModal(graveId, detail.grave.deceased_name);
+            };
+        }
+        
+        openDetailModal();
+    } catch (error) {
+        console.error('Failed to load grave detail:', error);
+        showToast('Gagal memuat detail makam: ' + error, 'error');
+    } finally {
+        showLoading(false);
+    }
+}
+
+async function handleEditFromDetail(graveId) {
+    console.log('Editing from detail, graveId:', graveId, 'mode:', currentViewMode);
+    
+    if (currentViewMode === 'classic') {
+        // Classic mode: populate classic form and scroll
+        try {
+            showLoading(true);
+            const detail = await window.__TAURI__?.core?.invoke('get_grave_detail', { id: graveId });
+            if (detail) {
+                currentEditingId = graveId;
+                populateClassicForm(detail.grave, detail.heirs);
+                scrollToClassicForm();
+                showToast('Silakan edit data di form atas', 'info');
+            }
+        } catch (error) {
+            console.error('Failed to load for edit:', error);
+            showToast('Gagal memuat data untuk edit', 'error');
+        } finally {
+            showLoading(false);
+        }
+    } else {
+        // Modern mode: open edit modal
+        openEditModal(graveId);
+    }
+}
+
+// ==================== MODAL FUNCTIONS (Modern Mode) ====================
 
 function openModal() {
     const modal = document.getElementById('inputModal');
     const panel = document.getElementById('modalPanel');
+    if (!modal || !panel) return;
+    
     modal.classList.remove('hidden');
     setTimeout(() => panel.classList.remove('translate-x-full'), 10);
     
-    // Reset form
-    document.getElementById('tambahNama').value = '';
-    document.getElementById('tambahBlockSelect').value = '';
-    document.getElementById('tambahNomor').value = '';
-    document.getElementById('tambahTanggal').value = '';
+    const namaInput = document.getElementById('tambahNama');
+    const blockSelect = document.getElementById('tambahBlockSelect');
+    const nomorInput = document.getElementById('tambahNomor');
+    const tanggalInput = document.getElementById('tambahTanggal');
+    const tipeSelect = document.getElementById('tambahTipeMakam');
+    const tempatLahirInput = document.getElementById('tambahTempatLahir');
+    const tanggalLahirInput = document.getElementById('tambahTanggalLahir');
+    
+    if (namaInput) namaInput.value = '';
+    if (blockSelect) blockSelect.value = '';
+    if (nomorInput) nomorInput.value = '';
+    if (tanggalInput) tanggalInput.value = '';
+    if (tipeSelect) tipeSelect.value = '';
+    if (tempatLahirInput) tempatLahirInput.value = '';
+    if (tanggalLahirInput) tanggalLahirInput.value = '';
+    
     resetAhliWaris();
 }
 
 function closeModal() {
     const modal = document.getElementById('inputModal');
     const panel = document.getElementById('modalPanel');
+    if (!modal || !panel) return;
+    
     panel.classList.add('translate-x-full');
     setTimeout(() => modal.classList.add('hidden'), 300);
 }
@@ -563,6 +1174,8 @@ function tambahAhliWaris() {
     
     jumlahAhliWaris++;
     const container = document.getElementById('ahliWarisContainer');
+    if (!container) return;
+    
     const div = document.createElement('div');
     div.innerHTML = createHeirHTML(jumlahAhliWaris, false);
     container.appendChild(div.firstElementChild);
@@ -573,6 +1186,8 @@ function hapusAhliWarisTerakhir() {
     if (jumlahAhliWaris <= 1) return;
     
     const container = document.getElementById('ahliWarisContainer');
+    if (!container) return;
+    
     container.removeChild(container.lastElementChild);
     jumlahAhliWaris--;
     updateTombolWaris();
@@ -601,11 +1216,13 @@ function updateTombolWaris() {
 
 async function simpanData() {
     try {
-        // Validate required fields
-        const nama = document.getElementById('tambahNama').value.trim();
-        const blockId = parseInt(document.getElementById('tambahBlockSelect').value);
-        const nomor = document.getElementById('tambahNomor').value.trim();
-        const tanggalWafat = document.getElementById('tambahTanggal').value;
+        const nama = document.getElementById('tambahNama')?.value?.trim();
+        const blockId = parseInt(document.getElementById('tambahBlockSelect')?.value);
+        const nomor = document.getElementById('tambahNomor')?.value?.trim();
+        const tanggalWafat = document.getElementById('tambahTanggal')?.value;
+        const tipeMakam = document.getElementById('tambahTipeMakam')?.value;
+        const tempatLahir = document.getElementById('tambahTempatLahir')?.value?.trim() || null;
+        const tanggalLahir = document.getElementById('tambahTanggalLahir')?.value || null;
         
         if (!nama) {
             showToast('Nama almarhum wajib diisi', 'error');
@@ -619,18 +1236,18 @@ async function simpanData() {
             showToast('Nomor makam wajib diisi', 'error');
             return;
         }
-        if (!tanggalWafat) {
-            showToast('Tanggal wafat wajib diisi', 'error');
+        // Note: tanggal dimakamkan (date_of_death) is now optional
+        if (!tipeMakam) {
+            showToast('Tipe makam wajib dipilih', 'error');
             return;
         }
         
-        // Collect heirs data
         const heirs = [];
         const heirElements = document.querySelectorAll('#ahliWarisContainer > div');
         
         for (let i = 0; i < heirElements.length; i++) {
             const el = heirElements[i];
-            const namaWaris = el.querySelector('.heir-nama').value.trim();
+            const namaWaris = el.querySelector('.heir-nama')?.value?.trim();
             
             if (i === 0 && !namaWaris) {
                 showToast('Ahli waris pertama wajib diisi', 'error');
@@ -639,12 +1256,12 @@ async function simpanData() {
             
             if (namaWaris) {
                 heirs.push({
-                    grave_id: 0,
+                    grave_id: 0,  // Will be set by backend
                     order_number: i + 1,
                     full_name: namaWaris,
-                    phone_number: el.querySelector('.heir-telp').value.trim() || null,
-                    relationship: el.querySelector('.heir-hubungan').value || null,
-                    address: el.querySelector('.heir-alamat').value.trim() || null,
+                    phone_number: el.querySelector('.heir-telp')?.value?.trim() || null,
+                    relationship: el.querySelector('.heir-hubungan')?.value || null,
+                    address: el.querySelector('.heir-alamat')?.value?.trim() || null,
                     is_primary: i === 0
                 });
             }
@@ -655,35 +1272,57 @@ async function simpanData() {
             return;
         }
         
-        // Create request
-        const request = {
+        console.log('Saving grave via modal - Block ID:', blockId, 'Number:', nomor, 'Type:', tipeMakam);
+        
+        // Check for duplicate before creating (only for 'new' graves, not 'stacked')
+        if (tipeMakam === 'new') {
+            const existingGraves = currentGraves.filter(g => 
+                g.block_id === blockId && g.number === nomor && g.grave_type === 'new'
+            );
+            if (existingGraves.length > 0) {
+                showToast(`Makam Baru dengan Blok ${blockId} Nomor ${nomor} sudah ada! Gunakan tipe Makam Tumpuk jika ingin menambahkan ke lokasi yang sama.`, 'error');
+                return;
+            }
+        }
+        
+        showLoading(true);
+        
+        const token = window.astanaApp?.getSessionToken?.() || localStorage.getItem('astana_session_token');
+        const requestPayload = {
             grave: {
                 deceased_name: nama,
                 block_id: blockId,
                 number: nomor,
                 date_of_death: tanggalWafat,
+                birth_place: tempatLahir,
+                birth_date: tanggalLahir,
                 burial_date: null,
-                notes: null
+                notes: null,
+                grave_type: tipeMakam
             },
             heirs: heirs
         };
-        
-        showLoading(true);
-        const token = window.astanaApp.getSessionToken();
-        await window.__TAURI__?.core?.invoke('create_grave_with_heirs', { token, request });
+        console.log('Request payload:', JSON.stringify(requestPayload, null, 2));
+        await window.__TAURI__?.core?.invoke('create_grave_with_heirs', { 
+            token: token,
+            request: requestPayload 
+        });
         
         closeModal();
         showToast('Data makam berhasil disimpan', 'success');
         await loadGraves();
     } catch (error) {
         console.error('Failed to save grave:', error);
-        showToast('Gagal menyimpan data: ' + error, 'error');
+        // Better error message for duplicate constraint
+        let errorMsg = error.toString();
+        if (errorMsg.includes('UNIQUE constraint failed')) {
+            errorMsg = 'Makam dengan Blok dan Nomor tersebut sudah ada di database!';
+        }
+        showToast('Gagal menyimpan data: ' + errorMsg, 'error');
     } finally {
         showLoading(false);
     }
 }
-
-// ==================== EDIT MODAL ====================
 
 async function openEditModal(graveId) {
     currentEditingId = graveId;
@@ -691,39 +1330,53 @@ async function openEditModal(graveId) {
     try {
         showLoading(true);
         
-        const detail = await window.__TAURI__?.core?.invoke('get_grave_detail', { id: graveId });
+        const detail = await window.__TAURI__?.core?.invoke('get_grave_by_id', { id: graveId });
         if (!detail) {
             showToast('Data makam tidak ditemukan', 'error');
             return;
         }
         
-        // Populate form
-        document.getElementById('editNama').value = detail.grave.deceased_name;
-        document.getElementById('editTanggal').value = detail.grave.date_of_death;
-        document.getElementById('editNomor').value = detail.grave.number;
+        console.log('Editing grave via modal:', detail);
         
-        // Populate block select
-        populateEditBlockSelect(detail.grave.block_id);
+        const namaInput = document.getElementById('editNama');
+        const tanggalInput = document.getElementById('editTanggal');
+        const nomorInput = document.getElementById('editNomor');
+        const tipeSelect = document.getElementById('editTipeMakam');
+        const tempatLahirInput = document.getElementById('editTempatLahir');
+        const tanggalLahirInput = document.getElementById('editTanggalLahir');
         
-        // Populate heirs
+        if (namaInput) namaInput.value = detail.deceased_name || '';
+        if (tanggalInput) tanggalInput.value = detail.date_of_death || '';
+        if (nomorInput) nomorInput.value = detail.number || '';
+        if (tipeSelect) tipeSelect.value = detail.grave_type || '';
+        if (tempatLahirInput) tempatLahirInput.value = detail.birth_place || '';
+        if (tanggalLahirInput) tanggalLahirInput.value = detail.birth_date || '';
+        
+        populateEditBlockSelect(detail.block_id);
+        
+        const heirs = await loadHeirsForGrave(graveId);
         const container = document.getElementById('editAhliWarisContainer');
-        container.innerHTML = '';
-        jumlahAhliWarisEdit = detail.heirs.length || 1;
-        
-        if (detail.heirs.length === 0) {
-            container.innerHTML = createHeirHTML(1, true, null);
-        } else {
-            detail.heirs.forEach((heir, index) => {
-                container.innerHTML += createHeirHTML(index + 1, index === 0, heir);
-            });
+        if (container) {
+            container.innerHTML = '';
+            jumlahAhliWarisEdit = heirs.length || 1;
+            
+            if (heirs.length === 0) {
+                container.innerHTML = createHeirHTML(1, true, null);
+            } else {
+                heirs.forEach((heir, index) => {
+                    container.innerHTML += createHeirHTML(index + 1, index === 0, heir);
+                });
+            }
         }
         
         updateTombolWarisEdit();
         
         const modal = document.getElementById('editModal');
         const panel = document.getElementById('editModalPanel');
-        modal.classList.remove('hidden');
-        setTimeout(() => panel.classList.remove('translate-x-full'), 10);
+        if (modal && panel) {
+            modal.classList.remove('hidden');
+            setTimeout(() => panel.classList.remove('translate-x-full'), 10);
+        }
     } catch (error) {
         console.error('Failed to load grave detail:', error);
         showToast('Gagal memuat detail makam: ' + error, 'error');
@@ -735,6 +1388,8 @@ async function openEditModal(graveId) {
 function closeEditModal() {
     const modal = document.getElementById('editModal');
     const panel = document.getElementById('editModalPanel');
+    if (!modal || !panel) return;
+    
     panel.classList.add('translate-x-full');
     setTimeout(() => modal.classList.add('hidden'), 300);
     currentEditingId = null;
@@ -745,6 +1400,8 @@ function tambahAhliWarisEdit() {
     
     jumlahAhliWarisEdit++;
     const container = document.getElementById('editAhliWarisContainer');
+    if (!container) return;
+    
     const div = document.createElement('div');
     div.innerHTML = createHeirHTML(jumlahAhliWarisEdit, false, null);
     container.appendChild(div.firstElementChild);
@@ -755,6 +1412,8 @@ function hapusAhliWarisTerakhirEdit() {
     if (jumlahAhliWarisEdit <= 1) return;
     
     const container = document.getElementById('editAhliWarisContainer');
+    if (!container) return;
+    
     container.removeChild(container.lastElementChild);
     jumlahAhliWarisEdit--;
     updateTombolWarisEdit();
@@ -785,11 +1444,13 @@ async function simpanEdit() {
     if (!currentEditingId) return;
     
     try {
-        // Validate required fields
-        const nama = document.getElementById('editNama').value.trim();
-        const blockId = parseInt(document.getElementById('editBlockSelect').value);
-        const nomor = document.getElementById('editNomor').value.trim();
-        const tanggalWafat = document.getElementById('editTanggal').value;
+        const nama = document.getElementById('editNama')?.value?.trim();
+        const blockId = parseInt(document.getElementById('editBlockSelect')?.value);
+        const nomor = document.getElementById('editNomor')?.value?.trim();
+        const tanggalWafat = document.getElementById('editTanggal')?.value;
+        const tipeMakam = document.getElementById('editTipeMakam')?.value;
+        const tempatLahir = document.getElementById('editTempatLahir')?.value?.trim() || null;
+        const tanggalLahir = document.getElementById('editTanggalLahir')?.value || null;
         
         if (!nama) {
             showToast('Nama almarhum wajib diisi', 'error');
@@ -803,18 +1464,18 @@ async function simpanEdit() {
             showToast('Nomor makam wajib diisi', 'error');
             return;
         }
-        if (!tanggalWafat) {
-            showToast('Tanggal wafat wajib diisi', 'error');
+        // Note: tanggal dimakamkan (date_of_death) is now optional
+        if (!tipeMakam) {
+            showToast('Tipe makam wajib dipilih', 'error');
             return;
         }
         
-        // Collect heirs data
         const heirs = [];
         const heirElements = document.querySelectorAll('#editAhliWarisContainer > div');
         
         for (let i = 0; i < heirElements.length; i++) {
             const el = heirElements[i];
-            const namaWaris = el.querySelector('.heir-nama').value.trim();
+            const namaWaris = el.querySelector('.heir-nama')?.value?.trim();
             
             if (i === 0 && !namaWaris) {
                 showToast('Ahli waris pertama wajib diisi', 'error');
@@ -826,9 +1487,9 @@ async function simpanEdit() {
                     grave_id: currentEditingId,
                     order_number: i + 1,
                     full_name: namaWaris,
-                    phone_number: el.querySelector('.heir-telp').value.trim() || null,
-                    relationship: el.querySelector('.heir-hubungan').value || null,
-                    address: el.querySelector('.heir-alamat').value.trim() || null,
+                    phone_number: el.querySelector('.heir-telp')?.value?.trim() || null,
+                    relationship: el.querySelector('.heir-hubungan')?.value || null,
+                    address: el.querySelector('.heir-alamat')?.value?.trim() || null,
                     is_primary: i === 0
                 });
             }
@@ -841,27 +1502,38 @@ async function simpanEdit() {
         
         showLoading(true);
         
-        const token = window.astanaApp.getSessionToken();
+        const graveUpdate = {
+            deceased_name: nama,
+            block_id: blockId,
+            number: nomor,
+            date_of_death: tanggalWafat,
+            birth_place: tempatLahir,
+            birth_date: tanggalLahir,
+            burial_date: null,
+            notes: null,
+            grave_type: tipeMakam
+        };
         
-        // Update grave
+        console.log('Updating grave via modal:', currentEditingId, graveUpdate);
+        
+        const token = window.astanaApp?.getSessionToken?.() || localStorage.getItem('astana_session_token');
+        
         await window.__TAURI__?.core?.invoke('update_grave', {
-            token,
+            token: token,
             id: currentEditingId,
-            grave: {
-                deceased_name: nama,
-                block_id: blockId,
-                number: nomor,
-                date_of_death: tanggalWafat,
-                burial_date: null,
-                notes: null
-            }
+            grave: graveUpdate
         });
         
-        // Update heirs
-        await window.__TAURI__?.core?.invoke('update_grave_heirs', {
-            graveId: currentEditingId,
-            heirs: heirs
-        });
+        await window.__TAURI__?.core?.invoke('delete_heirs_by_grave', { graveId: currentEditingId });
+        
+        for (const heir of heirs) {
+            await window.__TAURI__?.core?.invoke('create_heir', {
+                heir: {
+                    ...heir,
+                    grave_id: currentEditingId
+                }
+            });
+        }
         
         closeEditModal();
         showToast('Data makam berhasil diperbarui', 'success');
@@ -874,17 +1546,20 @@ async function simpanEdit() {
     }
 }
 
-// ==================== DELETE MODAL ====================
-
 function openDeleteModal(graveId, nama) {
     currentDeletingId = graveId;
     currentDeletingName = nama;
-    document.getElementById('deleteNama').textContent = nama;
-    document.getElementById('deleteModal').classList.remove('hidden');
+    const deleteNamaEl = document.getElementById('deleteNama');
+    if (deleteNamaEl) deleteNamaEl.textContent = nama;
+    
+    const modal = document.getElementById('deleteModal');
+    if (modal) modal.classList.remove('hidden');
 }
 
 function closeDeleteModal() {
-    document.getElementById('deleteModal').classList.add('hidden');
+    const modal = document.getElementById('deleteModal');
+    if (modal) modal.classList.add('hidden');
+    
     currentDeletingId = null;
     currentDeletingName = '';
 }
@@ -894,8 +1569,7 @@ async function confirmDelete() {
     
     try {
         showLoading(true);
-        const token = window.astanaApp.getSessionToken();
-        await window.__TAURI__?.core?.invoke('delete_grave', { token, id: currentDeletingId });
+        await window.__TAURI__?.core?.invoke('delete_grave', { id: currentDeletingId });
         
         closeDeleteModal();
         showToast('Data makam berhasil dihapus', 'success');
@@ -903,6 +1577,25 @@ async function confirmDelete() {
     } catch (error) {
         console.error('Failed to delete grave:', error);
         showToast('Gagal menghapus data: ' + error, 'error');
+    } finally {
+        showLoading(false);
+    }
+}
+
+async function handleImport() {
+    try {
+        showLoading(true);
+        const result = await window.__TAURI__?.core?.invoke('import_database');
+        
+        if (result.success) {
+            showToast(result.message || 'Database berhasil diimport', 'success');
+            await loadGraves();
+        } else {
+            showToast(result.error || 'Gagal mengimport database', 'error');
+        }
+    } catch (error) {
+        console.error('Import failed:', error);
+        showToast('Gagal mengimport database: ' + error, 'error');
     } finally {
         showLoading(false);
     }
@@ -950,26 +1643,22 @@ function showToast(message, type = 'info') {
 
 // ==================== EXPORT EXCEL ====================
 
-// Global variable for export range
 let exportStartYear = null;
 let exportEndYear = null;
 
 function openExportExcelModal() {
     const modal = document.getElementById('exportExcelModal');
-    modal.classList.remove('hidden');
-    
-    // Populate year options
-    populateYearOptions();
-    
-    // Set default range (5 years back)
-    setExportRange(5);
-    
-    // Update data count
-    updateExportDataCount();
+    if (modal) {
+        modal.classList.remove('hidden');
+        populateYearOptions();
+        setExportRange(5);
+        updateExportDataCount();
+    }
 }
 
 function closeExportExcelModal() {
-    document.getElementById('exportExcelModal').classList.add('hidden');
+    const modal = document.getElementById('exportExcelModal');
+    if (modal) modal.classList.add('hidden');
 }
 
 function populateYearOptions() {
@@ -977,11 +1666,11 @@ function populateYearOptions() {
     const startSelect = document.getElementById('exportStartYear');
     const endSelect = document.getElementById('exportEndYear');
     
-    // Clear existing options
+    if (!startSelect || !endSelect) return;
+    
     startSelect.innerHTML = '';
     endSelect.innerHTML = '';
     
-    // Generate years from 2000 to current year + 5
     for (let year = 2000; year <= currentYear + 5; year++) {
         const startOption = document.createElement('option');
         startOption.value = year;
@@ -999,29 +1688,28 @@ function setExportRange(range) {
     const currentYear = new Date().getFullYear();
     const startYearSelect = document.getElementById('exportStartYear');
     const endYearSelect = document.getElementById('exportEndYear');
+    
+    if (!startYearSelect || !endYearSelect) return;
+    
     const yearSelectorsDiv = startYearSelect.closest('.grid');
     
     if (range === 'all') {
-        // Hide year selectors when "All" is selected
         if (yearSelectorsDiv) {
             yearSelectorsDiv.style.display = 'none';
         }
         exportStartYear = null;
         exportEndYear = null;
     } else {
-        // Show year selectors
         if (yearSelectorsDiv) {
             yearSelectorsDiv.style.display = 'grid';
         }
         exportEndYear = currentYear;
         exportStartYear = currentYear - range + 1;
         
-        // Update select elements
         startYearSelect.value = exportStartYear;
         endYearSelect.value = exportEndYear;
     }
     
-    // Update active button state
     document.querySelectorAll('.quick-select-btn').forEach(btn => {
         btn.classList.remove('bg-emerald-100', 'text-emerald-700', 'active');
         btn.classList.add('bg-gray-100');
@@ -1033,7 +1721,6 @@ function setExportRange(range) {
         activeBtn.classList.add('bg-emerald-100', 'text-emerald-700', 'active');
     }
     
-    // Update preview
     updateYearPreview();
 }
 
@@ -1042,7 +1729,8 @@ function updateYearPreview() {
     const endYearSelect = document.getElementById('exportEndYear');
     const previewElement = document.getElementById('previewYears');
     
-    // Check if "Semua" is selected (all button has active class)
+    if (!startYearSelect || !endYearSelect || !previewElement) return;
+    
     const allBtn = document.querySelector('button[data-range="all"]');
     if (allBtn && allBtn.classList.contains('active')) {
         previewElement.textContent = 'Semua Data (Otomatis berdasarkan data di database)';
@@ -1052,7 +1740,6 @@ function updateYearPreview() {
     exportStartYear = parseInt(startYearSelect.value);
     exportEndYear = parseInt(endYearSelect.value);
     
-    // Validate
     if (exportStartYear > exportEndYear) {
         exportEndYear = exportStartYear;
         endYearSelect.value = exportEndYear;
@@ -1067,7 +1754,7 @@ async function updateExportDataCount() {
         const searchInput = document.querySelector('input[type="text"][placeholder*="Cari"]');
         const search = searchInput ? searchInput.value : '';
         
-        const blockSelect = document.querySelector('aside + main select');
+        const blockSelect = document.getElementById('filterBlockSelect');
         const blockId = blockSelect && blockSelect.value ? parseInt(blockSelect.value) : null;
         
         const count = await window.__TAURI__?.core?.invoke('count_graves', {
@@ -1075,9 +1762,13 @@ async function updateExportDataCount() {
             blockId: blockId
         });
         
-        document.getElementById('exportDataCount').textContent = `${count} data makam`;
+        const exportDataCountEl = document.getElementById('exportDataCount');
+        if (exportDataCountEl) {
+            exportDataCountEl.textContent = `${count} data makam`;
+        }
     } catch (error) {
-        document.getElementById('exportDataCount').textContent = '-';
+        const exportDataCountEl = document.getElementById('exportDataCount');
+        if (exportDataCountEl) exportDataCountEl.textContent = '-';
     }
 }
 
@@ -1090,61 +1781,35 @@ async function exportToExcel(startYear, endYear) {
     try {
         showLoading(true);
         
-        // Get current filter values
         const searchInput = document.querySelector('input[type="text"][placeholder*="Cari"]');
         const search = searchInput ? searchInput.value : '';
         
-        const blockSelect = document.querySelector('aside + main select');
+        const blockSelect = document.getElementById('filterBlockSelect');
         const blockId = blockSelect && blockSelect.value ? parseInt(blockSelect.value) : null;
         
-        // Check if "Semua" is selected
-        const allBtn = document.querySelector('button[data-range="all"]');
-        const isAll = allBtn && allBtn.classList.contains('active');
-        
-        const token = window.astanaApp.getSessionToken();
-        
-        // Fetch all graves with heirs for export
-        const result = await window.__TAURI__?.core?.invoke('export_graves', {
-            token,
+        const exportData = await window.__TAURI__?.core?.invoke('get_all_graves_with_heirs', {
             search: search || null,
-            blockId: blockId,
-            startYear: isAll ? null : startYear,
-            endYear: isAll ? null : endYear
+            blockId: blockId
         });
         
-        const exportData = result.graves;
-        const actualStartYear = result.start_year;
-        const actualEndYear = result.end_year;
-        
-        if (exportData.length === 0) {
+        if (!exportData || exportData.length === 0) {
             showToast('Tidak ada data untuk diexport', 'error');
             showLoading(false);
             return;
         }
         
-        // Determine years to show - use actual years from database if "all"
-        const yearsToShow = [];
-        const displayStartYear = isAll ? actualStartYear : startYear;
-        const displayEndYear = isAll ? actualEndYear : endYear;
-        
-        for (let year = displayStartYear; year <= displayEndYear; year++) {
-            yearsToShow.push(year);
-        }
-        
-        // Prepare data for Excel
         const excelData = exportData.map((item, index) => {
             const row = {
                 'No': index + 1,
                 'Nama Almarhum': item.deceased_name,
                 'Blok': item.block_code,
                 'Nomor Makam': item.number,
-                'Tanggal Wafat': formatDateForExport(item.date_of_death),
-                'Tanggal Pemakaman': item.burial_date ? formatDateForExport(item.burial_date) : '-',
-                'Iuran Tahunan': item.annual_fee ? formatRupiah(item.annual_fee) : '-',
-                'Catatan': item.notes || '-',
+                'Tempat Lahir': item.birth_place || '-',
+                'Tanggal Lahir': item.birth_date ? formatDate(item.birth_date) : '-',
+                'Tanggal Dimakamkan': item.burial_date ? formatDate(item.burial_date) : '-',
+                'Keterangan': item.notes || '-',
             };
             
-            // Add heir data (up to 3)
             for (let i = 0; i < 3; i++) {
                 const heir = item.heirs[i];
                 const num = i + 1;
@@ -1161,93 +1826,51 @@ async function exportToExcel(startYear, endYear) {
                 }
             }
             
-            // Add payment status for each year
-            let totalPaid = 0;
-            let yearsPaid = 0;
-            
-            yearsToShow.forEach(year => {
-                const payment = item.payments.find(p => p.year === year);
-                if (payment) {
-                    row[`Status ${year}`] = `Lunas (${formatRupiah(payment.amount)})`;
-                    row[`Tgl Bayar ${year}`] = formatDateForExport(payment.payment_date);
-                    totalPaid += payment.amount;
-                    yearsPaid++;
-                } else {
-                    const isPast = year < currentYear;
-                    row[`Status ${year}`] = isPast ? 'Tunggakan' : 'Belum Jatuh Tempo';
-                    row[`Tgl Bayar ${year}`] = '-';
-                }
-            });
-            
-            // Summary columns
-            row['Total Dibayar'] = formatRupiah(totalPaid);
-            row['Jumlah Tahun Lunas'] = yearsPaid;
-            
             return row;
         });
         
-        // Create workbook
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.json_to_sheet(excelData);
         
-        // Set column widths
         const colWidths = [
-            { wch: 5 },   // No
-            { wch: 25 },  // Nama Almarhum
-            { wch: 8 },   // Blok
-            { wch: 12 },  // Nomor Makam
-            { wch: 15 },  // Tanggal Wafat
-            { wch: 15 },  // Tanggal Pemakaman
-            { wch: 15 },  // Iuran Tahunan
-            { wch: 20 },  // Catatan
-            { wch: 20 },  // Ahli Waris 1
-            { wch: 15 },  // No. HP 1
-            { wch: 12 },  // Hubungan 1
-            { wch: 25 },  // Alamat 1
-            { wch: 20 },  // Ahli Waris 2
-            { wch: 15 },  // No. HP 2
-            { wch: 12 },  // Hubungan 2
-            { wch: 25 },  // Alamat 2
-            { wch: 20 },  // Ahli Waris 3
-            { wch: 15 },  // No. HP 3
-            { wch: 12 },  // Hubungan 3
-            { wch: 25 },  // Alamat 3
-            { wch: 20 },  // Status tahun
-            { wch: 15 },  // Tgl Bayar tahun
-            { wch: 20 },  // Status tahun
-            { wch: 15 },  // Tgl Bayar tahun
-            { wch: 20 },  // Status tahun
-            { wch: 15 },  // Tgl Bayar tahun
-            { wch: 20 },  // Status tahun
-            { wch: 15 },  // Tgl Bayar tahun
-            { wch: 15 },  // Total Dibayar
-            { wch: 10 },  // Jumlah Tahun Lunas
+            { wch: 5 },
+            { wch: 25 },
+            { wch: 8 },
+            { wch: 12 },
+            { wch: 15 },
+            { wch: 15 },
+            { wch: 18 },
+            { wch: 20 },
+            { wch: 20 },
+            { wch: 15 },
+            { wch: 12 },
+            { wch: 25 },
+            { wch: 20 },
+            { wch: 15 },
+            { wch: 12 },
+            { wch: 25 },
+            { wch: 20 },
+            { wch: 15 },
+            { wch: 12 },
+            { wch: 25 },
         ];
         ws['!cols'] = colWidths;
         
-        // Add worksheet to workbook
         XLSX.utils.book_append_sheet(wb, ws, 'Data Makam');
         
-        // Generate filename with timestamp
         const now = new Date();
         const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
         const defaultFilename = `Data_Makam_${timestamp}.xlsx`;
         
-        // Write to array buffer
         const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
         const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         
-        // Check if running in Tauri
         if (window.__TAURI__) {
             try {
-                // Convert blob to array
                 const arrayBuffer = await blob.arrayBuffer();
                 const uint8Array = new Uint8Array(arrayBuffer);
-                
-                // Convert to regular array for Tauri
                 const fileData = Array.from(uint8Array);
                 
-                // Use Tauri command to save with dialog
                 const savedPath = await window.__TAURI__?.core?.invoke('save_excel_file', {
                     fileData: fileData,
                     defaultName: defaultFilename
@@ -1256,16 +1879,13 @@ async function exportToExcel(startYear, endYear) {
                 if (savedPath) {
                     showToast(`Berhasil export ${exportData.length} data ke:\n${savedPath}`, 'success');
                 } else {
-                    // User cancelled
                     showToast('Export dibatalkan', 'info');
                 }
             } catch (tauriError) {
                 console.error('Tauri save failed:', tauriError);
-                // Fallback to browser download
                 fallbackDownload(blob, defaultFilename, exportData.length);
             }
         } else {
-            // Browser mode - fallback download
             fallbackDownload(blob, defaultFilename, exportData.length);
         }
         
@@ -1278,7 +1898,6 @@ async function exportToExcel(startYear, endYear) {
 }
 
 function fallbackDownload(blob, filename, dataCount) {
-    // Create download link
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -1288,31 +1907,7 @@ function fallbackDownload(blob, filename, dataCount) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    // Get OS info for message
-    const osInfo = getOSInfo();
-    showToast(`Berhasil export ${dataCount} data ke folder Downloads (${osInfo})`, 'success');
-}
-
-function getOSInfo() {
-    const userAgent = navigator.userAgent;
-    let os = 'Unknown OS';
-    
-    if (userAgent.indexOf('Win') !== -1) os = 'Windows';
-    else if (userAgent.indexOf('Mac') !== -1) os = 'macOS';
-    else if (userAgent.indexOf('Linux') !== -1) os = 'Linux';
-    else if (userAgent.indexOf('X11') !== -1) os = 'UNIX';
-    
-    return os;
-}
-
-function formatDateForExport(dateString) {
-    if (!dateString) return '-';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('id-ID', { 
-        day: '2-digit', 
-        month: '2-digit', 
-        year: 'numeric' 
-    });
+    showToast(`Berhasil export ${dataCount} data ke folder Downloads`, 'success');
 }
 
 function formatRelationship(relationship) {
@@ -1328,12 +1923,68 @@ function formatRelationship(relationship) {
     return map[relationship] || relationship;
 }
 
-function formatRupiah(amount) {
-    if (!amount || amount === 0) return 'Rp 0';
-    return 'Rp ' + amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+// ==================== TABLE ACTION LISTENERS ====================
+
+function setupTableActionListeners() {
+    console.log('Setting up table action listeners...');
+    
+    const tbody = document.getElementById('gravesTableBody');
+    if (tbody) {
+        tbody.addEventListener('click', (e) => {
+            console.log('Table clicked:', e.target);
+            
+            const editGraveBtn = e.target.closest('.btn-edit-grave');
+            if (editGraveBtn) {
+                e.stopPropagation();
+                const graveId = parseInt(editGraveBtn.dataset.editId);
+                console.log('Edit button clicked for grave:', graveId);
+                
+                // Check current mode
+                if (currentViewMode === 'classic') {
+                    handleEditFromDetail(graveId);
+                } else {
+                    openEditModal(graveId);
+                }
+                return;
+            }
+            
+            const deleteGraveBtn = e.target.closest('.btn-delete-grave');
+            if (deleteGraveBtn) {
+                e.stopPropagation();
+                const graveId = parseInt(deleteGraveBtn.dataset.deleteId);
+                const graveName = deleteGraveBtn.dataset.deleteName;
+                console.log('Delete button clicked for grave:', graveId, graveName);
+                openDeleteModal(graveId, graveName);
+                return;
+            }
+            
+            const row = e.target.closest('tr');
+            if (row && row.dataset.graveId) {
+                const graveId = parseInt(row.dataset.graveId);
+                console.log('Row clicked for detail:', graveId);
+                showDetailModal(graveId);
+            }
+        });
+    }
+    
+    const paginationContainer = document.querySelector('.border-t.border-gray-200 .flex.gap-2');
+    if (paginationContainer) {
+        paginationContainer.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-page]');
+            if (btn) {
+                const page = parseInt(btn.dataset.page);
+                goToPage(page);
+            }
+        });
+    }
 }
 
-// Expose functions to global scope for onclick handlers
+function closeSuksesModal() {
+    const modal = document.getElementById('modalSukses');
+    if (modal) modal.classList.add('hidden');
+}
+
+// Expose functions to global scope
 window.openModal = openModal;
 window.closeModal = closeModal;
 window.tambahAhliWaris = tambahAhliWaris;
@@ -1355,63 +2006,10 @@ window.setExportRange = setExportRange;
 window.confirmExportExcel = confirmExportExcel;
 window.updateYearPreview = updateYearPreview;
 window.closeSuksesModal = closeSuksesModal;
-
-// Note: setupEventListeners() is defined at the top of the file
-
-function setupTableActionListeners() {
-    // Use event delegation for dynamically generated table rows
-    const tableContainer = document.querySelector('tbody') || document.querySelector('.overflow-x-auto');
-    if (tableContainer) {
-        tableContainer.addEventListener('click', (e) => {
-            // Handle demo edit buttons (static HTML table)
-            const editBtn = e.target.closest('.btn-edit');
-            if (editBtn) {
-                showToast('Ini data demo - tidak dapat diedit', 'warning');
-                return;
-            }
-
-            // Handle demo delete buttons (static HTML table)
-            const deleteBtn = e.target.closest('.btn-delete');
-            if (deleteBtn) {
-                showToast('Ini data demo - tidak dapat dihapus', 'warning');
-                return;
-            }
-
-            // Handle dynamic grave edit buttons
-            const editGraveBtn = e.target.closest('.btn-edit-grave');
-            if (editGraveBtn) {
-                const graveId = parseInt(editGraveBtn.dataset.editId);
-                openEditModal(graveId);
-                return;
-            }
-
-            // Handle dynamic grave delete buttons
-            const deleteGraveBtn = e.target.closest('.btn-delete-grave');
-            if (deleteGraveBtn) {
-                const graveId = parseInt(deleteGraveBtn.dataset.deleteId);
-                const graveName = deleteGraveBtn.dataset.deleteName;
-                openDeleteModal(graveId, graveName);
-                return;
-            }
-        });
-    }
-
-    // Event delegation for pagination buttons
-    const paginationContainer = document.querySelector('.border-t.border-gray-200 .flex.gap-2');
-    if (paginationContainer) {
-        paginationContainer.addEventListener('click', (e) => {
-            const btn = e.target.closest('button[data-page]');
-            if (btn) {
-                const page = parseInt(btn.dataset.page);
-                goToPage(page);
-            }
-        });
-    }
-}
-
-function closeSuksesModal() {
-    const modal = document.getElementById('modalSukses');
-    if (modal) {
-        modal.classList.add('hidden');
-    }
-}
+window.showDetailModal = showDetailModal;
+window.closeDetailModal = closeDetailModal;
+window.openDetailModal = openDetailModal;
+window.loadGraves = loadGraves;
+window.toggleViewMode = toggleViewMode;
+window.resetClassicForm = resetClassicForm;
+window.handleClassicFormSubmit = handleClassicFormSubmit;
