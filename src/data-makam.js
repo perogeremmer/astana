@@ -2048,10 +2048,15 @@ async function exportToExcel(startYear, endYear) {
         const blockSelect = document.getElementById('filterBlockSelect');
         const blockId = blockSelect && blockSelect.value ? parseInt(blockSelect.value) : null;
         
-        const exportData = await window.__TAURI__?.core?.invoke('get_all_graves_with_heirs', {
+        const result = await window.__TAURI__?.core?.invoke('export_graves', {
+            token: window.astanaApp.getSessionToken(),
             search: search || null,
-            blockId: blockId
+            blockId: blockId,
+            startYear: null,
+            endYear: null
         });
+        
+        const exportData = result.graves;
         
         if (!exportData || exportData.length === 0) {
             showToast('Tidak ada data untuk diexport', 'error');
