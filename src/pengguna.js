@@ -106,6 +106,7 @@ function renderUsersTable() {
         row.className = 'hover:bg-gray-50';
         row.innerHTML = `
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${user.username}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${user.full_name || '-'}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${roleLabels[user.role] || user.role}</td>
             <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
             <td class="px-6 py-4 whitespace-nowrap">${passwordBadge}</td>
@@ -194,6 +195,7 @@ function openEditUserModal(userId) {
     
     document.getElementById('editUserId').value = user.id;
     document.getElementById('editUsername').value = user.username;
+    document.getElementById('editFullName').value = user.full_name || '';
     document.getElementById('editRole').value = user.role === 'superadmin_0' ? 'superadmin' : user.role;
     document.getElementById('editIsActive').checked = user.is_active;
     
@@ -233,6 +235,7 @@ document.getElementById('addUserForm').addEventListener('submit', async (e) => {
     const userData = {
         username: document.getElementById('newUsername').value,
         password: document.getElementById('newPassword').value,
+        full_name: document.getElementById('newFullName').value || null,
         role: document.getElementById('newRole').value
     };
     
@@ -282,6 +285,7 @@ document.getElementById('editUserForm').addEventListener('submit', async (e) => 
     const token = window.astanaApp.getSessionToken();
     const userId = parseInt(document.getElementById('editUserId').value);
     const userData = {
+        full_name: document.getElementById('editFullName').value || null,
         role: document.getElementById('editRole').value,
         is_active: document.getElementById('editIsActive').checked
     };

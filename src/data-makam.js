@@ -2093,6 +2093,13 @@ async function exportToExcel(startYear, endYear) {
             return row;
         });
         
+        // Safety check: ensure XLSX library is loaded
+        if (typeof XLSX === 'undefined') {
+            showToast('Gagal mengexport data: Library Excel tidak tersedia. Silakan restart aplikasi.', 'error');
+            showLoading(false);
+            return;
+        }
+        
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.json_to_sheet(excelData);
         

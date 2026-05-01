@@ -331,6 +331,12 @@ function setupEventListeners() {
         btnProcessPayment.addEventListener('click', processMultiYearPayment);
     }
     
+    // Annual fee input - recalculate total when changed
+    const annualFeeInput = document.getElementById('infoAnnualFee');
+    if (annualFeeInput) {
+        annualFeeInput.addEventListener('input', updateTotalToPay);
+    }
+    
     // Combined receipt button
     const btnCombinedReceipt = document.getElementById('btnCombinedReceipt');
     if (btnCombinedReceipt) {
@@ -640,8 +646,11 @@ async function openGravePaymentModal(graveId) {
         // Notes/Keterangan
         document.getElementById('infoNotes').textContent = detail.grave.notes || '-';
         
-        // Annual fee
-        document.getElementById('infoAnnualFee').textContent = formatRupiah(detail.grave.annual_fee);
+        // Annual fee - set default value from database but allow editing
+        const annualFeeInput = document.getElementById('infoAnnualFee');
+        if (annualFeeInput) {
+            annualFeeInput.value = detail.grave.annual_fee || 75000;
+        }
         
         // Set default received_by
         document.getElementById('inputReceivedBy').value = currentUserFullName;
@@ -651,6 +660,16 @@ async function openGravePaymentModal(graveId) {
         
         // Render payment history
         renderPaymentHistory(detail.payments);
+        
+        // Verifikasi tombol kwitansi keseluruhan - hanya muncul jika sudah ada pembayaran
+        const btnCombinedReceipt = document.getElementById('btnCombinedReceipt');
+        if (btnCombinedReceipt) {
+            if (detail.payments && detail.payments.length > 0) {
+                btnCombinedReceipt.classList.remove('hidden');
+            } else {
+                btnCombinedReceipt.classList.add('hidden');
+            }
+        }
         
         // Show modal
         const modal = document.getElementById('modalDetail');
@@ -678,22 +697,38 @@ function renderUnpaidYears(detail) {
     // Get paid years
     const paidYears = new Set(detail.payments.map(p => p.year));
     
-    // Generate years from currentYear-9 to currentYear
+    // Generate years: 10 years ahead + current year + 9 years back
     const years = [];
-    for (let y = currentYear; y >= currentYear - 9; y--) {
-        years.push(y);
+    
+    // 10 years ahead (future)
+    for (let y = currentYear + 10; y >= currentYear + 1; y--) {
+        years.push({ year: y, type: 'future' });
     }
     
-    // Create checkboxes for unpaid years
-    years.forEach(year => {
+    // Current year + 9 years back
+    for (let y = currentYear; y >= currentYear - 9; y--) {
+        years.push({ year: y, type: 'current_or_past' });
+    }
+    
+    // Create checkboxes for all years
+    years.forEach(item => {
+        const year = item.year;
         const isPaid = paidYears.has(year);
+        const isFuture = item.type === 'future';
         
         const label = document.createElement('label');
-        label.className = `inline-flex items-center px-3 py-1.5 rounded-lg border text-sm cursor-pointer transition-colors ${
-            isPaid 
-                ? 'bg-emerald-50 border-emerald-200 text-emerald-700 cursor-not-allowed' 
-                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-        }`;
+        
+        // Determine styling based on status
+        if (isPaid) {
+            // Already paid - green
+            label.className = 'inline-flex items-center px-3 py-1.5 rounded-lg border text-sm cursor-not-allowed transition-colors bg-emerald-50 border-emerald-200 text-emerald-700';
+        } else if (isFuture) {
+            // Future year - blue (can select)
+            label.className = 'inline-flex items-center px-3 py-1.5 rounded-lg border text-sm cursor-pointer transition-colors bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100';
+        } else {
+            // Current or past unpaid - white (can select)
+            label.className = 'inline-flex items-center px-3 py-1.5 rounded-lg border text-sm cursor-pointer transition-colors bg-white border-gray-300 text-gray-700 hover:bg-gray-50';
+        }
         
         if (!isPaid) {
             const checkbox = document.createElement('input');
@@ -705,7 +740,13 @@ function renderUnpaidYears(detail) {
         }
         
         const text = document.createElement('span');
-        text.textContent = isPaid ? `${year} (Lunas)` : year;
+        if (isPaid) {
+            text.textContent = `${year} (Lunas)`;
+        } else if (isFuture) {
+            text.textContent = `${year} (Mendatang)`;
+        } else {
+            text.textContent = year;
+        }
         label.appendChild(text);
         
         container.appendChild(label);
@@ -723,7 +764,9 @@ function updateTotalToPay() {
     
     const checkboxes = container.querySelectorAll('input[type="checkbox"]:checked');
     const selectedCount = checkboxes.length;
-    const total = selectedCount * currentGraveData.grave.annual_fee;
+    const annualFeeInput = document.getElementById('infoAnnualFee');
+    const annualFee = annualFeeInput ? parseInt(annualFeeInput.value) || 0 : 0;
+    const total = selectedCount * annualFee;
     
     totalDisplay.textContent = formatRupiah(total);
 }
@@ -816,7 +859,7 @@ async function processMultiYearPayment() {
                 grave_id: currentGraveData.grave.grave_id,
                 years,
                 payment_date: new Date().toISOString().split('T')[0],
-                amount_per_year: currentGraveData.grave.annual_fee,
+                amount_per_year: parseInt(document.getElementById('infoAnnualFee').value) || currentGraveData.grave.annual_fee,
                 paid_by: paidBy || null,
                 received_by: receivedBy
             }
@@ -1107,6 +1150,13 @@ async function exportToExcel(startYear, endYear) {
             
             return row;
         });
+        
+        // Safety check: ensure XLSX library is loaded
+        if (typeof XLSX === 'undefined') {
+            showToast('Gagal mengexport data: Library Excel tidak tersedia. Silakan restart aplikasi.', 'error');
+            showLoading(false);
+            return;
+        }
         
         // Create workbook
         const wb = XLSX.utils.book_new();

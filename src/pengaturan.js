@@ -410,7 +410,14 @@ async function restoreDatabase() {
             return;
         }
         
-        const confirmed = confirm('PERINGATAN: Restore akan mengganti seluruh data saat ini dengan data dari file backup. Pastikan Anda sudah melakukan backup terlebih dahulu.\n\nLanjutkan?');
+        // Show confirmation popup about auto logout
+        const confirmed = confirm(
+            'PERINGATAN PENTING:\n\n' +
+            '1. Restore akan mengganti seluruh data saat ini dengan data dari file backup\n' +
+            '2. Anda akan otomatis LOGOUT setelah restore selesai\n' +
+            '3. Pastikan Anda sudah melakukan backup terlebih dahulu\n\n' +
+            'Lanjutkan?'
+        );
         if (!confirmed) return;
         
         showLoading(true);
@@ -420,12 +427,13 @@ async function restoreDatabase() {
         
         console.log('Restore result:', result);
         showNotification(result, 'success');
-        showNotification('Aplikasi akan di-refresh...', 'info');
+        showNotification('Restore berhasil! Anda akan logout dalam 3 detik...', 'info');
         
-        // Refresh page after 2 seconds to reload data
+        // Clear session and redirect to login after restore
         setTimeout(() => {
-            window.location.reload();
-        }, 2000);
+            window.astanaApp.clearSession();
+            window.location.href = 'login.html';
+        }, 3000);
         
     } catch (error) {
         console.error('Error restoring:', error);

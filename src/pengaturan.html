@@ -280,38 +280,6 @@
                                 </h2>
                             </div>
                             <div class="p-5 space-y-4">
-                                <!-- Backup ke Google Drive -->
-                                <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
-                                    <div class="flex items-start gap-3">
-                                        <div class="w-10 h-10 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
-                                            <svg class="w-6 h-6 text-emerald-600" viewBox="0 0 24 24" fill="currentColor">
-                                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                                            </svg>
-                                        </div>
-                                        <div class="flex-1">
-                                            <h3 class="font-medium text-emerald-800 mb-1">Backup ke Google Drive</h3>
-                                            <p class="text-sm text-emerald-600 mb-3">Database akan di-backup otomatis ke Google Drive Anda. Memerlukan koneksi internet.</p>
-                                            
-                                            <div class="flex items-center gap-3 mb-3">
-                                                <div class="flex-1 bg-white rounded-lg px-3 py-2 text-sm text-gray-600 flex items-center gap-2">
-                                                    <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                                    </svg>
-                                                    Terhubung: admin@yayasan.com
-                                                </div>
-                                                <button class="text-sm text-red-600 hover:text-red-700 font-medium">Putuskan</button>
-                                            </div>
-
-                                            <div class="space-y-2">
-                                                <label class="flex items-center gap-2">
-                                                    <input type="checkbox" id="autoBackup" class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500">
-                                                    <span class="text-sm text-emerald-700">Backup otomatis setiap hari</span>
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
                                 <!-- Tombol Backup Manual -->
                                 <div class="flex gap-3">
                                     <button id="btnBackupNow" class="flex-1 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2">
@@ -328,36 +296,13 @@
                                     </button>
                                 </div>
 
-                                <!-- Riwayat Backup -->
+                                <!-- Riwayat Backup (Disembunyikan sementara) -->
+                                <!--
                                 <div class="border-t border-gray-200 pt-4">
                                     <h4 class="text-sm font-medium text-gray-700 mb-3">Riwayat Backup</h4>
-                                    <div class="space-y-2">
-                                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                            <div class="flex items-center gap-3">
-                                                <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                                </svg>
-                                                <div>
-                                                    <p class="text-sm font-medium text-gray-700">Backup otomatis harian</p>
-                                                    <p class="text-xs text-gray-500">15 Feb 2026, 03:00 WIB</p>
-                                                </div>
-                                            </div>
-                                            <span class="text-xs text-green-600 font-medium">Berhasil</span>
-                                        </div>
-                                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                            <div class="flex items-center gap-3">
-                                                <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                                </svg>
-                                                <div>
-                                                    <p class="text-sm font-medium text-gray-700">Backup manual</p>
-                                                    <p class="text-xs text-gray-500">14 Feb 2026, 14:30 WIB</p>
-                                                </div>
-                                            </div>
-                                            <span class="text-xs text-green-600 font-medium">Berhasil</span>
-                                        </div>
-                                    </div>
+                                    ...
                                 </div>
+                                -->
                             </div>
                         </div>
 
@@ -378,8 +323,12 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                                         </svg>
                                         <div>
-                                            <p class="text-sm font-medium text-amber-800">Peringatan</p>
-                                            <p class="text-sm text-amber-600">Restore akan mengganti seluruh data saat ini dengan data dari file backup. Pastikan Anda sudah melakukan backup terlebih dahulu.</p>
+                                            <p class="text-sm font-medium text-amber-800">Peringatan Penting</p>
+                                            <p class="text-sm text-amber-600">
+                                                Restore akan mengganti seluruh data saat ini dengan data dari file backup. 
+                                                <strong class="text-amber-800">Anda akan otomatis logout setelah restore selesai.</strong> 
+                                                Pastikan Anda sudah melakukan backup terlebih dahulu.
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
@@ -427,22 +376,12 @@
         </main>
     </div>
 
-    <!-- MODAL BACKUP BERHASIL -->
+    <!-- MODAL BACKUP BERHASIL (Disembunyikan sementara) -->
+    <!--
     <div id="modalBackupSuccess" class="fixed inset-0 z-50 hidden">
-        <div class="absolute inset-0 bg-black/50"></div>
-        <div class="absolute inset-0 flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
-                <div class="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg class="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                </div>
-                <h3 class="text-lg font-semibold text-gray-800 mb-2">Backup Berhasil!</h3>
-                <p class="text-sm text-gray-500 mb-6">Database berhasil di-backup ke Google Drive.</p>
-                <button id="btnCloseBackupModal" class="w-full px-4 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors">Tutup</button>
-            </div>
-        </div>
+        ...
     </div>
+    -->
 
     <script>
         function copyPath() {
@@ -455,16 +394,16 @@
             });
         }
 
-        function backupNow() {
-            // Simulate backup process
-            setTimeout(() => {
-                document.getElementById('modalBackupSuccess').classList.remove('hidden');
-            }, 1000);
-        }
+        // function backupNow() {
+        //     // Simulate backup process
+        //     setTimeout(() => {
+        //         document.getElementById('modalBackupSuccess').classList.remove('hidden');
+        //     }, 1000);
+        // }
 
-        function closeBackupModal() {
-            document.getElementById('modalBackupSuccess').classList.add('hidden');
-        }
+        // function closeBackupModal() {
+        //     document.getElementById('modalBackupSuccess').classList.add('hidden');
+        // }
     </script>
 </body>
 </html>
