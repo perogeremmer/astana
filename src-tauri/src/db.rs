@@ -79,9 +79,9 @@ impl Database {
 
     /// Get database path based on platform
     ///
-    /// Windows: %LOCALAPPDATA%/com.perogeremmer.astana/astana.db
-    /// macOS: ~/Library/Application Support/com.perogeremmer.astana/astana.db
-    /// Linux: ~/.local/share/com.perogeremmer.astana/astana.db
+    /// Windows: %LOCALAPPDATA%/astana/astana.db
+    /// macOS: ~/Library/Application Support/astana/astana.db
+    /// Linux: ~/.local/share/astana/astana.db
     fn get_db_path(app_handle: &AppHandle) -> Result<PathBuf, String> {
         let app_data_dir = app_handle
             .path()

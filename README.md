@@ -228,9 +228,9 @@ Aplikasi menggunakan **SQLite** sebagai database lokal yang tersimpan di kompute
 
 | Platform | Lokasi |
 |----------|--------|
-| Windows | `%LOCALAPPDATA%\com.perogeremmer.astana\astana.db` |
-| macOS | `~/Library/Application Support/com.perogeremmer.astana/astana.db` |
-| Linux | `~/.local/share/com.perogeremmer.astana/astana.db` |
+| Windows | `%LOCALAPPDATA%\astana\astana.db` |
+| macOS | `~/Library/Application Support/astana/astana.db` |
+| Linux | `~/.local/share/astana/astana.db` |
 
 Lihat detail lengkap di **[DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md)**
 
@@ -265,9 +265,9 @@ Gunakan database sample dengan **500 data makam** lengkap untuk langsung mencoba
 **Cara Import:**
 1. Download file sample: [`sample-data/astana.db`](./sample-data/astana.db)
 2. Copy ke lokasi aplikasi sesuai OS Anda:
-   - **Windows:** `%LOCALAPPDATA%\com.perogeremmer.astana\astana.db`
-   - **macOS:** `~/Library/Application Support/com.perogeremmer.astana/astana.db`
-   - **Linux:** `~/.local/share/com.perogeremmer.astana/astana.db`
+   - **Windows:** `%LOCALAPPDATA%\astana\astana.db`
+   - **macOS:** `~/Library/Application Support/astana/astana.db`
+   - **Linux:** `~/.local/share/astana/astana.db`
 3. Jalankan aplikasi
 4. Data sample siap digunakan! 🎉
 
