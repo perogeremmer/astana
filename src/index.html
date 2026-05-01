@@ -194,11 +194,14 @@
                                     <p class="text-sm text-amber-700">Makam baru bulan ini</p>
                                     <a href="data-makam.html" class="text-xs text-amber-600 hover:underline mt-1 inline-block">Input pembayaran →</a>
                                 </div>
+                                <!-- Backup info disembunyikan sementara -->
+                                <!--
                                 <div class="bg-white rounded-lg p-4 border border-amber-100">
                                     <p id="backup-days" class="text-2xl font-bold text-amber-600">-</p>
                                     <p class="text-sm text-amber-700">Terakhir backup data</p>
                                     <a href="pengaturan.html" class="text-xs text-amber-600 hover:underline mt-1 inline-block">Backup sekarang →</a>
                                 </div>
+                                -->
                             </div>
                         </div>
                     </div>
@@ -390,9 +393,9 @@
                 const graves = await invoke('get_recent_graves', { limit: 5 });
                 updateRecentGraves(graves);
                 
-                // Load days since backup
-                const daysSinceBackup = await invoke('get_days_since_backup');
-                updateBackupWarning(daysSinceBackup);
+                // Load days since backup (Disembunyikan sementara)
+                // const daysSinceBackup = await invoke('get_days_since_backup');
+                // updateBackupWarning(daysSinceBackup);
                 
                 // Update current date
                 document.getElementById('current-date').textContent = formatTanggalLengkap(new Date());
@@ -476,29 +479,29 @@
             }).join('');
         }
 
-        // Update backup warning
-        function updateBackupWarning(days) {
-            const element = document.getElementById('backup-days');
-            if (days >= 999) {
-                element.textContent = 'Belum pernah';
-                element.classList.add('text-red-600');
-            } else if (days === 0) {
-                element.textContent = 'Hari ini';
-                element.classList.add('text-emerald-600');
-            } else if (days === 1) {
-                element.textContent = '1 hari';
-                element.classList.add('text-emerald-600');
-            } else {
-                element.textContent = days + ' hari';
-                if (days > 7) {
-                    element.classList.add('text-red-600');
-                } else if (days > 3) {
-                    element.classList.add('text-amber-600');
-                } else {
-                    element.classList.add('text-emerald-600');
-                }
-            }
-        }
+        // Update backup warning (Disembunyikan sementara)
+        // function updateBackupWarning(days) {
+        //     const element = document.getElementById('backup-days');
+        //     if (days >= 999) {
+        //         element.textContent = 'Belum pernah';
+        //         element.classList.add('text-red-600');
+        //     } else if (days === 0) {
+        //         element.textContent = 'Hari ini';
+        //         element.classList.add('text-emerald-600');
+        //     } else if (days === 1) {
+        //         element.textContent = '1 hari';
+        //         element.classList.add('text-emerald-600');
+        //     } else {
+        //         element.textContent = days + ' hari';
+        //         if (days > 7) {
+        //             element.classList.add('text-red-600');
+        //         } else if (days > 3) {
+        //             element.classList.add('text-amber-600');
+        //         } else {
+        //             element.classList.add('text-emerald-600');
+        //         }
+        //     }
+        // }
 
         // Show error message
         function showError(message) {

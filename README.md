@@ -339,6 +339,18 @@ Lihat **[DEVELOPMENT.md](./DEVELOPMENT.md)** untuk panduan troubleshooting lengk
 
 ---
 
+## 📦 Dependencies & Libraries
+
+### External Libraries (Bundled Locally)
+
+| Library | Version | Usage | Location |
+|---------|---------|-------|----------|
+| SheetJS (XLSX) | 0.20.1 | Excel export functionality | `src/assets/js/xlsx.full.min.js` |
+
+**Note:** All external libraries are bundled locally in `src/assets/js/` to ensure offline functionality. No CDN dependencies required.
+
+---
+
 ## 🤝 Kontribusi
 
 Kontribusi sangat diterima! Silakan:

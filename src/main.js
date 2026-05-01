@@ -247,7 +247,7 @@ function updateSidebarUser() {
     // Update user name in sidebar
     const userNameElements = document.querySelectorAll('.sidebar-user-name');
     userNameElements.forEach(el => {
-        el.textContent = user.username;
+        el.textContent = user.full_name || user.username;
     });
     
     // Update user role in sidebar

@@ -74,7 +74,7 @@
     <script type="module" src="main.js"></script>
     <script type="module" src="pembayaran.js"></script>
     <!-- SheetJS for Excel export -->
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="assets/js/xlsx.full.min.js"></script>
 </head>
 <body class="bg-gray-50 text-gray-800">
 
@@ -500,7 +500,7 @@
                         <div class="bg-blue-50 rounded-lg p-3 mb-4">
                             <div class="flex items-center justify-between">
                                 <span class="text-sm text-blue-700">Iuran per Tahun:</span>
-                                <span class="text-sm font-semibold text-blue-800" id="infoAnnualFee">Rp 0</span>
+                                <input type="number" id="infoAnnualFee" class="w-32 px-2 py-1 text-sm font-semibold text-blue-800 bg-white border border-blue-300 rounded text-right" value="75000">
                             </div>
                             <div class="flex items-center justify-between mt-1">
                                 <span class="text-sm text-blue-700">Total yang akan dibayar:</span>
@@ -528,9 +528,9 @@
                             </h3>
                             <button id="btnCombinedReceipt" class="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
                                 </svg>
-                                Kwitansi Keseluruhan
+                                Unduh Laporan Pembayaran
                             </button>
                         </div>
                         

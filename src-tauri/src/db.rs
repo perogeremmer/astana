@@ -2108,12 +2108,14 @@ pub struct UserWithHash {
 pub struct CreateUserRequest {
     pub username: String,
     pub password: String,
+    pub full_name: Option<String>,
     pub role: String,
 }
 
 /// Update user request
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct UpdateUserRequest {
+    pub full_name: Option<String>,
     pub role: Option<String>,
     pub is_active: Option<bool>,
 }
@@ -2545,14 +2547,16 @@ impl Database {
         }
 
         let password_hash = Self::hash_password(&request.password)?;
+        let full_name = request.full_name.as_ref().map(|s| s.trim().to_string()).filter(|s| !s.is_empty());
 
         self.conn
             .execute(
-                "INSERT INTO users (username, password_hash, role, is_active, is_password_changed, created_by) 
-                 VALUES (?1, ?2, ?3, 1, 0, ?4)",
+                "INSERT INTO users (username, password_hash, full_name, role, is_active, is_password_changed, created_by) 
+                 VALUES (?1, ?2, ?3, ?4, 1, 0, ?5)",
                 [
                     &username as &dyn rusqlite::ToSql,
                     &password_hash as &dyn rusqlite::ToSql,
+                    &full_name as &dyn rusqlite::ToSql,
                     &request.role as &dyn rusqlite::ToSql,
                     &created_by as &dyn rusqlite::ToSql,
                 ],
@@ -2607,10 +2611,12 @@ impl Database {
         self.conn
             .execute(
                 "UPDATE users SET 
-                    role = COALESCE(?1, role),
-                    is_active = COALESCE(?2, is_active)
-                 WHERE id = ?3",
+                    full_name = COALESCE(?1, full_name),
+                    role = COALESCE(?2, role),
+                    is_active = COALESCE(?3, is_active)
+                 WHERE id = ?4",
                 [
+                    &request.full_name.as_ref().map(|s| s.trim().to_string()).filter(|s| !s.is_empty()) as &dyn rusqlite::ToSql,
                     &request.role as &dyn rusqlite::ToSql,
                     &request.is_active.map(|b| if b { 1 } else { 0 }) as &dyn rusqlite::ToSql,
                     &user_id as &dyn rusqlite::ToSql,
