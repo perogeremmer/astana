@@ -937,7 +937,7 @@
                             </div>
                             <div>
                                 <h3 class="text-lg font-semibold text-gray-800">Export Data Makam</h3>
-                                <p class="text-sm text-gray-500">Pilih range tahun pembayaran</p>
+                                <p class="text-sm text-gray-500">Export semua data makam ke Excel</p>
                             </div>
                         </div>
                         <button class="p-2 hover:bg-gray-100 rounded-lg transition-colors btn-close-modal" data-modal="exportExcelModal">
@@ -956,40 +956,7 @@
                             </div>
                         </div>
                         
-                        <!-- Range Tahun -->
-                        <div class="space-y-3">
-                            <label class="block text-sm font-medium text-gray-700">Range Tahun Pembayaran</label>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-xs text-gray-500 mb-1.5">Dari Tahun</label>
-                                    <select id="exportStartYear" class="w-full h-10 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
-                                        <!-- Options will be populated by JS -->
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-gray-500 mb-1.5">Sampai Tahun</label>
-                                    <select id="exportEndYear" class="w-full h-10 px-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
-                                        <!-- Options will be populated by JS -->
-                                    </select>
-                                </div>
-                            </div>
-                            
-                            <!-- Quick select buttons -->
-                            <div class="flex flex-wrap gap-2" id="quickSelectButtons">
-                                <button data-range="3" class="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors quick-select-btn">3 Tahun Terakhir</button>
-                                <button data-range="5" class="px-3 py-1.5 text-xs bg-emerald-100 text-emerald-700 hover:bg-emerald-200 rounded-lg transition-colors font-medium quick-select-btn active">5 Tahun Terakhir</button>
-                                <button data-range="10" class="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors quick-select-btn">10 Tahun Terakhir</button>
-                                <button data-range="all" class="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors quick-select-btn">Semua</button>
-                            </div>
-                        </div>
-                        
-                        <!-- Preview tahun yang akan diexport -->
-                        <div class="bg-blue-50 rounded-lg p-4">
-                            <div class="flex items-center">
-                                <span class="text-sm text-blue-700">Tahun yang akan diexport:</span>
-                                <span class="text-sm font-semibold text-blue-800" id="previewYears">-</span>
-                            </div>
-                        </div>
+
                     </div>
                     
                     <div class="flex gap-3 mt-6">

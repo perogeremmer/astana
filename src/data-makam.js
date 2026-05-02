@@ -126,18 +126,6 @@ function setupEventListeners() {
         });
     }
     
-    // Export modal year selectors
-    const startYearSelect = document.getElementById('exportStartYear');
-    const endYearSelect = document.getElementById('exportEndYear');
-    
-    if (startYearSelect) {
-        startYearSelect.addEventListener('change', updateYearPreview);
-    }
-    
-    if (endYearSelect) {
-        endYearSelect.addEventListener('change', updateYearPreview);
-    }
-    
     // Sort field and order dropdowns
     const sortField = document.getElementById('sortField');
     const sortOrder = document.getElementById('sortOrder');
@@ -244,14 +232,6 @@ function setupEventListeners() {
         });
     });
 
-    // Quick select buttons for export range
-    document.querySelectorAll('.quick-select-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const range = btn.dataset.range;
-            setExportRange(range);
-        });
-    });
-    
     // Confirm export button
     const btnConfirmExport = document.getElementById('btnConfirmExportExcel');
     if (btnConfirmExport) {
@@ -1904,15 +1884,10 @@ function showToast(message, type = 'info') {
 
 // ==================== EXPORT EXCEL ====================
 
-let exportStartYear = null;
-let exportEndYear = null;
-
 function openExportExcelModal() {
     const modal = document.getElementById('exportExcelModal');
     if (modal) {
         modal.classList.remove('hidden');
-        populateYearOptions();
-        setExportRange(5);
         updateExportDataCount();
     }
 }
@@ -1920,94 +1895,6 @@ function openExportExcelModal() {
 function closeExportExcelModal() {
     const modal = document.getElementById('exportExcelModal');
     if (modal) modal.classList.add('hidden');
-}
-
-function populateYearOptions() {
-    const currentYear = new Date().getFullYear();
-    const startSelect = document.getElementById('exportStartYear');
-    const endSelect = document.getElementById('exportEndYear');
-    
-    if (!startSelect || !endSelect) return;
-    
-    startSelect.innerHTML = '';
-    endSelect.innerHTML = '';
-    
-    for (let year = 2000; year <= currentYear + 5; year++) {
-        const startOption = document.createElement('option');
-        startOption.value = year;
-        startOption.textContent = year;
-        startSelect.appendChild(startOption);
-        
-        const endOption = document.createElement('option');
-        endOption.value = year;
-        endOption.textContent = year;
-        endSelect.appendChild(endOption);
-    }
-}
-
-function setExportRange(range) {
-    const currentYear = new Date().getFullYear();
-    const startYearSelect = document.getElementById('exportStartYear');
-    const endYearSelect = document.getElementById('exportEndYear');
-    
-    if (!startYearSelect || !endYearSelect) return;
-    
-    const yearSelectorsDiv = startYearSelect.closest('.grid');
-    
-    if (range === 'all') {
-        if (yearSelectorsDiv) {
-            yearSelectorsDiv.style.display = 'none';
-        }
-        exportStartYear = null;
-        exportEndYear = null;
-    } else {
-        if (yearSelectorsDiv) {
-            yearSelectorsDiv.style.display = 'grid';
-        }
-        exportEndYear = currentYear;
-        exportStartYear = currentYear - range + 1;
-        
-        startYearSelect.value = exportStartYear;
-        endYearSelect.value = exportEndYear;
-    }
-    
-    document.querySelectorAll('.quick-select-btn').forEach(btn => {
-        btn.classList.remove('bg-emerald-100', 'text-emerald-700', 'active');
-        btn.classList.add('bg-gray-100');
-    });
-    
-    const activeBtn = document.querySelector(`button[data-range="${range}"]`);
-    if (activeBtn) {
-        activeBtn.classList.remove('bg-gray-100');
-        activeBtn.classList.add('bg-emerald-100', 'text-emerald-700', 'active');
-    }
-    
-    updateYearPreview();
-}
-
-function updateYearPreview() {
-    const startYearSelect = document.getElementById('exportStartYear');
-    const endYearSelect = document.getElementById('exportEndYear');
-    const previewElement = document.getElementById('previewYears');
-    
-    if (!startYearSelect || !endYearSelect || !previewElement) return;
-    
-    const allBtn = document.querySelector('button[data-range="all"]');
-    if (allBtn && allBtn.classList.contains('active')) {
-        previewElement.textContent = 'Semua Data (Otomatis berdasarkan data di database)';
-        return;
-    }
-    
-    exportStartYear = parseInt(startYearSelect.value);
-    exportEndYear = parseInt(endYearSelect.value);
-    
-    if (exportStartYear > exportEndYear) {
-        exportEndYear = exportStartYear;
-        endYearSelect.value = exportEndYear;
-    }
-    
-    const yearCount = exportEndYear - exportStartYear + 1;
-    previewElement.textContent = `${exportStartYear} - ${exportEndYear} (${yearCount} tahun)`;
 }
 
 async function updateExportDataCount() {
@@ -2035,10 +1922,10 @@ async function updateExportDataCount() {
 
 async function confirmExportExcel() {
     closeExportExcelModal();
-    await exportToExcel(exportStartYear, exportEndYear);
+    await exportToExcel();
 }
 
-async function exportToExcel(startYear, endYear) {
+async function exportToExcel() {
     try {
         showLoading(true);
         
@@ -2312,8 +2199,6 @@ window.confirmDelete = confirmDelete;
 window.goToPage = goToPage;
 window.exportToExcel = exportToExcel;
 window.openExportExcelModal = openExportExcelModal;
-window.closeExportExcelModal = closeExportExcelModal;
-window.setExportRange = setExportRange;
 window.confirmExportExcel = confirmExportExcel;
 window.updateYearPreview = updateYearPreview;
 window.closeSuksesModal = closeSuksesModal;
