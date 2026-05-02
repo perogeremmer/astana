@@ -479,7 +479,7 @@ function renderTableHeader() {
     thead.innerHTML = `
         <tr>
             <th class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10 border-r">No</th>
-            <th class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sticky left-10 bg-gray-50 z-10 border-r">NomorBlok</th>
+            <th class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sticky left-10 bg-gray-50 z-10 border-r">Nomor Blok</th>
             <th class="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider border-r">Tipe Makam</th>
             <th class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-r">Nama Almarhum</th>
             <th class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-r">Nama Ahli Waris #1</th>
@@ -528,7 +528,7 @@ function renderPaymentsTable() {
         
         row.innerHTML = `
             <td class="px-3 py-3 text-sm text-gray-500 sticky left-0 bg-white border-r">${(currentPage - 1) * itemsPerPage + index + 1}</td>
-            <td class="px-3 py-3 text-sm text-gray-600 sticky left-10 bg-white border-r">${item.block_code}${item.number}</td>
+            <td class="px-3 py-3 text-sm text-gray-600 sticky left-10 bg-white border-r">${item.block_code}-${item.number}</td>
             <td class="px-3 py-3 text-sm text-center text-gray-600 border-r">${graveType}</td>
             <td class="px-3 py-3 text-sm font-medium text-gray-800 border-r">${escapeHtml(item.deceased_name)}</td>
             <td class="px-3 py-3 text-sm text-gray-600 border-r">${escapeHtml(item.primary_heir_name || '-')}</td>
