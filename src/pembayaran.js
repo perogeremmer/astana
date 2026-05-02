@@ -479,11 +479,10 @@ function renderTableHeader() {
     thead.innerHTML = `
         <tr>
             <th class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10 border-r">No</th>
-            <th class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sticky left-10 bg-gray-50 z-10 border-r">Nama Almarhum</th>
-            <th class="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider border-r">Blok</th>
-            <th class="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider border-r">Nomor</th>
-            <th class="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider border-r">Tipe</th>
-            <th class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-r">Ahli Waris</th>
+            <th class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sticky left-10 bg-gray-50 z-10 border-r">NomorBlok</th>
+            <th class="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider border-r">Tipe Makam</th>
+            <th class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-r">Nama Almarhum</th>
+            <th class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-r">Nama Ahli Waris #1</th>
             <th class="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider border-r">Status ${currentYear}</th>
             <th class="px-3 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Bayar</th>
         </tr>
@@ -504,7 +503,7 @@ function renderPaymentsTable() {
         
         tbody.innerHTML = `
             <tr>
-                <td colspan="8" class="px-3 py-8 text-center text-gray-500">
+                <td colspan="7" class="px-3 py-8 text-center text-gray-500">
                     ${emptyMessage}
                 </td>
             </tr>
@@ -517,22 +516,21 @@ function renderPaymentsTable() {
         row.className = 'hover:bg-gray-50 cursor-pointer transition-colors';
         row.dataset.graveId = item.grave_id;
         
-        // Status badge
+        // Status pembayaran badge
         const statusBadge = item.current_year_paid 
             ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">Lunas</span>'
             : '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Belum</span>';
         
-        // Format grave type
+        // Tipe makam
         const graveType = item.grave_type 
             ? (item.grave_type === 'new' ? 'Baru' : item.grave_type === 'stacked' ? 'Tumpuk' : item.grave_type)
             : '-';
         
         row.innerHTML = `
             <td class="px-3 py-3 text-sm text-gray-500 sticky left-0 bg-white border-r">${(currentPage - 1) * itemsPerPage + index + 1}</td>
-            <td class="px-3 py-3 text-sm font-medium text-gray-800 sticky left-10 bg-white border-r">${escapeHtml(item.deceased_name)}</td>
-            <td class="px-3 py-3 text-sm text-center text-gray-600 border-r">${item.block_code}</td>
-            <td class="px-3 py-3 text-sm text-center text-gray-600 border-r">${item.number}</td>
+            <td class="px-3 py-3 text-sm text-gray-600 sticky left-10 bg-white border-r">${item.block_code}${item.number}</td>
             <td class="px-3 py-3 text-sm text-center text-gray-600 border-r">${graveType}</td>
+            <td class="px-3 py-3 text-sm font-medium text-gray-800 border-r">${escapeHtml(item.deceased_name)}</td>
             <td class="px-3 py-3 text-sm text-gray-600 border-r">${escapeHtml(item.primary_heir_name || '-')}</td>
             <td class="px-3 py-3 text-center border-r">${statusBadge}</td>
             <td class="px-3 py-3 text-sm text-right text-emerald-600 font-medium">${formatRupiah(item.total_paid_amount)}</td>
