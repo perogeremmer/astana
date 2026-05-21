@@ -1,6 +1,6 @@
 # 🧪 Astana - Comprehensive Testing Plan
 
-## Status: ✅ Fase 1, 2, & 2.10 SEMUA SELESAI
+## Status: ✅ Fase 1, 2, 2.10 ✅ | Fase 3 (A+B) ✅ | Fase 3 (C+D) ⏳
 
 ## Overview
 
@@ -258,8 +258,7 @@ Expected: ~63 tests (8 auth + 55 new), all PASS.
 ---
 
 ## ═══════════════════════════════════════════
-## FASE 2.10: Negative Test Cases (Edge Cases + Validation)
-## Target: ~22 new tests across Rust + JS
+## FASE 3 (AKTIF): Refactor Rust Backend — Service & Controller Pattern
 ## ═══════════════════════════════════════════
 
 ### Analisis Kesenjangan
@@ -332,69 +331,96 @@ cd src-tauri && cargo test    # Rust: tetap 78 tests
 
 ---
 
-**Dikerjakan setelah Fase 1 & 2** (safety net sudah exist).
+Memecah `db.rs` (4813 baris) dan `lib.rs` (2847 baris) menjadi struktur modular.
 
-### 3.1 Setup Playwright
+### 3.1 Target Struktur
 
-```bash
-npm init -y
-npm install --save-dev @playwright/test
-npx playwright install chromium
+```
+src-tauri/src/
+├── models/                    ← Struct definitions (zero business logic)
+│   ├── mod.rs
+│   ├── block.rs               Block, CreateBlockRequest, UpdateBlockRequest, BlockStats
+│   ├── grave.rs               Grave, GraveWithBlock, CreateGraveRequest, UpdateGraveRequest, GraveExportData
+│   ├── heir.rs                Heir, CreateHeirRequest, UpdateHeirRequest
+│   ├── payment.rs             Payment, CreatePaymentRequest
+│   ├── settings.rs            Settings, UpdateSettingsRequest
+│   ├── dashboard.rs           DashboardStats, RecentPayment, RecentGrave, FinancialSummary, DatabaseStats
+│   ├── report.rs              YearlyReport, BlockReport, GravePaymentDetail, PaymentStatus, GravePaymentDetailWithHeir
+│   ├── user.rs                User, UserWithHash, CreateUserRequest, UpdateUserRequest, LoginResult, Session
+│   └── audit.rs               AuditLog
+│
+├── services/                  ← impl Database (business logic / query methods)
+│   ├── mod.rs
+│   ├── block_service.rs       (6 methods)  ~150 baris
+│   ├── grave_service.rs       (7 methods)  ~330 baris
+│   ├── heir_service.rs        (6 methods)  ~120 baris
+│   ├── payment_service.rs     (6 methods)  ~160 baris
+│   ├── settings_service.rs    (3 methods)  ~60 baris
+│   ├── dashboard_service.rs   (5 methods)  ~210 baris
+│   ├── report_service.rs      (5 methods)  ~290 baris
+│   ├── auth_service.rs        (16 methods) ~580 baris
+│   ├── audit_service.rs       (3 methods)  ~75 baris
+│   └── backup_service.rs      (2 methods)  ~35 baris
+│
+├── controllers/               ← #[tauri::command] (request handling + response)
+│   ├── mod.rs
+│   ├── block_controller.rs    (6 commands)  ~140 baris
+│   ├── grave_controller.rs    (9 commands)  ~280 baris
+│   ├── heir_controller.rs     (6 commands)  ~90 baris
+│   ├── payment_controller.rs  (10 commands) ~400 baris
+│   ├── receipt_controller.rs  (2 commands)  ~200 baris
+│   ├── dashboard_controller.rs(5 commands)  ~50 baris
+│   ├── report_controller.rs   (3 commands)  ~350 baris
+│   ├── settings_controller.rs (6 commands)  ~170 baris
+│   ├── auth_controller.rs     (7 commands)  ~180 baris
+│   ├── user_controller.rs     (5 commands)  ~190 baris
+│   ├── audit_controller.rs    (2 commands)  ~45 baris
+│   ├── system_controller.rs   (5 commands)  ~130 baris
+│   └── file_controller.rs     (3 commands)  ~80 baris
+│
+├── state.rs                   ← SessionStore + FirstRunState (dipisah dari lib.rs)
+│
+├── db.rs                      ← Database struct + init/connection/migrations + re-export
+├── lib.rs                     ← setup_handler + run() + pub mod declarations
+├── main.rs                    ← no change
+├── utils.rs                   ← no change
+└── pdf_receipt.rs             ← no change
 ```
 
-File `playwright.config.js`:
+### 3.2 Prinsip: Zero Impact ke Frontend
+
+Frontend JS memanggil Tauri commands via IPC dengan **string command name**:
 ```js
-module.exports = {
-  testDir: './e2e',
-  use: { baseURL: 'http://localhost:1420', headless: true },
-};
+window.__TAURI__.core.invoke('get_blocks');  // ← tidak berubah
 ```
+Selama command name tetap sama (nama function Rust tidak berubah), frontend tidak perlu diubah.
+Mock Tauri di `mock-tauri.js` juga tetap valid karena mensimulasi IPC yang sama.
 
-### 3.2 E2E Test Files
+### 3.3 Eksekusi
 
-```
-e2e/
-├── auth.spec.js         Login, password change, session expiry, first-run
-├── blok.spec.js         CRUD block, cards + table, status toggle
-├── makam.spec.js        CRUD grave + heirs, classic + modern form, detail modal, Excel
-├── pembayaran.spec.js   Year picker, multi-year payment, receipts, export
-├── laporan.spec.js      Yearly report, block breakdown, PDF/Excel export
-├── pengaturan.spec.js   Settings edit, logo upload, backup/restore
-├── pengguna.spec.js     CRUD user, reset password, role-based UI
-├── audit-log.spec.js    Log display, pagination, filtering, auto-refresh
-└── navigation.spec.js   Sidebar, role-based menu, logout redirect
-```
+| Step | Action | Verify |
+|------|--------|--------|
+| A.1 | Buat `models/` — 9 file struct | `cargo check` |
+| A.2 | Update `db.rs` — tambah re-export, hapus struct asli | `cargo test` → 78 pass |
+| B.1 | `services/` — 10 file `impl Database` | `cargo test` → 78 pass |
+| B.2 | Hapus `impl Database` lama dari `db.rs` | `cargo test` → 78 pass |
+| C.1 | `state.rs` — SessionStore + FirstRunState | `cargo check` |
+| C.2 | `controllers/` — 13 file | `cargo test` → 78 pass |
+| C.3 | Hapus command dari `lib.rs` | `cargo test` → 78 pass |
+| D.1 | `tests/` — pindah test ke file terpisah | `cargo test` → 78 pass |
+| D.2 | Hapus `#[cfg(test)]` dari `db.rs` | `cargo test` → 78 pass |
 
-### 3.3 JS Refactoring (parallel with E2E)
+### 3.4 Hasil Akhir
 
-Refactor JS into modules for testability:
-
-```
-src/modules/
-├── api.js          invoke() wrappers for all commands
-├── auth.js         Session/login/logout/role logic
-├── formatters.js   formatRupiah, formatTanggal, escapeHtml, etc.
-├── validators.js   Form validation rules
-└── state.js        Global state management
-
-src/screens/
-├── blok.js          DOM-only, imports from modules/
-├── data-makam.js    DOM-only, imports from modules/
-├── pembayaran.js    DOM-only, imports from modules/
-├── laporan.js       DOM-only, imports from modules/
-├── pengaturan.js    DOM-only, imports from modules/
-├── pengguna.js      DOM-only, imports from modules/
-└── audit-log.js     DOM-only, imports from modules/
-```
-
-With ESM (`<script type="module">`), functions become importable for Vitest:
-
-```js
-import { formatRupiah } from './modules/formatters.js';
-import { createBlock } from './modules/api.js';
-```
-
-After refactoring, add Vitest for JS unit tests of `modules/` functions.
+| File | Sebelum | Sesudah |
+|------|---------|---------|
+| `db.rs` | 4813 baris | ~200 baris (struct + init + re-export) |
+| `lib.rs` | 2847 baris | ~100 baris (setup + run + pub mod) |
+| `models/` | — | 9 file, ~430 baris |
+| `services/` | — | 10 file, ~2000 baris |
+| `controllers/` | — | 13 file, ~2300 baris |
+| `state.rs` | inline di lib.rs | ~60 baris |
+| `tests/` | inline di db.rs | ~1200 baris terpisah |
 
 ---
 
@@ -427,37 +453,45 @@ After refactoring, add Vitest for JS unit tests of `modules/` functions.
 | 2.10.3 | `pembayaran-tests.js` — Negative tests (5) | ✅ |
 | 2.10.4 | `pengguna-tests.js` — Negative tests (6) | ✅ |
 | 2.10.5 | `laporan-tests.js` — Negative tests (1) | ✅ |
-| **Total** | **~81 JS tests + 78 Rust tests** | **✅ SEMUA SELESAI** |
+| A.1 | `models/` — 9 file struct | ✅ |
+| A.2 | `db.rs` — tambah re-export, hapus struct asli | ✅ |
+| B.1 | `services/` — 10 file `impl Database` | ✅ |
+| B.2 | Hapus `impl Database` lama dari `db.rs` | ✅ |
+| C.1 | `state.rs` — SessionStore + FirstRunState | ⏳ |
+| C.2 | `controllers/` — 13 file | ⏳ |
+| D.1 | `tests/` — pindah test | ⏳ |
+| **Total** | **~81 JS tests + 78 Rust tests** | **✅ FASE 1-3A/B** |
 
 ---
 
-## File Structure (Final)
+## File Structure (Saat Ini — Setelah Fase 3A/B)
 
 ```
-src/tests/
-├── mock-tauri.js           # Centralized mock (53 Tauri commands)
-├── test-runner.html        # Browser test runner with tabs
-├── auth-ui-tests.js        # Auth tests (8) — refactored
-├── blok-tests.js           # Block CRUD tests (7)
-├── data-makam-tests.js     # Grave & heir CRUD tests (10)
-├── pembayaran-tests.js     # Payment tests (9)
-├── laporan-tests.js        # Report tests (6)
-├── pengaturan-tests.js     # Settings tests (6)
-├── pengguna-tests.js       # User mgmt tests (8)
-├── audit-log-tests.js      # Audit log tests (6)
-├── command-parameter-tests.js  # Pre-existing
-└── validate-commands.js    # Pre-existing
-
-src-tauri/src/db.rs         # 78 Rust tests (29 existing + 49 new)
+src-tauri/src/
+├── models/                     # 9 file struct (Block, Grave, Heir, Payment, Settings, Dashboard, Report, User, Audit)
+│   ├── mod.rs
+│   ├── block.rs grave.rs heir.rs payment.rs settings.rs
+│   └── dashboard.rs report.rs user.rs audit.rs
+├── services/                   # 10 file impl Database (business logic queries)
+│   ├── mod.rs
+│   ├── backup_service.rs       # backup_to, restore_from
+│   ├── block_service.rs        # 6 CRUD methods
+│   ├── grave_service.rs        # 7 CRUD methods
+│   ├── heir_service.rs         # 6 CRUD methods
+│   ├── payment_service.rs      # 6 CRUD methods
+│   ├── settings_service.rs     # 3 methods
+│   ├── dashboard_service.rs    # 5 methods
+│   ├── report_service.rs       # 5 methods
+│   ├── auth_service.rs         # 16 methods (login, users, password)
+│   └── audit_service.rs        # 3 methods
+├── db.rs                       # ~320 baris (Database struct + init + re-export)
+├── lib.rs                      # ~2847 baris (70 Tauri commands — BELUM di-split)
+├── main.rs utils.rs pdf_receipt.rs
+├── src/tests/                  # Frontend JS tests (81 tests)
 ```
 
 ## Verification
 
 ```bash
-# Check backend tests pass
-cd src-tauri && cargo test    # 78 tests, all PASS
-
-# Check frontend tests pass
-# Open src/tests/test-runner.html in browser
-# Click "Run All Tests" or click individual module tabs
+cd src-tauri && cargo test    # 78 tests, ALL PASS ✅
 ```

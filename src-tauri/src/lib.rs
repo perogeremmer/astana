@@ -13,6 +13,8 @@ use uuid::Uuid;
 
 // Modul database
 pub mod db;
+pub mod models;
+pub mod services;
 pub mod utils;
 pub mod pdf_receipt;
 
