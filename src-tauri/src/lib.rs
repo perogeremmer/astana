@@ -1,117 +1,34 @@
 // Astana - Manajemen Iuran Makam
 // Library utama untuk aplikasi Tauri
 
-use std::collections::HashMap;
 use std::io::Write;
 use std::path::PathBuf;
-use std::sync::Mutex;
 
 use chrono::{Datelike, Timelike};
 use tauri::Manager;
 use tauri::State;
-use uuid::Uuid;
+
+use crate::state::{SessionStore, FirstRunState};
 
 // Modul database
 pub mod db;
 pub mod models;
 pub mod services;
+pub mod state;
 pub mod utils;
 pub mod pdf_receipt;
 
-// Helper function to format number with dots as thousand separators
-fn format_number(num: i64) -> String {
-    num.to_string()
-        .as_bytes()
-        .rchunks(3)
-        .rev()
-        .map(std::str::from_utf8)
-        .collect::<Result<Vec<&str>, _>>()
-        .unwrap()
-        .join(".")
+#[cfg(test)]
+pub mod tests;
+
+// Helper functions (used by controllers)
+pub fn format_number(num: i64) -> String {
+    num.to_string().as_bytes().rchunks(3).rev()
+        .map(std::str::from_utf8).collect::<Result<Vec<&str>, _>>().unwrap().join(".")
 }
 
-// Helper function to format rupiah
-fn format_rupiah(amount: i64) -> String {
+pub fn format_rupiah(amount: i64) -> String {
     format!("Rp. {}", format_number(amount))
-}
-
-// Global session storage
-pub struct SessionStore {
-    sessions: Mutex<HashMap<String, db::Session>>,
-}
-
-impl SessionStore {
-    pub fn new() -> Self {
-        Self {
-            sessions: Mutex::new(HashMap::new()),
-        }
-    }
-
-    pub fn create_session(&self, user_id: i64, username: String, role: String) -> String {
-        let token = Uuid::new_v4().to_string();
-        let expires_at = chrono::Utc::now().timestamp() + (8 * 60 * 60); // 8 hours
-        
-        let session = db::Session {
-            user_id,
-            username,
-            role,
-            token: token.clone(),
-            expires_at,
-        };
-        
-        let mut sessions = self.sessions.lock().unwrap();
-        sessions.insert(token.clone(), session);
-        
-        token
-    }
-
-    pub fn get_session(&self, token: &str) -> Option<db::Session> {
-        let sessions = self.sessions.lock().unwrap();
-        sessions.get(token).cloned()
-    }
-
-    pub fn remove_session(&self, token: &str) {
-        let mut sessions = self.sessions.lock().unwrap();
-        sessions.remove(token);
-    }
-
-    pub fn is_valid(&self, token: &str) -> bool {
-        if let Some(session) = self.get_session(token) {
-            let now = chrono::Utc::now().timestamp();
-            session.expires_at > now
-        } else {
-            false
-        }
-    }
-
-    pub fn cleanup_expired(&self) {
-        let mut sessions = self.sessions.lock().unwrap();
-        let now = chrono::Utc::now().timestamp();
-        sessions.retain(|_, session| session.expires_at > now);
-    }
-}
-
-// Global store untuk Superadmin_0 password yang di-generate
-pub struct FirstRunState {
-    pub superadmin_password: Mutex<Option<String>>,
-}
-
-impl FirstRunState {
-    pub fn new() -> Self {
-        Self {
-            superadmin_password: Mutex::new(None),
-        }
-    }
-
-    pub fn set_password(&self, password: String) {
-        let mut pwd = self.superadmin_password.lock().unwrap();
-        *pwd = Some(password);
-    }
-
-    pub fn get_and_clear_password(&self) -> Option<String> {
-        let mut pwd = self.superadmin_password.lock().unwrap();
-        pwd.take()
-    }
 }
 
 /// Command untuk mendapatkan path database
@@ -2723,127 +2640,4 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
-}
-
-// ==================== UNIT TESTS ====================
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::fs;
-    use tempfile::TempDir;
-
-    #[test]
-    fn test_pdf_generation_basic() {
-        use printpdf::*;
-        use std::io::BufWriter;
-
-        // Create temp directory
-        let temp_dir = TempDir::new().unwrap();
-        let pdf_path = temp_dir.path().join("test_basic.pdf");
-
-        // Create simple PDF
-        let (doc, page1, layer1) = PdfDocument::new(
-            "Test PDF",
-            Mm(210.0),
-            Mm(297.0),
-            "Layer 1",
-        );
-
-        let current_layer = doc.get_page(page1).get_layer(layer1);
-        let font = doc.add_builtin_font(BuiltinFont::Helvetica).unwrap();
-        
-        current_layer.use_text("Hello World", 12.0, Mm(10.0), Mm(280.0), &font);
-
-        // Save PDF
-        let file = fs::File::create(&pdf_path).unwrap();
-        let mut buf_writer = BufWriter::new(file);
-        doc.save(&mut buf_writer).unwrap();
-        buf_writer.flush().unwrap();
-
-        // Verify file exists and has content
-        let metadata = fs::metadata(&pdf_path).unwrap();
-        assert!(metadata.len() > 0, "PDF file should not be empty");
-        println!("Basic PDF generated: {} bytes", metadata.len());
-    }
-
-    #[test]
-    fn test_pdf_generation_with_data() {
-        use printpdf::*;
-        use std::io::BufWriter;
-
-        let temp_dir = TempDir::new().unwrap();
-        let pdf_path = temp_dir.path().join("test_with_data.pdf");
-
-        // Create PDF with multiple elements
-        let (doc, page1, layer1) = PdfDocument::new(
-            "Test Report",
-            Mm(297.0), // A4 Landscape
-            Mm(210.0),
-            "Layer 1",
-        );
-
-        let current_layer = doc.get_page(page1).get_layer(layer1);
-        let font = doc.add_builtin_font(BuiltinFont::Helvetica).unwrap();
-        let font_bold = doc.add_builtin_font(BuiltinFont::HelveticaBold).unwrap();
-
-        // Add title
-        current_layer.use_text("TEST REPORT", 18.0, Mm(20.0), Mm(190.0), &font_bold);
-        current_layer.use_text("Tahun 2025", 14.0, Mm(20.0), Mm(180.0), &font);
-
-        // Add table-like data
-        let mut y = 160.0;
-        for i in 0..5 {
-            current_layer.use_text(&format!("Row {}", i), 10.0, Mm(20.0), Mm(y), &font);
-            current_layer.use_text(&format!("Value {}", i * 100), 10.0, Mm(80.0), Mm(y), &font);
-            y -= 10.0;
-        }
-
-        // Save PDF
-        let file = fs::File::create(&pdf_path).unwrap();
-        let mut buf_writer = BufWriter::new(file);
-        doc.save(&mut buf_writer).unwrap();
-        buf_writer.flush().unwrap();
-
-        // Verify file
-        let metadata = fs::metadata(&pdf_path).unwrap();
-        assert!(metadata.len() > 0, "PDF with data should not be empty");
-        assert!(metadata.len() > 500, "PDF should have reasonable size");
-        println!("PDF with data generated: {} bytes", metadata.len());
-    }
-
-    #[test]
-    fn test_pdf_generation_landscape() {
-        use printpdf::*;
-        use std::io::BufWriter;
-
-        let temp_dir = TempDir::new().unwrap();
-        let pdf_path = temp_dir.path().join("test_landscape.pdf");
-
-        // Create A4 Landscape PDF
-        let (doc, page1, layer1) = PdfDocument::new(
-            "Landscape Test",
-            Mm(297.0), // A4 width in landscape
-            Mm(210.0), // A4 height
-            "Layer 1",
-        );
-
-        let current_layer = doc.get_page(page1).get_layer(layer1);
-        let font = doc.add_builtin_font(BuiltinFont::Helvetica).unwrap();
-
-        // Add content across the width
-        current_layer.use_text("Left", 12.0, Mm(20.0), Mm(190.0), &font);
-        current_layer.use_text("Center", 12.0, Mm(140.0), Mm(190.0), &font);
-        current_layer.use_text("Right", 12.0, Mm(260.0), Mm(190.0), &font);
-
-        // Save and verify
-        let file = fs::File::create(&pdf_path).unwrap();
-        let mut buf_writer = BufWriter::new(file);
-        doc.save(&mut buf_writer).unwrap();
-        buf_writer.flush().unwrap();
-
-        let metadata = fs::metadata(&pdf_path).unwrap();
-        assert!(metadata.len() > 0, "Landscape PDF should not be empty");
-        println!("Landscape PDF generated: {} bytes", metadata.len());
-    }
 }
