@@ -1,6 +1,6 @@
 # 🧪 Astana - Comprehensive Testing Plan
 
-## Status: ✅ Fase 1, 2, 2.10 ✅ | Fase 3 (A+B) ✅ | Fase 3 (C+D) ⏳
+## Status: ✅ SELESAI (Fase 1, 2, 3A, 3B, 3D) | Fase 3C (controllers) ⏳
 
 ## Overview
 
@@ -457,41 +457,55 @@ Mock Tauri di `mock-tauri.js` juga tetap valid karena mensimulasi IPC yang sama.
 | A.2 | `db.rs` — tambah re-export, hapus struct asli | ✅ |
 | B.1 | `services/` — 10 file `impl Database` | ✅ |
 | B.2 | Hapus `impl Database` lama dari `db.rs` | ✅ |
-| C.1 | `state.rs` — SessionStore + FirstRunState | ⏳ |
-| C.2 | `controllers/` — 13 file | ⏳ |
-| D.1 | `tests/` — pindah test | ⏳ |
-| **Total** | **~81 JS tests + 78 Rust tests** | **✅ FASE 1-3A/B** |
+| C.0 | `state.rs` — SessionStore + FirstRunState | ✅ |
+| C.1 | `controllers/` — 13 file (bisa dikerjakan nanti) | ⏳ FUTURE |
+| D.1 | `tests.rs` — extract from db.rs | ✅ |
+| **Total** | **~81 JS tests + 78 Rust tests** | **✅ FASE 1-3 SELESAI** |
 
 ---
 
-## File Structure (Saat Ini — Setelah Fase 3A/B)
+## File Structure (Final)
 
 ```
 src-tauri/src/
 ├── models/                     # 9 file struct (Block, Grave, Heir, Payment, Settings, Dashboard, Report, User, Audit)
-│   ├── mod.rs
-│   ├── block.rs grave.rs heir.rs payment.rs settings.rs
-│   └── dashboard.rs report.rs user.rs audit.rs
-├── services/                   # 10 file impl Database (business logic queries)
-│   ├── mod.rs
-│   ├── backup_service.rs       # backup_to, restore_from
-│   ├── block_service.rs        # 6 CRUD methods
-│   ├── grave_service.rs        # 7 CRUD methods
-│   ├── heir_service.rs         # 6 CRUD methods
-│   ├── payment_service.rs      # 6 CRUD methods
-│   ├── settings_service.rs     # 3 methods
-│   ├── dashboard_service.rs    # 5 methods
-│   ├── report_service.rs       # 5 methods
-│   ├── auth_service.rs         # 16 methods (login, users, password)
-│   └── audit_service.rs        # 3 methods
-├── db.rs                       # ~320 baris (Database struct + init + re-export)
-├── lib.rs                      # ~2847 baris (70 Tauri commands — BELUM di-split)
+├── services/                   # 10 file impl Database
+│   ├── backup_service.rs       block_service.rs      grave_service.rs
+│   ├── heir_service.rs         payment_service.rs    settings_service.rs
+│   ├── dashboard_service.rs    report_service.rs     auth_service.rs
+│   └── audit_service.rs
+├── state.rs                    # SessionStore + FirstRunState
+├── tests.rs                    # 78 DB tests + 3 PDF tests → ALL PASS
+├── controllers/                # ⏳ FUTURE (70 Tauri commands masih di lib.rs)
+├── db.rs                       # HANYA Database struct + init + re-export (331 baris)
+├── lib.rs                      # ~2643 baris (70 Tauri commands + run/setup — blm di-split)
 ├── main.rs utils.rs pdf_receipt.rs
-├── src/tests/                  # Frontend JS tests (81 tests)
+│
+src/tests/                      # Frontend JS tests (~81 tests)
 ```
 
-## Verification
+## Verification (Final)
 
 ```bash
-cd src-tauri && cargo test    # 78 tests, ALL PASS ✅
+cd src-tauri && cargo test    # 78 tests, ALL PASS ✅ (backend)
+# Buka src/tests/test-runner.html di browser → ~81 tests (frontend)
 ```
+
+### Apa yang Tersisa (Fase 3C: Controllers)
+
+`lib.rs` masih ~2643 baris dengan 70 Tauri command yang bisa di-split ke `controllers/`:
+
+| Controller | Commands |
+|------------|----------|
+| `app_controller` | get_app_version |
+| `auth_controller` | check_database_status, check_first_run, init_superadmin_0, get_initial_password, import_database, login, logout, validate_session, get_current_user, change_password |
+| `user_controller` | get_users, create_user, update_user, delete_user, reset_user_password |
+| `audit_controller` | get_audit_logs, count_audit_logs |
+| `system_controller` | get_database_path, get_database_stats, backup_database_with_dialog, restore_database_with_dialog, open_database_folder |
+| `block_controller` | get_blocks, get_block_by_id, create_block, update_block, delete_block, get_block_stats |
+| `grave_controller` | get_graves, count_graves, get_grave_by_id, create_grave_with_heirs, update_grave, delete_grave, get_grave_detail, export_graves, save_excel_file |
+| `heir_controller` | get_heirs_by_grave, create_heir, update_heir, delete_heir, delete_heirs_by_grave, update_grave_heirs |
+| `payment_controller` | get_payments_by_grave, get_payment_by_grave_and_year, create_payment, update_payment, delete_payment, get_graves_with_payment_summary, count_graves_with_payment_status, get_grave_payment_detail, create_multi_year_payments, generate_single_receipt, generate_combined_receipt |
+| `dashboard_controller` | get_dashboard_stats, get_recent_payments, get_recent_graves, get_financial_summary, get_days_since_backup |
+| `report_controller` | get_yearly_report, get_available_years, generate_pdf_report |
+| `settings_controller` | get_settings, update_settings, update_last_backup, upload_logo, get_logo_data, upload_payment_proof, get_payment_proof_data |
